@@ -1,5 +1,5 @@
 {
-  "name": "Jupiter Web App",
+  "name": "web",
   "private": true,
   "sideEffects": false,
   "type": "module",
