@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Native web application
 
-## Getting Started
+I was inspired by how [linear.app](https://linear.app) was able to feel native and has killer offline support.
 
-First, run the development server:
+On 8th September 2025, I decided to take a look under the hood.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+I knew how their infamous [sync engine](https://www.youtube.com/watch?v=bnOpm3a1fRE) works. TL;DR - it stores the recent data in IndexDB. But, I was more interested in finding how the application navigates between pages & is able to work offline effortlessly.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+They leverage two clever techniques:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Greedy First Load
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+![Greedy First Load](./images/linear-gfl.gif)
 
-## Learn More
+The first page is loaded as is, although every single page after that is greedily preloaded. It does increase first load time, although for an application like Linear, that's a workable tradeoff.
 
-To learn more about Next.js, take a look at the following resources:
+Especially, combined with the next step.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## JS Chunk Cache
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+![JS Chunk Cache](./images/linear-js-chunk.png)
 
-## Deploy on Vercel
+They use a clever technique where they store even their chunked javascript bundles in the service worker. Given that it'll rarely change unless there are updates, this is pretty smart.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Recreation
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Based on this, I have created a project which combines tanstack and workbox to achive similar functionality.
+
+Deployed version is available here:
+
+[native-web-application.advaitb.com](https://native-web-application.advaitb.com)
