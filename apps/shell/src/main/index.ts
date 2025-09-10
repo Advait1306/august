@@ -34,7 +34,7 @@ function createWindow(): void {
   //   mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   // }
 
-  mainWindow.loadURL('http://localhost:3000')
+  mainWindow.loadURL('http://localhost:4173')
 }
 
 // This method will be called when Electron has finished

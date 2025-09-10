@@ -1,28 +1,17 @@
-import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { serwist } from "@serwist/vite";
+import react from "@vitejs/plugin-react-swc";
 import { defineConfig } from "vite";
-import tsConfigPaths from "vite-tsconfig-paths";
-import viteReact from "@vitejs/plugin-react";
 
+// https://vitejs.dev/config/
 export default defineConfig({
-  server: {
-    port: 3000,
-  },
-  build: {
-    rollupOptions: {
-      external: ["workbox-config.js"],
-    },
-  },
   plugins: [
-    tsConfigPaths({
-      projects: ["./tsconfig.json"],
+    react(),
+    serwist({
+      swSrc: "src/sw.ts",
+      swDest: "sw.js",
+      globDirectory: "dist",
+      injectionPoint: "self.__SW_MANIFEST",
+      rollupFormat: "iife",
     }),
-    tanstackStart({
-      customViteReactPlugin: true,
-      target: process.env.VERCEL ? "vercel" : "node-server",
-      spa: {
-        enabled: true,
-      },
-    }),
-    viteReact(),
   ],
 });

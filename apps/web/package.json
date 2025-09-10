@@ -1,34 +1,26 @@
 {
-  "name": "web",
-  "private": true,
-  "sideEffects": false,
+  "name": "Jupiter",
+  "version": "1.0.0",
   "type": "module",
+  "license": "MIT",
+  "private": true,
   "scripts": {
-    "dev": "vite dev",
-    "build": "node scripts/build.js",
-    "start": "node .output/server/index.mjs"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "start": "vite preview"
   },
   "dependencies": {
-    "@tanstack/react-router": "^1.131.36",
-    "@tanstack/react-router-devtools": "^1.131.36",
-    "@tanstack/react-start": "^1.131.36",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.6.0",
-    "workbox-window": "^7.3.0",
-    "zod": "^3.24.2"
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
   },
   "devDependencies": {
-    "@types/node": "^22.5.4",
-    "@types/react": "^19.0.8",
-    "@types/react-dom": "^19.0.3",
-    "@vitejs/plugin-react": "^4.6.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.5.1",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2",
-    "vite": "^6.3.5",
-    "vite-tsconfig-paths": "^5.1.4",
-    "workbox-build": "^7.3.0"
+    "@serwist/vite": "latest",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react-swc": "4.0.1",
+    "serwist": "latest",
+    "typescript": "5.9.2",
+    "vite": "7.1.5"
   }
 }

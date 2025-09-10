@@ -1,31 +1,33 @@
-# Native web application
+# Serwist example - vite-react-basic
 
-I was inspired by how [linear.app](https://linear.app) was able to feel native and has killer offline support.
+This example demonstrates how to use Serwist with Vite + React.
 
-On 8th September 2025, I decided to take a look under the hood.
+## Usage
 
-I knew how their infamous [sync engine](https://www.youtube.com/watch?v=bnOpm3a1fRE) works. TL;DR - it stores the recent data in IndexDB. But, I was more interested in finding how the application navigates between pages & is able to work offline effortlessly.
+[![Open in Gitpod and run](https://img.shields.io/badge/Open%20In-Gitpod.io-%231966D2?style=for-the-badge&logo=gitpod)](https://gitpod.io/#https://github.com/serwist/serwist/)
 
-They leverage two clever techniques:
+```bash
+cd examples/vite-react-basic
+pnpm build
+pnpm preview
+```
 
-## Greedy First Load
+or
 
-![Greedy First Load](./images/linear-gfl.gif)
+Execute [`degit`](https://github.com/Rich-Harris/degit) with [npm](https://docs.npmjs.com/cli/init), [Yarn](https://yarnpkg.com/lang/en/docs/cli/create/), [pnpm](https://pnpm.io), or [bun](https://bun.sh) to bootstrap the example:
 
-The first page is loaded as is, although every single page after that is greedily preloaded. It does increase first load time, although for an application like Linear, that's a workable tradeoff.
+```bash
+npx degit serwist/serwist/examples/vite-react-basic my-app
+```
 
-Especially, combined with the next step.
+```bash
+yarn degit serwist/serwist/examples/vite-react-basic my-app
+```
 
-## JS Chunk Cache
+```bash
+pnpx degit serwist/serwist/examples/vite-react-basic my-app
+```
 
-![JS Chunk Cache](./images/linear-js-chunk.png)
-
-They use a clever technique where they store even their chunked javascript bundles in the service worker. Given that it'll rarely change unless there are updates, this is pretty smart.
-
-## Recreation
-
-Based on this, I have created a project which combines tanstack and workbox to achive similar functionality.
-
-Deployed version is available here:
-
-[native-web-application.advaitb.com](https://native-web-application.advaitb.com)
+```bash
+bunx degit serwist/serwist/examples/vite-react-basic my-app
+```
