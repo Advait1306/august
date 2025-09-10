@@ -1,8 +1,49 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { agent } from './agent'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  projects: {
+    getAll: () => electronAPI.ipcRenderer.invoke('projects:getAll'),
+    selectFolder: () => electronAPI.ipcRenderer.invoke('projects:selectFolder'),
+    remove: (id: string) => electronAPI.ipcRenderer.invoke('projects:remove', id),
+    update: (id: string, updates: any) =>
+      electronAPI.ipcRenderer.invoke('projects:update', id, updates)
+  },
+  chat: {
+    // Thread management
+    getThreads: () => electronAPI.ipcRenderer.invoke('threads:getAll'),
+    createThread: (threadId: string) => electronAPI.ipcRenderer.invoke('threads:create', threadId),
+    updateThread: (id: string, updates: any) =>
+      electronAPI.ipcRenderer.invoke('threads:update', id, updates),
+    deleteThread: (id: string) => electronAPI.ipcRenderer.invoke('threads:delete', id),
+    archiveThread: (id: string) => electronAPI.ipcRenderer.invoke('threads:archive', id),
+
+    // Message management
+    getMessages: (threadId: string) =>
+      electronAPI.ipcRenderer.invoke('messages:getByThread', threadId),
+    saveMessage: (message: any) => electronAPI.ipcRenderer.invoke('messages:save', message),
+    deleteMessage: (id: string) => electronAPI.ipcRenderer.invoke('messages:delete', id),
+
+    // Event listeners for streaming
+    onMessageUpdate: (callback: (message: any) => void) => {
+      electronAPI.ipcRenderer.on('chat:messageUpdate', (_, message) => callback(message))
+      return () => electronAPI.ipcRenderer.removeAllListeners('chat:messageUpdate')
+    }
+  },
+  auth: {
+    getToken: () => electronAPI.ipcRenderer.invoke('auth:get-token'),
+    openLogin: () => electronAPI.ipcRenderer.invoke('auth:open-login'),
+    onTokenReceived: (callback: (token: string) => void) => {
+      console.log('auth callback set')
+      electronAPI.ipcRenderer.on('auth:token-received', (_, token) => callback(token))
+      return () => electronAPI.ipcRenderer.removeAllListeners('auth:token-received')
+    }
+  },
+  agent: agent
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
