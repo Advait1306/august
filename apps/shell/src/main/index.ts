@@ -58,7 +58,7 @@ function createWindow(): void {
   //   mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   // }
 
-  mainWindow.loadURL('https://native-web-application.advaitb.com/')
+  mainWindow.loadURL('http://localhost:3000')
 }
 
 // Handle deep links

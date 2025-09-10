@@ -11,10 +11,10 @@ interface TasksProps {
 
 export const Route = createFileRoute("/tasks")({
   component: Tasks,
-  validateSearch: (search: TasksProps) => {
+  validateSearch: (search: TasksProps | undefined) => {
     return {
-      project: search.project,
-      agent: search.agent,
+      project: search?.project,
+      agent: search?.agent,
     };
   },
 });
