@@ -13,7 +13,6 @@ import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AgentsRouteImport } from './routes/agents'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TasksRoute = TasksRouteImport.update({
@@ -36,11 +35,6 @@ const AgentsRoute = AgentsRouteImport.update({
   path: '/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,7 +43,6 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/agents': typeof AgentsRoute
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
@@ -57,7 +50,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/agents': typeof AgentsRoute
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
@@ -66,7 +58,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/about': typeof AboutRoute
   '/agents': typeof AgentsRoute
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
@@ -74,15 +65,14 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/agents' | '/mcp' | '/projects' | '/tasks'
+  fullPaths: '/' | '/agents' | '/mcp' | '/projects' | '/tasks'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/agents' | '/mcp' | '/projects' | '/tasks'
-  id: '__root__' | '/' | '/about' | '/agents' | '/mcp' | '/projects' | '/tasks'
+  to: '/' | '/agents' | '/mcp' | '/projects' | '/tasks'
+  id: '__root__' | '/' | '/agents' | '/mcp' | '/projects' | '/tasks'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
   AgentsRoute: typeof AgentsRoute
   McpRoute: typeof McpRoute
   ProjectsRoute: typeof ProjectsRoute
@@ -119,13 +109,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -138,7 +121,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
   AgentsRoute: AgentsRoute,
   McpRoute: McpRoute,
   ProjectsRoute: ProjectsRoute,
