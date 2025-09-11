@@ -19,7 +19,7 @@ export const Route = createFileRoute("/tasks")({
   },
 });
 
-export default function Tasks() {
+function Tasks() {
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
   const { project, agent } = Route.useSearch();
 

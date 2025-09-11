@@ -44,7 +44,7 @@ export const Route = createFileRoute("/agents")({
   component: Agents,
 });
 
-export default function Agents() {
+function Agents() {
   const {
     agents,
     baseAgents,

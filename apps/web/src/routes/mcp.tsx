@@ -4,7 +4,7 @@ export const Route = createFileRoute("/mcp")({
   component: MCP,
 });
 
-export default function MCP() {
+function MCP() {
   return (
     <div className="space-y-6">
       <div>

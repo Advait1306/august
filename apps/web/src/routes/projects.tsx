@@ -26,7 +26,7 @@ export const Route = createFileRoute("/projects")({
   component: Projects,
 });
 
-export default function Projects() {
+function Projects() {
   const { projects, isLoading, loadProjects, selectNewProject, deleteProject } =
     useProjectStore();
   const { addItemToContext, removeContextItem } = useCommandMenu();
