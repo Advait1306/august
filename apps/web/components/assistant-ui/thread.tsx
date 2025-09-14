@@ -128,60 +128,6 @@ const ThreadWelcome: FC = () => {
   );
 };
 
-const ThreadWelcomeSuggestions: FC = () => {
-  return (
-    <div className="grid w-full gap-2 sm:grid-cols-2">
-      {[
-        {
-          title: "What are the advantages",
-          label: "of using Assistant Cloud?",
-          action: "What are the advantages of using Assistant Cloud?",
-        },
-        {
-          title: "Write code to",
-          label: `demonstrate topological sorting`,
-          action: `Write code to demonstrate topological sorting`,
-        },
-        {
-          title: "Help me write an essay",
-          label: `about AI chat applications`,
-          action: `Help me write an essay about AI chat applications`,
-        },
-        {
-          title: "What is the weather",
-          label: "in San Francisco?",
-          action: "What is the weather in San Francisco?",
-        },
-      ].map((suggestedAction, index) => (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          transition={{ delay: 0.05 * index }}
-          key={`suggested-action-${suggestedAction.title}-${index}`}
-          className="[&:nth-child(n+3)]:hidden sm:[&:nth-child(n+3)]:block"
-        >
-          <ThreadPrimitive.Suggestion
-            prompt={suggestedAction.action}
-            method="replace"
-            autoSend
-            asChild
-          >
-            <Button
-              variant="ghost"
-              className="dark:hover:bg-accent/60 h-auto w-full flex-1 flex-wrap items-start justify-start gap-1 rounded-xl border px-4 py-3.5 text-left text-sm sm:flex-col"
-              aria-label={suggestedAction.action}
-            >
-              <span className="font-medium">{suggestedAction.title}</span>
-              <p className="text-muted-foreground">{suggestedAction.label}</p>
-            </Button>
-          </ThreadPrimitive.Suggestion>
-        </motion.div>
-      ))}
-    </div>
-  );
-};
-
 interface ComposerProps {
   composerInputRef?: React.RefObject<HTMLTextAreaElement | null>;
   preselectedProjectId?: string | null;
@@ -196,9 +142,6 @@ const Composer: FC<ComposerProps> = ({
   return (
     <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6">
       <ThreadScrollToBottom />
-      <ThreadPrimitive.Empty>
-        <ThreadWelcomeSuggestions />
-      </ThreadPrimitive.Empty>
       <ComposerPrimitive.Root className="relative flex w-full flex-col rounded-2xl focus-within:ring-2 focus-within:ring-black focus-within:ring-offset-2 dark:focus-within:ring-white">
         <ComposerPrimitive.Input
           ref={composerInputRef}
@@ -323,7 +266,7 @@ const ComposerAction: FC<ComposerActionProps> = ({
             <Button
               type="submit"
               variant="default"
-              className="dark:border-muted-foreground/90 border-muted-foreground/60 hover:bg-primary/75 size-8 rounded-full border"
+              className="hover:bg-primary/75 size-8 rounded-full"
               aria-label="Send message"
             >
               <ArrowUpIcon className="size-5" />
