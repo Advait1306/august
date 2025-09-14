@@ -39,18 +39,14 @@ import { MCPIcon } from "@/components/icons/MCPIcon";
 import { Kbd, KbdKey } from "@/components/ui/kibo-ui/kbd";
 import { useNavigate } from "@tanstack/react-router";
 
-export type CommandItem =
-  | { type: "url"; url: string; label?: string }
-  | { type: "action"; action: () => void; label?: string };
-
-type CommandMenuItemBase = {
+type CommandMenuItem = {
   id: string;
   title: string;
   icon: ComponentType<any>;
   shortcut?: string[];
+  action: () => void;
+  label?: string;
 };
-
-type CommandMenuItem = CommandMenuItemBase & CommandItem;
 
 export type CommandMenuContextItemType = "project" | "task";
 
@@ -166,32 +162,42 @@ function CommandMenuDialog({
             id: "tasks",
             title: "Tasks",
             icon: CheckSquare,
-            type: "url" as const,
-            url: "/tasks",
+            action: () => {
+              navigate({
+                to: "/tasks",
+                search: {
+                  project: undefined,
+                  agent: undefined,
+                },
+              });
+            },
             shortcut: ["G", "T"],
           },
           {
             id: "projects",
             title: "Projects",
             icon: FolderKanban,
-            type: "url" as const,
-            url: "/projects",
+            action: () => {
+              navigate({ to: "/projects" });
+            },
             shortcut: ["G", "P"],
           },
           {
             id: "agents",
             title: "Agents",
             icon: Bot,
-            type: "url" as const,
-            url: "/agents",
+            action: () => {
+              navigate({ to: "/agents" });
+            },
             shortcut: ["G", "A"],
           },
           {
             id: "mcp",
             title: "MCP",
             icon: MCPIcon,
-            type: "url" as const,
-            url: "/mcp",
+            action: () => {
+              navigate({ to: "/mcp" });
+            },
             shortcut: ["G", "M"],
           },
         ],
@@ -203,14 +209,12 @@ function CommandMenuDialog({
             id: "settings",
             title: "Settings",
             icon: Settings,
-            type: "action" as const,
             action: () => console.log("Settings clicked"),
           },
           {
             id: "profile",
             title: "Profile",
             icon: User,
-            type: "action" as const,
             action: () => console.log("Profile clicked"),
           },
         ],
@@ -222,21 +226,21 @@ function CommandMenuDialog({
             id: "theme-light",
             title: "Light",
             icon: Sun,
-            type: "action" as const,
+
             action: () => setTheme("light"),
           },
           {
             id: "theme-dark",
             title: "Dark",
             icon: Moon,
-            type: "action" as const,
+
             action: () => setTheme("dark"),
           },
           {
             id: "theme-system",
             title: "System",
             icon: Monitor,
-            type: "action" as const,
+
             action: () => setTheme("system"),
           },
         ],
@@ -253,15 +257,29 @@ function CommandMenuDialog({
             id: "start-task-with-project",
             title: `Start task on ${contextItem.name}`,
             icon: Play,
-            type: "url" as const,
-            url: `/tasks?project=${contextItem.id}`,
+            action: () => {
+              navigate({
+                to: "/tasks",
+                search: {
+                  project: contextItem.id,
+                  agent: "claude-code",
+                },
+              });
+            },
           },
           {
             id: "start-task-with-claude-code",
             title: `Start task on ${contextItem.name} with Claude Code`,
             icon: Bot,
-            type: "url" as const,
-            url: `/tasks?project=${contextItem.id}&agent=claude-code`,
+            action: () => {
+              navigate({
+                to: "/tasks",
+                search: {
+                  project: contextItem.id,
+                  agent: "claude-code",
+                },
+              });
+            },
           }
         );
       } else if (contextItem.type === "task") {
@@ -270,7 +288,6 @@ function CommandMenuDialog({
             id: "archive-task",
             title: `Archive Task`,
             icon: Archive,
-            type: "action" as const,
             action: () => {
               // TODO: Implement archive functionality
               console.log("Archive thread:", contextItem.id);
@@ -280,7 +297,6 @@ function CommandMenuDialog({
             id: "delete-task",
             title: `Delete Task`,
             icon: Trash2,
-            type: "action" as const,
             action: () => {
               // TODO: Implement delete functionality
               console.log("Delete thread:", contextItem.id);
@@ -301,17 +317,12 @@ function CommandMenuDialog({
   }, [setTheme, contextItem]);
 
   const runCommand = useCallback(
-    (command: CommandItem) => {
+    (command: CommandMenuItem) => {
       if (contextItem) {
         setIsResetRequired(true);
       }
       setOpen(false);
-      if (command.type === "url") {
-        // TODO: Fix type here
-        navigate(command.url as any);
-      } else if (command.type === "action") {
-        command.action();
-      }
+      command.action();
     },
     [contextItem, navigate, setIsResetRequired, setOpen]
   );

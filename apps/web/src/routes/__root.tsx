@@ -16,7 +16,7 @@ const RootLayout = () => (
             <div className="flex flex-1 overflow-hidden">
               <AppSidebar />
               <SidebarInset>
-                <div className="rounded-lg border overflow-hidden flex-1">
+                <div className="rounded-lg border overflow-hidden flex-1 bg-background">
                   <Outlet />
                 </div>
               </SidebarInset>
