@@ -142,20 +142,22 @@ const Composer: FC<ComposerProps> = ({
   return (
     <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6">
       <ThreadScrollToBottom />
-      <ComposerPrimitive.Root className="relative flex w-full flex-col rounded-2xl focus-within:ring-2 focus-within:ring-black focus-within:ring-offset-2 dark:focus-within:ring-white">
-        <ComposerPrimitive.Input
-          ref={composerInputRef}
-          placeholder="Send a message..."
-          className="bg-muted border-border dark:border-muted-foreground/15 focus:outline-primary placeholder:text-muted-foreground max-h-[calc(50dvh)] min-h-16 w-full resize-none rounded-t-2xl border-x border-t px-4 pb-3 pt-2 text-base outline-none"
-          rows={1}
-          autoFocus
-          aria-label="Message input"
-        />
-        <ComposerAction
-          preselectedProjectId={preselectedProjectId}
-          preselectedAgent={preselectedAgent}
-        />
-      </ComposerPrimitive.Root>
+      <div className="p-[4px] border rounded-2xl focus-within:outline-primary focus-within:outline-1">
+        <ComposerPrimitive.Root className="relative flex w-full flex-col rounded-[12px] overflow-hidden border">
+          <ComposerPrimitive.Input
+            ref={composerInputRef}
+            placeholder="Send a message..."
+            className="bg-muted placeholder:text-muted-foreground max-h-[calc(50dvh)] min-h-16 w-full resize-none px-4 pb-3 pt-2 text-base outline-none"
+            rows={1}
+            autoFocus
+            aria-label="Message input"
+          />
+          <ComposerAction
+            preselectedProjectId={preselectedProjectId}
+            preselectedAgent={preselectedAgent}
+          />
+        </ComposerPrimitive.Root>
+      </div>
     </div>
   );
 };
@@ -208,7 +210,7 @@ const ComposerAction: FC<ComposerActionProps> = ({
           <Button onClick={permission.deny}>Deny</Button>
         </div>
       )}
-      <div className="bg-muted border-border dark:border-muted-foreground/15 relative flex items-center justify-between rounded-b-2xl border-x border-b p-2">
+      <div className="bg-muted relative flex items-center justify-between p-2">
         <ThreadPrimitive.If running={false}>
           <ThreadPrimitive.If empty={true}>
             <div className="flex gap-2">
