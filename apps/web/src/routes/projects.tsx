@@ -79,14 +79,11 @@ function Projects() {
         </div>
         <ul>
           {projects.map((project) => (
-            <li
-              key={project.id}
-              className="first:border-t first:border-[#e6e6e6]"
-            >
+            <li key={project.id} className="first:border-t border-card-border">
               <ContextMenu>
                 <ContextMenuTrigger>
                   <div
-                    className="bg-card hover:bg-secondary flex flex-col justify-between border-b border-[#e6e6e6] px-4 py-2 cursor-pointer"
+                    className="bg-card hover:bg-secondary flex flex-col justify-between border-b border-card-border px-4 py-2 cursor-pointer"
                     onMouseEnter={() =>
                       addItemToContext("project", project.id, project.name, {
                         path: project.path,

@@ -48,7 +48,6 @@ function Agents() {
   const {
     agents,
     baseAgents,
-    isLoading,
     loadAgents,
     loadBaseAgents,
     createAgent,
@@ -152,13 +151,10 @@ function Agents() {
         </div>
         <ul>
           {agents.map((agent) => (
-            <li
-              key={agent.id}
-              className="first:border-t first:border-[#e6e6e6]"
-            >
+            <li key={agent.id} className="first:border-t border-card-border">
               <ContextMenu>
                 <ContextMenuTrigger>
-                  <div className="bg-card hover:bg-secondary flex flex-col justify-between border-b border-[#e6e6e6] px-4 py-2 cursor-pointer">
+                  <div className="bg-card hover:bg-secondary flex flex-col justify-between border-b border-card-border px-4 py-2 cursor-pointer">
                     <div>
                       <h3>{agent.name}</h3>
                     </div>
