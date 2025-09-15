@@ -33,11 +33,11 @@ const data = {
       url: "/agents",
       icon: Bot,
     },
-    {
-      title: "MCP",
-      url: "/mcp",
-      icon: MCPIcon,
-    },
+    // {
+    //   title: "MCP",
+    //   url: "/mcp",
+    //   icon: MCPIcon,
+    // },
   ],
   navSecondary: [],
   projects: [],

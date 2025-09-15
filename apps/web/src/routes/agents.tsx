@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAgentStore } from "@/src/stores/agentStore";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Plus, Settings, Trash, Edit } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +21,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,7 +36,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { NewAgent, BaseAgent, Agent } from "@/src/types/agent";
+import { Separator } from "@/components/ui/separator";
+import type { NewAgent, Agent } from "@/src/types/agent";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/agents")({
@@ -54,20 +54,15 @@ function Agents() {
     createAgent,
     updateAgentData,
     deleteAgent,
-    updateBaseAgentApiKey,
   } = useAgentStore();
 
   // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
 
   // Form states
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [selectedBaseAgent, setSelectedBaseAgent] = useState<BaseAgent | null>(
-    null
-  );
   const [agentToDelete, setAgentToDelete] = useState<string | null>(null);
 
   // Form data
@@ -77,7 +72,6 @@ function Agents() {
     baseAgentId: "",
   });
   const [editAgentForm, setEditAgentForm] = useState<Partial<NewAgent>>({});
-  const [apiKeyForm, setApiKeyForm] = useState("");
 
   useEffect(() => {
     loadAgents();
@@ -118,18 +112,6 @@ function Agents() {
     }
   };
 
-  const handleUpdateApiKey = async () => {
-    if (!selectedBaseAgent) return;
-    try {
-      await updateBaseAgentApiKey(selectedBaseAgent.id, apiKeyForm);
-      setShowApiKeyDialog(false);
-      setSelectedBaseAgent(null);
-      setApiKeyForm("");
-    } catch (error) {
-      console.error("Failed to update API key:", error);
-    }
-  };
-
   const openEditDialog = (agent: Agent) => {
     setSelectedAgent(agent);
     setEditAgentForm({
@@ -145,118 +127,69 @@ function Agents() {
     setShowDeleteDialog(true);
   };
 
-  const openApiKeyDialog = (baseAgent: BaseAgent) => {
-    setSelectedBaseAgent(baseAgent);
-    setApiKeyForm(baseAgent.apiKey || "");
-    setShowApiKeyDialog(true);
-  };
-
-  if (isLoading) {
-    return <div>Loading agents...</div>;
-  }
-
   return (
-    <div className="p-6">
-      {/* Base Agents Section */}
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Base Agents</h2>
-        <p className="text-muted-foreground mb-4">
-          Foundation agents that provide core functionality. You can only update
-          API keys.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {baseAgents.map((baseAgent) => (
-            <Card key={baseAgent.id} className="relative">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {baseAgent.name}
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openApiKeyDialog(baseAgent)}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  {baseAgent.apiKey ? "API key configured" : "No API key set"}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+    <div>
+      <div className="flex justify-end p-2">
+        <Button
+          onClick={() => setShowCreateDialog(true)}
+          variant="outline"
+          className="p-0 h-[28px] text-[0.8rem]"
+          hotkey="c"
+        >
+          <Plus className="h-4 w-4" />
+          Create Agent
+        </Button>
+      </div>
 
-      {/* Custom Agents Section */}
-      <section>
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-xl font-semibold">Custom Agents</h2>
-            <p className="text-muted-foreground">
-              Your personalized agents with custom prompts and memories.
-            </p>
-          </div>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Agent
-          </Button>
-        </div>
+      <Separator />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex flex-col">
+        <div className="p-4 flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">Agents</h1>
+          <span className="text-muted-foreground">
+            Create custom agents with your own system prompts.
+          </span>
+        </div>
+        <ul>
           {agents.map((agent) => (
-            <Card key={agent.id} className="relative">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {agent.name}
-                </CardTitle>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => openEditDialog(agent)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+            <li
+              key={agent.id}
+              className="first:border-t first:border-[#e6e6e6]"
+            >
+              <ContextMenu>
+                <ContextMenuTrigger>
+                  <div className="bg-card hover:bg-secondary flex flex-col justify-between border-b border-[#e6e6e6] px-4 py-2 cursor-pointer">
+                    <div>
+                      <h3>{agent.name}</h3>
+                    </div>
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem onClick={() => openEditDialog(agent)}>
+                    Edit
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    variant="destructive"
                     onClick={() => openDeleteDialog(agent.id)}
                   >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="line-clamp-3">
-                  {agent.systemPrompt}
-                </CardDescription>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Base:{" "}
-                  {baseAgents.find((ba) => ba.id === agent.baseAgentId)?.name ||
-                    "Unknown"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Created: {new Date(agent.createdAt).toLocaleDateString()}
-                </p>
-              </CardContent>
-            </Card>
+                    Delete
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            </li>
           ))}
-        </div>
+        </ul>
+      </div>
 
-        {agents.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">
-              No custom agents created yet
-            </p>
-            <Button onClick={() => setShowCreateDialog(true)} size="lg">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Agent
-            </Button>
-          </div>
-        )}
-      </section>
+      {agents.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-gray-500 mb-4">No agents created yet</p>
+          <Button onClick={() => setShowCreateDialog(true)} size="lg">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Your First Agent
+          </Button>
+        </div>
+      )}
 
       {/* Create Agent Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -389,39 +322,6 @@ function Agents() {
               Cancel
             </Button>
             <Button onClick={handleEditAgent}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* API Key Dialog */}
-      <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update API Key</DialogTitle>
-            <DialogDescription>
-              Configure the API key for {selectedBaseAgent?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="apiKey">API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                value={apiKeyForm}
-                onChange={(e) => setApiKeyForm(e.target.value)}
-                placeholder="Enter API key"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowApiKeyDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateApiKey}>Update API Key</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
