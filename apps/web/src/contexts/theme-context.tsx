@@ -33,6 +33,7 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
+  // Manual theme change
   React.useEffect(() => {
     const root = window.document.documentElement;
 
@@ -45,30 +46,24 @@ export function ThemeProvider({
         : "light";
 
       root.classList.add(systemTheme);
-      return;
+
+      // Adding handler to automatically change theme when system theme changes
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+      const handleChange = () => {
+        const root = window.document.documentElement;
+        root.classList.remove("light", "dark");
+
+        const systemTheme = mediaQuery.matches ? "dark" : "light";
+        root.classList.add(systemTheme);
+      };
+
+      mediaQuery.addEventListener("change", handleChange);
+
+      return () => mediaQuery.removeEventListener("change", handleChange);
     }
 
     root.classList.add(theme);
-  }, [theme]);
-
-  React.useEffect(() => {
-    if (theme !== "system") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const handleChange = () => {
-      const root = window.document.documentElement;
-      root.classList.remove("light", "dark");
-
-      const systemTheme = mediaQuery.matches ? "dark" : "light";
-      root.classList.add(systemTheme);
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-
-    return () => mediaQuery.removeEventListener("change", handleChange);
   }, [theme]);
 
   const value = {

@@ -13,17 +13,18 @@ const RootLayout = () => (
         <div className="[--header-height:calc(--spacing(9))]">
           <SidebarProvider className="flex flex-col">
             <SiteHeader />
-            <div className="flex flex-1">
+            <div className="flex flex-1 overflow-hidden">
               <AppSidebar />
               <SidebarInset>
-                <Outlet />
+                <div className="rounded-lg border overflow-hidden flex-1 bg-background">
+                  <Outlet />
+                </div>
               </SidebarInset>
             </div>
           </SidebarProvider>
         </div>
       </CommandMenuProvider>
     </ThemeProvider>
-    <hr />
     <TanStackRouterDevtools />
   </>
 );

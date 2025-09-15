@@ -38,7 +38,7 @@ function Tasks() {
       <RuntimeProvider>
         <div className="flex w-full h-full">
           {/* Thread List Sidebar */}
-          <div className="w-1/3 min-w-[300px] border-r border-border bg-muted/10 flex flex-col h-full">
+          <div className="w-1/3 min-w-[300px] border-r border-border bg-[#E8E8E8] dark:bg-[#141414] flex flex-col h-full">
             <div className="p-4 border-b border-border flex-shrink-0">
               <h2 className="text-lg font-semibold">Tasks</h2>
             </div>

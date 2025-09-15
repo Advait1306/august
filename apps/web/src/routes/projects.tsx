@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useProjectStore } from "@/src/stores/projectStore";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { FolderIcon, Plus } from "lucide-react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/projects")({
 });
 
 function Projects() {
-  const { projects, isLoading, loadProjects, selectNewProject, deleteProject } =
+  const { projects, loadProjects, selectNewProject, deleteProject } =
     useProjectStore();
   const { addItemToContext, removeContextItem } = useCommandMenu();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -54,58 +54,61 @@ function Projects() {
     setDeleteDialogOpen(true);
   };
 
-  if (isLoading) {
-    return <div>Loading projects...</div>;
-  }
-
   return (
     <div>
       <div className="flex justify-end p-2">
         <Button
           onClick={handleAddProject}
           variant="outline"
-          className="p-0 h-[28px]"
+          className="p-0 h-[28px] text-[0.8rem]"
           hotkey="c"
         >
-          <Plus className="h-4 w-4" />
+          <FolderIcon className="h-4 w-4" />
+          Add Project
         </Button>
       </div>
 
       <Separator />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-        {projects.map((project) => (
-          <ContextMenu key={project.id}>
-            <ContextMenuTrigger>
-              <div
-                className="bg-card flex flex-col justify-between border rounded p-4 hover:shadow-lg transition-shadow cursor-pointer h-32"
-                onMouseEnter={() =>
-                  addItemToContext("project", project.id, project.name, {
-                    path: project.path,
-                    createdAt: project.createdAt,
-                  })
-                }
-                onMouseLeave={() => removeContextItem()}
-              >
-                <div>
-                  <h3 className="font-semibold">{project.name}</h3>
-                  <p className="text-gray-500 text-xs">{project.path}</p>
-                </div>
-                <p className="text-gray-400 text-xs mt-2">
-                  Created: {new Date(project.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <ContextMenuItem
-                variant="destructive"
-                onClick={() => openDeleteDialog(project.id)}
-              >
-                Delete
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-        ))}
+      <div className="flex flex-col">
+        <div className="p-4 flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+          <span className="text-muted-foreground">
+            Add a project to have an agent work on it.
+          </span>
+        </div>
+        <ul>
+          {projects.map((project) => (
+            <li key={project.id} className="first:border-t border-card-border">
+              <ContextMenu>
+                <ContextMenuTrigger>
+                  <div
+                    className="bg-card hover:bg-secondary flex flex-col justify-between border-b border-card-border px-4 py-2 cursor-pointer"
+                    onMouseEnter={() =>
+                      addItemToContext("project", project.id, project.name, {
+                        path: project.path,
+                        createdAt: project.createdAt,
+                      })
+                    }
+                    onMouseLeave={() => removeContextItem()}
+                  >
+                    <div>
+                      <h3>{project.name}</h3>
+                    </div>
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent>
+                  <ContextMenuItem
+                    variant="destructive"
+                    onClick={() => openDeleteDialog(project.id)}
+                  >
+                    Delete
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {projects.length === 0 && (
