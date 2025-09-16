@@ -7,9 +7,12 @@ import { SiteHeader } from "@/components/site-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
 import Guard from "../../components/guard";
+import { Toaster } from "@/components/ui/sonner";
 
 // Import your Publishable Key
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const SIGN_IN_URL = import.meta.env.VITE_CLERK_SIGN_IN_URL;
+const SIGN_UP_URL = import.meta.env.VITE_CLERK_SIGN_UP_URL;
 
 if (!PUBLISHABLE_KEY) {
   throw new Error("Add your Clerk Publishable Key to the .env file");
@@ -20,7 +23,11 @@ const RootLayout = () => {
     return (
       <>
         <ThemeProvider>
-          <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+          <ClerkProvider
+            publishableKey={PUBLISHABLE_KEY}
+            signInUrl={SIGN_IN_URL}
+            signUpUrl={SIGN_UP_URL}
+          >
             <SignedIn>
               <CommandMenuProvider>
                 <div className="[--header-height:calc(--spacing(9))]">
@@ -44,17 +51,23 @@ const RootLayout = () => {
           </ClerkProvider>
         </ThemeProvider>
         <TanStackRouterDevtools />
+        <Toaster />
       </>
     );
   } else {
     return (
       <>
         <ThemeProvider>
-          <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+          <ClerkProvider
+            publishableKey={PUBLISHABLE_KEY}
+            signInUrl={SIGN_IN_URL}
+            signUpUrl={SIGN_UP_URL}
+          >
             <Outlet />
           </ClerkProvider>
         </ThemeProvider>
         <TanStackRouterDevtools />
+        <Toaster />
       </>
     );
   }

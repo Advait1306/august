@@ -17,6 +17,7 @@ export function registerAuthIpcHandlers(): void {
 }
 
 export function handleAuthToken(token: string): void {
+  console.log('Sending auth ticket: ', token)
   // Send the token to the renderer process
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('auth:ticket-received', token)

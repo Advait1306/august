@@ -6,5 +6,11 @@ export const Route = createFileRoute("/sign-in/$")({
 });
 
 function Page() {
-  return <SignIn />;
+  console.log(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+  console.log(import.meta.env.VITE_CLERK_SIGN_IN_URL);
+  return (
+    <div className="h-screen w-screen flex flex-col gap-2 justify-center items-center">
+      <SignIn />
+    </div>
+  );
 }

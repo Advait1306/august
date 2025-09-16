@@ -1,6 +1,12 @@
 import { WebOnly } from "@/components/restrictor";
 import { Button } from "@/components/ui/button";
-import { RedirectToSignIn, SignedOut, SignOutButton } from "@clerk/clerk-react";
+import {
+  RedirectToSignIn,
+  SignedIn,
+  SignedOut,
+  SignOutButton,
+  useUser,
+} from "@clerk/clerk-react";
 import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/home")({
@@ -8,21 +14,31 @@ export const Route = createFileRoute("/home")({
 });
 
 function Home() {
+  const { user } = useUser();
+
   return (
     <WebOnly>
       <SignedOut>
         <RedirectToSignIn />
       </SignedOut>
-      <div className="h-screen w-full flex flex-col justify-center items-center">
-        <span className="w-[40%] min-w-[200px] max-w-[500px] text-center">
-          You shouldn't be here, but now that you are, tell me how you got here
-          by sending an email to advait@sixhuman.com
-        </span>
+      <SignedIn>
+        <div className="h-screen w-full flex flex-col gap-2 justify-center items-center">
+          <span className="w-[40%] min-w-[200px] max-w-[600px] text-center">
+            You shouldn't be here, but now that you are, let me tell you that
+            soon we'll be having agents that can run outside of your computer
+            that'll be managed here.
+          </span>
 
-        <Button>
-          <SignOutButton />
-        </Button>
-      </div>
+          <br />
+          <Button>
+            <SignOutButton />
+          </Button>
+
+          <span className="text-muted-foreground text-[14px]">
+            logged in as {user?.primaryEmailAddress?.emailAddress}
+          </span>
+        </div>
+      </SignedIn>
     </WebOnly>
   );
 }

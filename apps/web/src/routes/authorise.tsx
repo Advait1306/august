@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import {
   RedirectToSignIn,
+  SignedIn,
   SignedOut,
   useAuth,
   useUser,
@@ -14,6 +15,10 @@ export const Route = createFileRoute("/authorise")({
 function Page() {
   const { getToken } = useAuth();
   const { user } = useUser();
+  const { signOut } = useAuth();
+
+  console.log(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+
   const handleAuthorise = async () => {
     const authToken = await getToken();
     if (authToken) {
@@ -43,11 +48,27 @@ function Page() {
       <SignedOut>
         <RedirectToSignIn />
       </SignedOut>
-      <span>
-        Do you want to authorise your local application with{" "}
-        {user?.primaryEmailAddress?.emailAddress}?
-      </span>
-      <Button onClick={handleAuthorise}>Authorise</Button>
+      <SignedIn>
+        <div className="w-[30%] h-[40%] min-w-[400px] max-w-[500px] rounded-xl flex flex-col bg-secondary overflow-hidden">
+          <div className="h-[50%] w-full bg-amber-600"></div>
+          <div className="h-[50%] w-full flex flex-col justify-center gap-4 px-12 text-center">
+            <span>
+              Do you want to authorise Jupiter with {""}
+              {user?.primaryEmailAddress?.emailAddress}?
+            </span>
+            <div className="flex flex-col gap-2">
+              <Button onClick={handleAuthorise}>Authorise</Button>
+            </div>
+          </div>
+        </div>
+        <Button
+          variant={"link"}
+          onClick={() => signOut()}
+          className="text-muted-foreground text-[12px]"
+        >
+          Login with a different account
+        </Button>
+      </SignedIn>
     </div>
   );
 }
