@@ -17,8 +17,6 @@ function Page() {
   const { user } = useUser();
   const { signOut } = useAuth();
 
-  console.log(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-
   const handleAuthorise = async () => {
     const authToken = await getToken();
     if (authToken) {

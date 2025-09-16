@@ -8,6 +8,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
 import Guard from "../../components/guard";
 import { Toaster } from "@/components/ui/sonner";
+import { useEffect } from "react";
+import { getSerwist } from "virtual:serwist";
 
 // Import your Publishable Key
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -19,6 +21,19 @@ if (!PUBLISHABLE_KEY) {
 }
 
 const RootLayout = () => {
+  useEffect(() => {
+    const loadSerwist = async () => {
+      if ("serviceWorker" in navigator) {
+        const serwist = await getSerwist();
+        serwist?.addEventListener("installed", () => {
+          console.log("Serwist installed!");
+        });
+        void serwist?.register();
+      }
+    };
+    loadSerwist();
+  }, []);
+
   if (window.electron) {
     return (
       <>
