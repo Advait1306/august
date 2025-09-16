@@ -7,6 +7,9 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["dist/", "out/"]
     },
+    "build:mac": {
+      "outputs": ["dist/"]
+    },
     "shell#build": {
       "dependsOn": ["web#build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],

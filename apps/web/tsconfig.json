@@ -27,7 +27,7 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["src", "components/ui/kibo-ui"],
+  "include": ["src", "components", "src/types"],
   "exclude": ["src/sw.ts"],
   "references": [
     { "path": "./tsconfig.node.json" },
