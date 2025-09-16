@@ -8,7 +8,6 @@ import {
 } from '@assistant-ui/react'
 import AgentInterface from '../agent-interface'
 import { query } from '@anthropic-ai/claude-code'
-
 import assert from 'node:assert'
 
 export class ClaudeCodeAgent implements AgentInterface {
@@ -67,6 +66,7 @@ export class ClaudeCodeAgent implements AgentInterface {
           await receivedResult
         })(),
         options: {
+          pathToClaudeCodeExecutable: '/Users/advait/.nvm/versions/node/v22.15.0/bin/claude',
           resume: sessionId,
           cwd: project.path,
           appendSystemPrompt: systemPrompt,
