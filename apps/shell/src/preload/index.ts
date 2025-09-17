@@ -34,11 +34,10 @@ const api = {
     }
   },
   auth: {
-    getToken: () => electronAPI.ipcRenderer.invoke('auth:get-token'),
     openLogin: () => electronAPI.ipcRenderer.invoke('auth:open-login'),
-    onTokenReceived: (callback: (token: string) => void) => {
-      console.log('auth callback set')
-      electronAPI.ipcRenderer.on('auth:token-received', (_, token) => callback(token))
+    onTokenReceived: (callback: (ticket: string) => void) => {
+      console.log('token listener added')
+      electronAPI.ipcRenderer.on('auth:ticket-received', (_, ticket) => callback(ticket))
       return () => electronAPI.ipcRenderer.removeAllListeners('auth:token-received')
     }
   },

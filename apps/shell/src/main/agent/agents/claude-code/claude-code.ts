@@ -6,10 +6,11 @@ import {
   ThreadUserMessage,
   ToolCallMessagePart
 } from '@assistant-ui/react'
-import AgentInterface from '../agent-interface'
+import AgentInterface from '../../agent-interface'
 import { query } from '@anthropic-ai/claude-code'
-
 import assert from 'node:assert'
+import log from 'electron-log/main'
+import { findClaudeBinary } from './find-claude-code'
 
 export class ClaudeCodeAgent implements AgentInterface {
   async *run(
@@ -52,64 +53,77 @@ export class ClaudeCodeAgent implements AgentInterface {
       done = resolve
     })
 
-    try {
-      for await (const data of query({
-        prompt: (async function* () {
-          yield {
-            type: 'user' as const,
-            message: {
-              role: 'user' as const,
-              content: (lastMessage.content[0] as TextMessagePart).text
-            },
-            parent_tool_use_id: null,
-            session_id: sessionId || ''
-          }
-          await receivedResult
-        })(),
-        options: {
-          resume: sessionId,
-          cwd: project.path,
-          appendSystemPrompt: systemPrompt,
-          canUseTool: async (toolName, input) => {
-            if (
-              await permissionRequest({
-                toolName,
-                input,
-                threadId: runOptions.threadId
-              })
-            ) {
-              return { behavior: 'allow', updatedInput: input }
-            } else {
-              return { behavior: 'deny', message: 'Permission denied' }
-            }
-          }
-        }
-      })) {
-        if (data.type === 'system') {
-          continue
-        }
+    log.info('Project: ', project.path)
+    // Find the claude executable path and environment
 
-        if (data.type === 'assistant' || data.type === 'user') {
-          output.push(...data.message.content)
-          yield {
-            content: this.convertToGenericContent(output),
-            metadata: {
-              custom: {
-                sessionId: data.session_id,
-                agent: 'claude-code',
-                project
+    try {
+      const claudeInfo = findClaudeBinary()
+      log.info('Using Claude executable:', claudeInfo.path)
+
+      try {
+        for await (const data of query({
+          prompt: (async function* () {
+            yield {
+              type: 'user' as const,
+              message: {
+                role: 'user' as const,
+                content: (lastMessage.content[0] as TextMessagePart).text
+              },
+              parent_tool_use_id: null,
+              session_id: sessionId || ''
+            }
+            await receivedResult
+          })(),
+          options: {
+            pathToClaudeCodeExecutable: claudeInfo.path,
+            env: claudeInfo.env,
+            resume: sessionId,
+            cwd: project.path,
+            appendSystemPrompt: systemPrompt,
+            canUseTool: async (toolName, input) => {
+              if (
+                await permissionRequest({
+                  toolName,
+                  input,
+                  threadId: runOptions.threadId
+                })
+              ) {
+                return { behavior: 'allow', updatedInput: input }
+              } else {
+                return { behavior: 'deny', message: 'Permission denied' }
               }
             }
           }
-        }
+        })) {
+          if (data.type === 'system') {
+            continue
+          }
 
-        if (data.type === 'result') {
-          done()
-          return
+          if (data.type === 'assistant' || data.type === 'user') {
+            output.push(...data.message.content)
+            yield {
+              content: this.convertToGenericContent(output),
+              metadata: {
+                custom: {
+                  sessionId: data.session_id,
+                  agent: 'claude-code',
+                  project
+                }
+              }
+            }
+          }
+
+          if (data.type === 'result') {
+            done()
+            return
+          }
         }
+      } catch (error) {
+        log.error('Error in ClaudeCodeAgent:', error)
+        console.error('Error in ClaudeCodeAgent:', error)
       }
     } catch (error) {
-      console.error('Error in ClaudeCodeAgent:', error)
+      log.error('Error executing "which claude":', error)
     }
   }
 

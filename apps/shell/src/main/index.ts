@@ -50,14 +50,6 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  // if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-  //   mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-  // } else {
-  //   mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-  // }
-
   mainWindow.loadURL('http://localhost:3000')
 }
 
@@ -67,11 +59,11 @@ function handleDeepLink(url: string): void {
     const parsedUrl = new URL(url)
     console.log('protocol: ', parsedUrl.protocol)
     console.log('parsedURL ', parsedUrl)
-    console.log('token: ', parsedUrl.searchParams.get('token'))
+    console.log('ticket: ', parsedUrl.searchParams.get('ticket'))
     if (parsedUrl.protocol === 'jupiter:') {
-      const token = parsedUrl.searchParams.get('token')
-      if (token) {
-        handleAuthToken(token)
+      const ticket = parsedUrl.searchParams.get('ticket')
+      if (ticket) {
+        handleAuthToken(ticket)
         // Focus the main window if it exists
         if (mainWindow) {
           if (mainWindow.isMinimized()) mainWindow.restore()

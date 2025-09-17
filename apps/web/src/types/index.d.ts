@@ -22,7 +22,6 @@ declare global {
         archiveThread: (id: string) => Promise<void>;
       };
       auth: {
-        getToken: () => Promise<string | null>;
         openLogin: () => Promise<boolean>;
         onTokenReceived: (callback: (token: string) => void) => () => void;
       };

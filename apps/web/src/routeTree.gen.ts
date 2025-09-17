@@ -12,8 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as HomeRouteImport } from './routes/home'
+import { Route as AuthoriseRouteImport } from './routes/authorise'
 import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
+import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
 
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
@@ -30,6 +34,16 @@ const McpRoute = McpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthoriseRoute = AuthoriseRouteImport.update({
+  id: '/authorise',
+  path: '/authorise',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AgentsRoute = AgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
@@ -40,43 +54,97 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignUpSplatRoute = SignUpSplatRouteImport.update({
+  id: '/sign-up/$',
+  path: '/sign-up/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInSplatRoute = SignInSplatRouteImport.update({
+  id: '/sign-in/$',
+  path: '/sign-in/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
+  '/authorise': typeof AuthoriseRoute
+  '/home': typeof HomeRoute
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
+  '/authorise': typeof AuthoriseRoute
+  '/home': typeof HomeRoute
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agents': typeof AgentsRoute
+  '/authorise': typeof AuthoriseRoute
+  '/home': typeof HomeRoute
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
+  '/sign-in/$': typeof SignInSplatRoute
+  '/sign-up/$': typeof SignUpSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agents' | '/mcp' | '/projects' | '/tasks'
+  fullPaths:
+    | '/'
+    | '/agents'
+    | '/authorise'
+    | '/home'
+    | '/mcp'
+    | '/projects'
+    | '/tasks'
+    | '/sign-in/$'
+    | '/sign-up/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agents' | '/mcp' | '/projects' | '/tasks'
-  id: '__root__' | '/' | '/agents' | '/mcp' | '/projects' | '/tasks'
+  to:
+    | '/'
+    | '/agents'
+    | '/authorise'
+    | '/home'
+    | '/mcp'
+    | '/projects'
+    | '/tasks'
+    | '/sign-in/$'
+    | '/sign-up/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/agents'
+    | '/authorise'
+    | '/home'
+    | '/mcp'
+    | '/projects'
+    | '/tasks'
+    | '/sign-in/$'
+    | '/sign-up/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgentsRoute: typeof AgentsRoute
+  AuthoriseRoute: typeof AuthoriseRoute
+  HomeRoute: typeof HomeRoute
   McpRoute: typeof McpRoute
   ProjectsRoute: typeof ProjectsRoute
   TasksRoute: typeof TasksRoute
+  SignInSplatRoute: typeof SignInSplatRoute
+  SignUpSplatRoute: typeof SignUpSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -102,6 +170,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/authorise': {
+      id: '/authorise'
+      path: '/authorise'
+      fullPath: '/authorise'
+      preLoaderRoute: typeof AuthoriseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/agents': {
       id: '/agents'
       path: '/agents'
@@ -116,15 +198,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sign-up/$': {
+      id: '/sign-up/$'
+      path: '/sign-up/$'
+      fullPath: '/sign-up/$'
+      preLoaderRoute: typeof SignUpSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in/$': {
+      id: '/sign-in/$'
+      path: '/sign-in/$'
+      fullPath: '/sign-in/$'
+      preLoaderRoute: typeof SignInSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgentsRoute: AgentsRoute,
+  AuthoriseRoute: AuthoriseRoute,
+  HomeRoute: HomeRoute,
   McpRoute: McpRoute,
   ProjectsRoute: ProjectsRoute,
   TasksRoute: TasksRoute,
+  SignInSplatRoute: SignInSplatRoute,
+  SignUpSplatRoute: SignUpSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
