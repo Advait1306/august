@@ -1,0 +1,33 @@
+{
+  "name": "@jupiter/shared",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "electron": "^38.0.0",
+    "@jupiter/typescript-config": "*",
+    "typescript": "latest"
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "exports": {
+    "./agent-request-permission-over-ipc": {
+      "types": "./utils/agent-request-permission-over-ipc.tsx",
+      "default": "./dist/utils/agent-request-permission-over-ipc.js"
+    },
+    "./async-generator-over-ipc-sender": {
+      "types": "./utils/async-generator-over-ipc-sender.tsx",
+      "default": "./dist/utils/async-generator-over-ipc-sender.js"
+    },
+    "./async-generator-over-ipc-consumer": {
+      "types": "./utils/async-generator-over-ipc-consumer.tsx",
+      "default": "./dist/utils/async-generator-over-ipc-consumer.js"
+    },
+    "./types": {
+      "types": "./src/types.ts",
+      "default": "./dist/types.js"
+    }
+  }
+}

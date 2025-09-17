@@ -21,20 +21,27 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
+    "@anthropic-ai/claude-code": "1.0.115",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@jupiter/shared": "*",
+    "better-sqlite3": "^12.2.0",
+    "drizzle-orm": "^0.44.5",
+    "electron-log": "^5.4.3",
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.16.5",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.7.0",
+    "drizzle-kit": "^0.31.4",
     "electron": "37.2.3",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "26.0.20",
     "electron-vite": "^4.0.0",
     "eslint": "^9.31.0",
     "eslint-plugin-react": "^7.37.5",
