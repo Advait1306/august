@@ -325,26 +325,33 @@ export function createEnvironmentForPath(claudePath: string): NodeJS.ProcessEnv 
 
   log.info('Creating environment for Claude path:', claudePath)
 
-  // If this is an NVM installation, set up the environment properly
-  if (claudePath.includes('/.nvm/versions/node/')) {
-    const nodeVersionMatch = claudePath.match(/\.nvm\/versions\/node\/([^/]+)/)
-    if (nodeVersionMatch) {
-      const nodeVersion = nodeVersionMatch[1]
-      const nodeBinDir = join(homedir(), '.nvm', 'versions', 'node', nodeVersion, 'bin')
+  // If this is a Node.js installation, extract the bin directory from the claude path
+  const nodeBinMatch = claudePath.match(/^(.+\/bin)\/claude$/)
+  if (nodeBinMatch) {
+    const nodeBinDir = nodeBinMatch[1]
 
-      log.info(`Setting up NVM environment for node ${nodeVersion}`)
-      log.info(`Node bin directory: ${nodeBinDir}`)
+    // Verify this looks like a Node.js bin directory by checking if node exists
+    const nodeExecutable = join(nodeBinDir, 'node')
+    if (existsSync(nodeExecutable)) {
+      log.info(`Setting up Node.js environment for bin directory: ${nodeBinDir}`)
 
       // Ensure the Node.js bin directory is first in PATH
       const currentPath = env.PATH || ''
-      env.PATH = `${nodeBinDir}:${currentPath}`
+      if (!currentPath.split(':').includes(nodeBinDir)) {
+        env.PATH = `${nodeBinDir}:${currentPath}`
+        log.info('Updated PATH:', env.PATH)
+      }
 
-      // Set NVM-related environment variables
-      env.NVM_DIR = join(homedir(), '.nvm')
-      env.NVM_BIN = nodeBinDir
-      env.NVM_PATH = nodeBinDir
-
-      log.info('Updated PATH:', env.PATH)
+      // If this is an NVM installation, also set NVM-related environment variables
+      if (claudePath.includes('/.nvm/versions/node/')) {
+        const nodeVersionMatch = claudePath.match(/\.nvm\/versions\/node\/([^/]+)/)
+        if (nodeVersionMatch) {
+          env.NVM_DIR = join(homedir(), '.nvm')
+          env.NVM_BIN = nodeBinDir
+          env.NVM_PATH = nodeBinDir
+          log.info(`Also setting NVM environment variables for node ${nodeVersionMatch[1]}`)
+        }
+      }
     }
   }
 
