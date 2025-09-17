@@ -1,6 +1,6 @@
 import { ChatModelRunOptions } from '@assistant-ui/react'
 import AgentInterface from './agent-interface'
-import { ClaudeCodeAgent } from './agents/claude-code'
+import { ClaudeCodeAgent } from './agents/claude-code/claude-code'
 import { CodexAgent } from './agents/codex'
 import { OpenCodeAgent } from './agents/opencode'
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
