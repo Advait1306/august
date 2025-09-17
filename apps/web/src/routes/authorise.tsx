@@ -21,12 +21,15 @@ function Page() {
     const authToken = await getToken();
     if (authToken) {
       try {
-        const response = await fetch("http://localhost:8080/ticket", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
+        const response = await fetch(
+          `${import.meta.env.VITE_SERVER_URL}/ticket`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
 
         if (response.ok) {
           console.log("Authorization successful");
