@@ -20,7 +20,6 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Square,
-  ChevronsUpDown,
 } from "lucide-react";
 
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
@@ -39,11 +38,6 @@ import {
 import { useProjectStore } from "@/src/stores/projectStore";
 import { useAgentStore } from "@/src/stores/agentStore";
 import { usePermission } from "@/src/contexts/permission-provider";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "../ui/collapsible";
 
 interface ThreadProps {
   composerInputRef?: React.RefObject<HTMLTextAreaElement | null>;

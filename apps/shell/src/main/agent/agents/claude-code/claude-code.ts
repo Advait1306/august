@@ -54,6 +54,7 @@ export class ClaudeCodeAgent implements AgentInterface {
     })
 
     log.info('Project: ', project.path)
+    log.info('Session ID: ', sessionId)
     // Find the claude executable path and environment
 
     try {
@@ -75,8 +76,8 @@ export class ClaudeCodeAgent implements AgentInterface {
             await receivedResult
           })(),
           options: {
-            pathToClaudeCodeExecutable: claudeInfo.path,
-            env: claudeInfo.env,
+            // pathToClaudeCodeExecutable: claudeInfo.path,
+            // env: claudeInfo.env,
             resume: sessionId,
             cwd: project.path,
             appendSystemPrompt: systemPrompt,
