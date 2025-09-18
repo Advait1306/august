@@ -20,6 +20,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Square,
+  ChevronsUpDown,
 } from "lucide-react";
 
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
@@ -38,6 +39,11 @@ import {
 import { useProjectStore } from "@/src/stores/projectStore";
 import { useAgentStore } from "@/src/stores/agentStore";
 import { usePermission } from "@/src/contexts/permission-provider";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
 
 interface ThreadProps {
   composerInputRef?: React.RefObject<HTMLTextAreaElement | null>;
@@ -139,9 +145,34 @@ const Composer: FC<ComposerProps> = ({
   preselectedProjectId,
   preselectedAgent,
 }) => {
+  const id = useThreadListItem().id;
+  const permission = usePermission(id);
+
   return (
     <div className="bg-background relative mx-auto flex w-full max-w-[var(--thread-max-width)] flex-col gap-4 px-[var(--thread-padding-x)] pb-4 md:pb-6">
       <ThreadScrollToBottom />
+      {permission && (
+        <div className="bg-muted border rounded-2xl p-4">
+          <div className="flex flex-row justify-between">
+            <div className="flex flex-col">
+              <span className="uppercase text-[12px] font-semibold">
+                Permission
+              </span>
+              <span>{permission.toolName}</span>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={permission.alwaysAllow}>
+                Allow for this thread
+              </Button>
+              <Button onClick={permission.grant}>Allow</Button>
+              <Button onClick={permission.deny} variant={"destructive"}>
+                Deny
+              </Button>
+            </div>
+          </div>
+          {/* TODO: Add permission details */}
+        </div>
+      )}
       <div className="p-[4px] border rounded-2xl focus-within:outline-primary focus-within:outline-1">
         <ComposerPrimitive.Root className="relative flex w-full flex-col rounded-[12px] overflow-hidden border">
           <ComposerPrimitive.Input
@@ -182,7 +213,6 @@ const ComposerAction: FC<ComposerActionProps> = ({
   );
   const { projects, isLoading, loadProjects } = useProjectStore();
   const { agents, loadAgents } = useAgentStore();
-  const permission = usePermission(id);
 
   useEffect(() => {
     loadProjects();
@@ -200,100 +230,89 @@ const ComposerAction: FC<ComposerActionProps> = ({
   }, [id, selectedAgent, selectedProjectId, threadComposer, projects]);
 
   return (
-    <>
-      {permission && (
-        <div>
-          <p>Permission required</p>
-          <p>{permission.toolName}</p>
-          {/* <p>{JSON.stringify(permission.input)}</p> */}
-          <Button onClick={permission.grant}>Grant</Button>
-          <Button onClick={permission.deny}>Deny</Button>
-        </div>
-      )}
-      <div className="bg-muted relative flex items-center justify-between p-2">
-        <ThreadPrimitive.If running={false}>
-          <ThreadPrimitive.If empty={true}>
-            <div className="flex gap-2">
-              <Select
-                disabled={thread.messages.length > 0}
-                value={selectedAgent || undefined}
-                onValueChange={(value) => {
-                  setSelectedAgent(value);
-                }}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Agent" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agents.map((agent) => (
-                    <SelectItem key={agent.id} value={agent.id}>
-                      {agent.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                disabled={thread.messages.length > 0 || isLoading}
-                value={selectedProjectId || undefined}
-                onValueChange={(value) => {
-                  setSelectedProjectId(value);
-                }}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue
-                    placeholder={isLoading ? "Loading..." : "Project"}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </ThreadPrimitive.If>
-          {/* Dummy component to force the layout to be correct */}
-          <ThreadPrimitive.If empty={false}>
-            <div />
-          </ThreadPrimitive.If>
-          <ComposerPrimitive.Send
-            asChild
-            disabled={
-              (!selectedAgent || !selectedProjectId) &&
-              thread.messages.length === 0
-            }
-          >
-            <Button
-              type="submit"
-              variant="default"
-              className="hover:bg-primary/75 size-8 rounded-full"
-              aria-label="Send message"
+    <div className="bg-muted relative flex items-center justify-between p-2">
+      <ThreadPrimitive.If running={false}>
+        <ThreadPrimitive.If empty={true}>
+          <div className="flex gap-2">
+            <Select
+              disabled={thread.messages.length > 0}
+              value={selectedAgent || undefined}
+              onValueChange={(value) => {
+                setSelectedAgent(value);
+              }}
             >
-              <ArrowUpIcon className="size-5" />
-            </Button>
-          </ComposerPrimitive.Send>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Agent" />
+              </SelectTrigger>
+              <SelectContent>
+                {agents.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              disabled={thread.messages.length > 0 || isLoading}
+              value={selectedProjectId || undefined}
+              onValueChange={(value) => {
+                setSelectedProjectId(value);
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue
+                  placeholder={isLoading ? "Loading..." : "Project"}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </ThreadPrimitive.If>
-
         {/* Dummy component to force the layout to be correct */}
-        <ThreadPrimitive.If running>
+        <ThreadPrimitive.If empty={false}>
           <div />
         </ThreadPrimitive.If>
-        <ThreadPrimitive.If running>
-          <ComposerPrimitive.Cancel asChild>
-            <Button
-              type="button"
-              variant="default"
-              className="dark:border-muted-foreground/90 border-muted-foreground/60 hover:bg-primary/75 size-8 rounded-full border"
-              aria-label="Stop generating"
-            >
-              <Square className="size-3.5 fill-white dark:size-4 dark:fill-black" />
-            </Button>
-          </ComposerPrimitive.Cancel>
-        </ThreadPrimitive.If>
-      </div>
-    </>
+        <ComposerPrimitive.Send
+          asChild
+          disabled={
+            (!selectedAgent || !selectedProjectId) &&
+            thread.messages.length === 0
+          }
+        >
+          <Button
+            type="submit"
+            variant="default"
+            className="hover:bg-primary/75 size-8 rounded-full"
+            aria-label="Send message"
+          >
+            <ArrowUpIcon className="size-5" />
+          </Button>
+        </ComposerPrimitive.Send>
+      </ThreadPrimitive.If>
+
+      {/* Dummy component to force the layout to be correct */}
+      <ThreadPrimitive.If running>
+        <div />
+      </ThreadPrimitive.If>
+      <ThreadPrimitive.If running>
+        <ComposerPrimitive.Cancel asChild>
+          <Button
+            type="button"
+            variant="default"
+            className="dark:border-muted-foreground/90 border-muted-foreground/60 hover:bg-primary/75 size-8 rounded-full border"
+            aria-label="Stop generating"
+          >
+            <Square className="size-3.5 fill-white dark:size-4 dark:fill-black" />
+          </Button>
+        </ComposerPrimitive.Cancel>
+      </ThreadPrimitive.If>
+    </div>
   );
 };
 
