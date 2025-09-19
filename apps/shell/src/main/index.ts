@@ -50,8 +50,8 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // mainWindow.loadURL('https://jupiter.sixhuman.com')
-  mainWindow.loadURL('http://localhost:3000')
+  mainWindow.loadURL('https://jupiter.sixhuman.com')
+  // mainWindow.loadURL('http://localhost:3000')
 }
 
 // Handle deep links
