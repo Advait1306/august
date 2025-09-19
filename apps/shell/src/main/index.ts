@@ -49,9 +49,8 @@ function createWindow(): void {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
-
-  mainWindow.loadURL('https://jupiter.sixhuman.com')
-  // mainWindow.loadURL('http://localhost:3000')
+  // @ts-ignore VITE_WEB_URL is defined in the .env file
+  mainWindow.loadURL(import.meta.env.VITE_WEB_URL)
 }
 
 // Handle deep links
