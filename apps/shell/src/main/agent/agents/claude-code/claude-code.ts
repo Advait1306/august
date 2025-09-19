@@ -28,7 +28,7 @@ export class ClaudeCodeAgent implements AgentInterface {
     systemPrompt?: string
   ): AsyncGenerator<ChatModelRunResult, void> {
     // Claude code doesn't take old messages, it takes a session id that's generated and stored in all assistant messages
-    const sessionId = runOptions.messages.find((m) => m.role === 'assistant')?.metadata?.custom
+    const sessionId = runOptions.messages.findLast((m) => m.role === 'assistant')?.metadata?.custom
       ?.sessionId as string | undefined
 
     const project = (runOptions.runConfig.custom?.project ??
@@ -52,9 +52,6 @@ export class ClaudeCodeAgent implements AgentInterface {
     const receivedResult = new Promise((resolve) => {
       done = resolve
     })
-
-    log.info('Project: ', project.path)
-    // Find the claude executable path and environment
 
     try {
       const claudeInfo = findClaudeBinary()

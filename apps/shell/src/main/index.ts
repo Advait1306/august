@@ -51,6 +51,7 @@ function createWindow(): void {
   })
 
   mainWindow.loadURL('https://jupiter.sixhuman.com')
+  // mainWindow.loadURL('http://localhost:3000')
 }
 
 // Handle deep links
