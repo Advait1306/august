@@ -42,7 +42,10 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
-    mainWindow!.webContents.openDevTools()
+
+    if (!import.meta.env.PROD) {
+      mainWindow!.webContents.openDevTools()
+    }
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

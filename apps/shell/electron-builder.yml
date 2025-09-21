@@ -1,7 +1,7 @@
 appId: com.sixhuman.jupiter
-productName: shell
+productName: Jupiter
 directories:
-  buildResources: build
+  buildResources: build-resources
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -9,31 +9,36 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - "!**/@anthropic-ai/claude-code/vendor/claude-code-jetbrains-plugin/**"
 asarUnpack:
   - resources/**
 win:
-  executableName: shell
+  executableName: Jupiter
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
-  entitlementsInherit: build/entitlements.mac.plist
+  entitlements: build-resources/entitlements.mac.plist
+  entitlementsInherit: build-resources/entitlements.mac.plist
   extendInfo:
     - NSCameraUsageDescription: Application requests access to the device's camera.
     - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+  notarize: true
+  hardenedRuntime: true
+  timestamp: http://timestamp.apple.com/ts01
 dmg:
   artifactName: ${name}-${version}.${ext}
+  sign: false
 linux:
   target:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
+  maintainer: sixhuman.com
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
@@ -41,3 +46,4 @@ npmRebuild: false
 publish:
   provider: generic
   url: https://example.com/auto-updates
+
