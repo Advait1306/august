@@ -9,6 +9,7 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - "!**/@anthropic-ai/claude-code/vendor/claude-code-jetbrains-plugin/**"
 asarUnpack:
   - resources/**
 win:
@@ -28,6 +29,7 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: true
   hardenedRuntime: true
+  timestamp: http://timestamp.apple.com/ts01
 dmg:
   artifactName: ${name}-${version}.${ext}
   sign: false
@@ -36,7 +38,7 @@ linux:
     - AppImage
     - snap
     - deb
-  maintainer: electronjs.org
+  maintainer: sixhuman.com
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
@@ -44,4 +46,4 @@ npmRebuild: false
 publish:
   provider: generic
   url: https://example.com/auto-updates
-afterSign: build-resources/notorize.js
+
