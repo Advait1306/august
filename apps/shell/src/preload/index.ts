@@ -41,6 +41,11 @@ const api = {
       return () => electronAPI.ipcRenderer.removeAllListeners('auth:token-received')
     }
   },
+  autoUpdater: {
+    checkForUpdates: () => electronAPI.ipcRenderer.invoke('auto-updater:check-for-updates'),
+    quitAndInstall: () => electronAPI.ipcRenderer.invoke('auto-updater:quit-and-install'),
+    getUpdateInfo: () => electronAPI.ipcRenderer.invoke('auto-updater:get-update-info')
+  },
   agent: agent
 }
 

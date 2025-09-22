@@ -18,7 +18,11 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "node scripts/build-and-notorize.js",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "publish": "node scripts/release.js",
+    "publish:mac": "npm run build && electron-builder --mac -p always",
+    "publish:win": "npm run build && electron-builder --win -p always",
+    "publish:linux": "npm run build && electron-builder --linux -p always"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "1.0.115",

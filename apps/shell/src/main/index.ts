@@ -5,6 +5,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { AgentAdapterMain } from './agent/agent-adapter-main'
 import { setMainWindow, handleAuthToken } from './ipc/auth'
+import { autoUpdaterService } from './services/auto-updater-service'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -39,6 +40,9 @@ function createWindow(): void {
 
   // Set the main window reference for auth IPC handlers
   setMainWindow(mainWindow)
+
+  // Set the main window reference for auto-updater service
+  autoUpdaterService.setMainWindow(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
@@ -110,6 +114,7 @@ app.whenReady().then(async () => {
     const { registerMessageIpcHandlers } = await import('./ipc/messages')
     const { registerAgentIpcHandlers } = await import('./ipc/agents')
     const { registerAuthIpcHandlers } = await import('./ipc/auth')
+    const { registerAutoUpdaterIpcHandlers } = await import('./ipc/auto-updater')
 
     initializeDatabase()
 
@@ -121,7 +126,11 @@ app.whenReady().then(async () => {
     registerMessageIpcHandlers()
     registerAgentIpcHandlers()
     registerAuthIpcHandlers()
+    registerAutoUpdaterIpcHandlers()
     AgentAdapterMain.getInstance()
+
+    // Initialize auto-updater and start checking for updates
+    await autoUpdaterService.checkForUpdates()
   } catch (error) {
     console.error('Failed to initialize database or IPC handlers:', error)
     app.quit()
@@ -168,6 +177,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  // Clean up auto-updater service
+  autoUpdaterService.destroy()
 })
 
 // In this file you can include the rest of your app's specific main process
