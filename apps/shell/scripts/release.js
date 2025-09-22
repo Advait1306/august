@@ -59,6 +59,9 @@ function publishBuild() {
     )
   }
 
+  // TODO: Fix environment variables
+  execCommand('npm run build')
+
   // Determine platform and run appropriate publish command
   const platform = process.platform
 
