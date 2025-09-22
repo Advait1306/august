@@ -64,11 +64,7 @@ function publishBuild() {
 
   log(`Publishing for platform: ${platform}`)
   if (platform === 'darwin') {
-    execCommand('npm run publish:mac', {
-      env: {
-        GITHUB_RELEASE_TOKEN: process.env.GITHUB_RELEASE_TOKEN
-      }
-    })
+    execCommand('npm run publish:mac')
   } else if (platform === 'win32') {
     execCommand('npm run publish:win')
   } else if (platform === 'linux') {
@@ -95,13 +91,13 @@ async function main() {
     log('Starting release process...')
 
     // Check if we're in a clean git state
-    try {
-      execCommand('git diff --exit-code', { stdio: 'pipe' })
-      execCommand('git diff --cached --exit-code', { stdio: 'pipe' })
-    } catch {
-      error('Working directory is not clean. Please commit or stash your changes.')
-      process.exit(1)
-    }
+    // try {
+    //   execCommand('git diff --exit-code', { stdio: 'pipe' })
+    //   execCommand('git diff --cached --exit-code', { stdio: 'pipe' })
+    // } catch {
+    //   error('Working directory is not clean. Please commit or stash your changes.')
+    //   process.exit(1)
+    // }
 
     let version
     if (!skipBump) {

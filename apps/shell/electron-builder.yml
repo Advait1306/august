@@ -31,7 +31,7 @@ mac:
   hardenedRuntime: true
   timestamp: http://timestamp.apple.com/ts01
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}.${ext}
   sign: false
 linux:
   target:

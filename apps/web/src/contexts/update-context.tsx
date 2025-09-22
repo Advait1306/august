@@ -70,6 +70,7 @@ export function UpdateProvider({ children }: UpdateProviderProps) {
     const removeCheckingListener = window.electron.ipcRenderer.on(
       "auto-updater:update-checking",
       () => {
+        console.log("checking");
         setState("checking");
         setError(null);
       }
@@ -80,6 +81,7 @@ export function UpdateProvider({ children }: UpdateProviderProps) {
     const removeAvailableListener = window.electron.ipcRenderer.on(
       "auto-updater:update-available",
       (_, info: UpdateInfo) => {
+        console.log("available");
         setState("available");
         setUpdateInfo(info);
         setError(null);
@@ -91,6 +93,7 @@ export function UpdateProvider({ children }: UpdateProviderProps) {
     const removeNotAvailableListener = window.electron.ipcRenderer.on(
       "auto-updater:update-not-available",
       () => {
+        console.log("not-available");
         setState("not-available");
         setError(null);
       }
@@ -101,6 +104,7 @@ export function UpdateProvider({ children }: UpdateProviderProps) {
     const removeProgressListener = window.electron.ipcRenderer.on(
       "auto-updater:update-download-progress",
       (_, progressData: UpdateProgress) => {
+        console.log("downloading");
         setState("downloading");
         setProgress(progressData);
         setError(null);
@@ -112,6 +116,7 @@ export function UpdateProvider({ children }: UpdateProviderProps) {
     const removeDownloadedListener = window.electron.ipcRenderer.on(
       "auto-updater:update-downloaded",
       (_, info: UpdateInfo) => {
+        console.log("downloaded");
         setState("downloaded");
         setUpdateInfo(info);
         setProgress(null);
@@ -124,6 +129,7 @@ export function UpdateProvider({ children }: UpdateProviderProps) {
     const removeErrorListener = window.electron.ipcRenderer.on(
       "auto-updater:update-error",
       (_, errorInfo: UpdateError) => {
+        console.log("error");
         setState("error");
         setError(errorInfo);
       }
