@@ -52,22 +52,23 @@ function publishBuild() {
   log('Building and publishing...')
 
   // Check for GitHub token
-  const githubToken = process.env.GITHUB_RELEASE_TOKEN || process.env.GH_TOKEN
+  const githubToken = process.env.GITHUB_RELEASE_TOKEN
   if (!githubToken) {
     throw new Error(
       'GITHUB_RELEASE_TOKEN or GH_TOKEN environment variable is required for publishing'
     )
   }
 
-  // Set the token for electron-builder
-  process.env.GH_TOKEN = githubToken
-
   // Determine platform and run appropriate publish command
   const platform = process.platform
 
   log(`Publishing for platform: ${platform}`)
   if (platform === 'darwin') {
-    execCommand('npm run publish:mac')
+    execCommand('npm run publish:mac', {
+      env: {
+        GITHUB_RELEASE_TOKEN: process.env.GITHUB_RELEASE_TOKEN
+      }
+    })
   } else if (platform === 'win32') {
     execCommand('npm run publish:win')
   } else if (platform === 'linux') {
