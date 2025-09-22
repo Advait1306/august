@@ -5,6 +5,7 @@
 const { execSync } = require('child_process')
 const { readFileSync } = require('fs')
 const path = require('path')
+require('dotenv').config()
 
 /**
  * Release script for automatic publishing to GitHub
@@ -50,13 +51,23 @@ function commitAndTag(version) {
 function publishBuild() {
   log('Building and publishing...')
 
-  // Determine platform and run appropriate build command
+  // Check for GitHub token
+  const githubToken = process.env.GITHUB_RELEASE_TOKEN || process.env.GH_TOKEN
+  if (!githubToken) {
+    throw new Error(
+      'GITHUB_RELEASE_TOKEN or GH_TOKEN environment variable is required for publishing'
+    )
+  }
+
+  // Set the token for electron-builder
+  process.env.GH_TOKEN = githubToken
+
+  // Determine platform and run appropriate publish command
   const platform = process.platform
 
+  log(`Publishing for platform: ${platform}`)
   if (platform === 'darwin') {
-    // macOS - includes signing and notarization
-    execCommand('npm run build:mac')
-    execCommand('electron-builder --mac -p always')
+    execCommand('npm run publish:mac')
   } else if (platform === 'win32') {
     execCommand('npm run publish:win')
   } else if (platform === 'linux') {
@@ -145,7 +156,8 @@ Examples:
 Note:
 - On macOS, this will trigger code signing and notarization
 - Ensure you have the necessary certificates and environment variables set
-- The GitHub token should be set in the GH_TOKEN environment variable
+- The GitHub token must be set in GITHUB_RELEASE_TOKEN or GH_TOKEN environment variable
+- For GitHub releases: export GITHUB_RELEASE_TOKEN=your_token_here
 `)
   process.exit(0)
 }

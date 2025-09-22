@@ -1,6 +1,6 @@
 {
   "name": "shell",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "An app to manage agents that help you work",
   "main": "./out/main/index.js",
   "author": "sixhuman.com",
@@ -20,9 +20,9 @@
     "build:mac": "node scripts/build-and-notorize.js",
     "build:linux": "electron-vite build && electron-builder --linux",
     "publish": "node scripts/release.js",
-    "publish:mac": "npm run build && electron-builder --mac -p always",
-    "publish:win": "npm run build && electron-builder --win -p always",
-    "publish:linux": "npm run build && electron-builder --linux -p always"
+    "publish:mac": "electron-builder --mac -p always",
+    "publish:win": "electron-builder --win -p always",
+    "publish:linux": "electron-builder --linux -p always"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "1.0.115",
