@@ -64,10 +64,7 @@ function createWindow(): void {
 function handleDeepLink(url: string): void {
   try {
     const parsedUrl = new URL(url)
-    console.log('protocol: ', parsedUrl.protocol)
-    console.log('parsedURL ', parsedUrl)
-    console.log('ticket: ', parsedUrl.searchParams.get('ticket'))
-    if (parsedUrl.protocol === 'jupiter:') {
+    if (parsedUrl.protocol === 'august:') {
       const ticket = parsedUrl.searchParams.get('ticket')
       if (ticket) {
         handleAuthToken(ticket)
@@ -88,15 +85,15 @@ function handleDeepLink(url: string): void {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.sixhuman')
 
   // Register protocol handler
   if (process.defaultApp) {
     if (process.argv.length >= 2) {
-      app.setAsDefaultProtocolClient('jupiter', process.execPath, [path.resolve(process.argv[1])])
+      app.setAsDefaultProtocolClient('august', process.execPath, [path.resolve(process.argv[1])])
     }
   } else {
-    app.setAsDefaultProtocolClient('jupiter')
+    app.setAsDefaultProtocolClient('august')
   }
 
   // Default open or close DevTools by F12 in development
@@ -157,7 +154,7 @@ app.on('second-instance', (_, commandLine) => {
   }
 
   // Handle deep link from command line arguments
-  const url = commandLine.find((arg) => arg.startsWith('jupiter://'))
+  const url = commandLine.find((arg) => arg.startsWith('august://'))
   if (url) {
     handleDeepLink(url)
   }

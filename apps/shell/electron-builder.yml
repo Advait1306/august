@@ -1,5 +1,5 @@
-appId: com.sixhuman.jupiter
-productName: Jupiter
+appId: com.sixhuman.august
+productName: August
 directories:
   buildResources: build-resources
 files:
@@ -13,7 +13,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: Jupiter
+  executableName: August
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

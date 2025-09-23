@@ -10,7 +10,7 @@ export function registerAuthIpcHandlers(): void {
   ipcMain.handle('auth:open-login', async () => {
     // Open the web login page
     const { shell } = await import('electron')
-    shell.openExternal('https://jupiter.sixhuman.com/authorise')
+    shell.openExternal('https://app.august.tech/authorise')
     return true
   })
 }

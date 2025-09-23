@@ -34,7 +34,7 @@ function Page() {
         if (response.ok) {
           console.log("Authorization successful");
           const data = await response.json();
-          window.location.href = `jupiter://authorise?ticket=${data.ticket}`;
+          window.location.href = `august://authorise?ticket=${data.ticket}`;
         } else {
           console.error("Authorization failed:", response.status);
         }
@@ -54,7 +54,7 @@ function Page() {
           <div className="h-[50%] w-full bg-amber-600"></div>
           <div className="h-[50%] w-full flex flex-col justify-center gap-4 px-12 text-center">
             <span>
-              Do you want to authorise Jupiter with {""}
+              Do you want to authorise August with {""}
               {user?.primaryEmailAddress?.emailAddress}?
             </span>
             <div className="flex flex-col gap-2">

@@ -5,7 +5,7 @@ import * as schema from './schema'
 import { app } from 'electron'
 import path from 'path'
 
-const sqlite = new Database(path.join(app.getPath('userData'), 'jupiter-database.db'))
+const sqlite = new Database(path.join(app.getPath('userData'), 'august-database.db'))
 export const db = drizzle(sqlite, { schema })
 
 export function initializeDatabase(): void {
