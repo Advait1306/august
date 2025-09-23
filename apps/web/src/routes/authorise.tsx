@@ -50,9 +50,11 @@ function Page() {
         <RedirectToSignIn />
       </SignedOut>
       <SignedIn>
-        <div className="w-[30%] h-[40%] min-w-[400px] max-w-[500px] rounded-xl flex flex-col bg-secondary overflow-hidden">
-          <div className="h-[50%] w-full bg-amber-600"></div>
-          <div className="h-[50%] w-full flex flex-col justify-center gap-4 px-12 text-center">
+        <div className="w-[30%] h-[40%] min-w-[400px] max-w-[500px] rounded-xl flex flex-col bg-secondary overflow-hidden border">
+          <div className="h-[50%] overflow-hidden mx-4 mt-4">
+            <img src="auth_image.png" />
+          </div>
+          <div className="h-[50%] w-full bg-muted flex flex-col justify-center gap-4 px-12 text-center">
             <span>
               Do you want to authorise August with {""}
               {user?.primaryEmailAddress?.emailAddress}?
