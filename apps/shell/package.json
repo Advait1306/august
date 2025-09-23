@@ -4,7 +4,7 @@
   "description": "An app to manage agents that help you work",
   "main": "./out/main/index.js",
   "author": "sixhuman.com",
-  "homepage": "https://jupiter.sixhuman.com",
+  "homepage": "https://august.tech",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
