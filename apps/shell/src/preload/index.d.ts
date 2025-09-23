@@ -27,6 +27,11 @@ declare global {
         openLogin: () => Promise<boolean>
         onTokenReceived: (callback: (token: string) => void) => () => void
       }
+      autoUpdater: {
+        checkForUpdates: () => Promise<{ success: boolean; error?: string }>
+        quitAndInstall: () => Promise<{ success: boolean; error?: string }>
+        getUpdateInfo: () => Promise<{ success: boolean; data?: any; error?: string }>
+      }
       agent: agentTypes
     }
   }

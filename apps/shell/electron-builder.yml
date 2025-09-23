@@ -31,7 +31,7 @@ mac:
   hardenedRuntime: true
   timestamp: http://timestamp.apple.com/ts01
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}.${ext}
   sign: false
 linux:
   target:
@@ -44,6 +44,7 @@ appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: sixhuman
+  repo: august-shell-release
 
