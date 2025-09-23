@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Permission } from "@jupiter/shared/types";
 
 type PermissionState = Record<string, Permission>;
@@ -11,13 +11,28 @@ export function PermissionProvider({
   children: React.ReactNode;
 }) {
   const [permissions, setPermissions] = useState<PermissionState>({});
+  const alwaysAllowThreads = useRef<string[]>([]);
 
   useEffect(() => {
     const removeListener = window.api.agent.addPermissionHandler((request) => {
+      if (alwaysAllowThreads.current.includes(request.threadId)) {
+        window.api.agent.grantPermission(request.id);
+        return;
+      }
+
       setPermissions((prev) => ({
         ...prev,
         [request.threadId]: {
           ...request,
+          alwaysAllow: () => {
+            alwaysAllowThreads.current.push(request.threadId);
+            window.api.agent.grantPermission(request.id);
+            setPermissions((prev) => {
+              const newPermissions = { ...prev };
+              delete newPermissions[request.threadId];
+              return newPermissions;
+            });
+          },
           grant: () => {
             window.api.agent.grantPermission(request.id);
             setPermissions((prev) => {

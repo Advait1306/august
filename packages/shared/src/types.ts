@@ -18,6 +18,7 @@ export type PermissionRequest = {
 };
 
 export type Permission = PermissionRequest & {
+  alwaysAllow: () => void;
   grant: () => void;
   deny: () => void;
 };

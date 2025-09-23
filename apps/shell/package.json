@@ -1,10 +1,10 @@
 {
   "name": "shell",
-  "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "version": "0.0.12",
+  "description": "An app to manage agents that help you work",
   "main": "./out/main/index.js",
-  "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "author": "sixhuman.com",
+  "homepage": "https://jupiter.sixhuman.com",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
@@ -17,8 +17,12 @@
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:mac": "node scripts/build-and-notorize.js",
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "publish": "node scripts/release.js",
+    "publish:mac": "electron-builder --mac -p always",
+    "publish:win": "electron-builder --win -p always",
+    "publish:linux": "electron-builder --linux -p always"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "1.0.115",
@@ -34,11 +38,13 @@
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron/notarize": "^3.1.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.16.5",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.7.0",
+    "dotenv": "^17.2.2",
     "drizzle-kit": "^0.31.4",
     "electron": "37.2.3",
     "electron-builder": "26.0.20",

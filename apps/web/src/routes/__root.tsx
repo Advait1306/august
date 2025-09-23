@@ -10,6 +10,8 @@ import Guard from "../../components/guard";
 import { Toaster } from "@/components/ui/sonner";
 import { useEffect } from "react";
 import { getSerwist } from "virtual:serwist";
+import { UpdateProvider } from "../contexts/update-context";
+import { UpdateToast } from "../../components/update-toast";
 
 // Import your Publishable Key
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -38,32 +40,35 @@ const RootLayout = () => {
     return (
       <>
         <ThemeProvider>
-          <ClerkProvider
-            publishableKey={PUBLISHABLE_KEY}
-            signInUrl={SIGN_IN_URL}
-            signUpUrl={SIGN_UP_URL}
-          >
-            <SignedIn>
-              <CommandMenuProvider>
-                <div className="[--header-height:calc(--spacing(9))]">
-                  <SidebarProvider className="flex flex-col">
-                    <SiteHeader />
-                    <div className="flex flex-1 overflow-hidden">
-                      <AppSidebar />
-                      <SidebarInset>
-                        <div className="rounded-lg border overflow-hidden flex-1 bg-background">
-                          <Outlet />
-                        </div>
-                      </SidebarInset>
-                    </div>
-                  </SidebarProvider>
-                </div>
-              </CommandMenuProvider>
-            </SignedIn>
-            <SignedOut>
-              <Guard />
-            </SignedOut>
-          </ClerkProvider>
+          <UpdateProvider>
+            <ClerkProvider
+              publishableKey={PUBLISHABLE_KEY}
+              signInUrl={SIGN_IN_URL}
+              signUpUrl={SIGN_UP_URL}
+            >
+              <SignedIn>
+                <CommandMenuProvider>
+                  <div className="[--header-height:calc(--spacing(9))]">
+                    <SidebarProvider className="flex flex-col">
+                      <SiteHeader />
+                      <div className="flex flex-1 overflow-hidden">
+                        <AppSidebar />
+                        <SidebarInset>
+                          <div className="rounded-lg border overflow-hidden flex-1 bg-background">
+                            <Outlet />
+                          </div>
+                        </SidebarInset>
+                      </div>
+                    </SidebarProvider>
+                  </div>
+                </CommandMenuProvider>
+              </SignedIn>
+              <SignedOut>
+                <Guard />
+              </SignedOut>
+            </ClerkProvider>
+            <UpdateToast />
+          </UpdateProvider>
         </ThemeProvider>
         <TanStackRouterDevtools />
         <Toaster />
