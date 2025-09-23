@@ -26,7 +26,7 @@ const ThemeProviderContext =
 export function ThemeProvider({
   children,
   defaultTheme = "system",
-  storageKey = "jupiter-ui-theme",
+  storageKey = "august-ui-theme",
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = React.useState<Theme>(
