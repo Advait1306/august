@@ -71,7 +71,7 @@ export default function GettingStarted() {
       </div>
       <div className="flex-7 overflow-hidden p-2 h-full" ref={imageDivRef}>
         <Image
-          src={`/steps_light/0.png`}
+          src={`/steps_light/${activeStep}.png`}
           priority
           width={800}
           height={400}
