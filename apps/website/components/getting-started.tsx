@@ -9,15 +9,17 @@ const steps = [
   },
   {
     title: "Create an agent",
-    description: "Create an agent to automate your tasks.",
+    description: "Design a custom agent to automate your workflows.",
   },
   {
     title: "Add your projects",
-    description: "Add your projects to the agent.",
+    description:
+      "Connect your project folders, so agents know exactly where to work.",
   },
   {
-    title: "Start with your task",
-    description: "Start with your task.",
+    title: "Start with your tasks",
+    description:
+      "Kick off your first task and let your agent take care of the execution.",
   },
 ];
 

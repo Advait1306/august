@@ -30,11 +30,12 @@ export default function Home() {
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start max-w-[1100px]">
         <div className="flex flex-col gap-2">
           <span className="w-full text-4xl font-medium tracking-tight">
-            Artificial employees for your teams
+            Artificial employees for your team
           </span>
-          <span className="text-muted-foreground md:w-[70%]">
-            Create, manage, and use AI agents to automate the busy work in your
-            company, and something longer to fill the space...
+          <span className="text-muted-foreground md:w-[60%]">
+            Create, manage, and deploy agents for your company, allowing you to
+            focus on research and decision-making while your agents handle
+            execution.
           </span>
         </div>
 
