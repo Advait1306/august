@@ -61,7 +61,7 @@ export default function Home() {
 
         <GettingStarted />
       </main>
-      <footer className="w-full max-w-[1100px] row-start-3 flex gap-[24px] flex-wrap items-center justify-between items-center">
+      <footer className="w-full max-w-[1100px] row-start-3 flex gap-[24px] flex-wrap justify-between items-center">
         <span className="text-sm text-muted-foreground">
           © {new Date().getFullYear()} sixhuman technologies private limited
         </span>
