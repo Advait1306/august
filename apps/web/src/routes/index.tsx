@@ -3,7 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
     if (window.electron) {
-      return redirect({
+      redirect({
         to: "/tasks",
         search: {
           project: undefined,
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
         },
       });
     } else {
-      throw redirect({
+      redirect({
         to: "/home",
       });
     }
