@@ -1,6 +1,6 @@
 {
   "name": "shell",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "An app to manage agents that help you work",
   "main": "./out/main/index.js",
   "author": "sixhuman.com",
