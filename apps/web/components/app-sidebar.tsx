@@ -8,7 +8,9 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarHeader,
 } from "@/components/ui/sidebar";
+import { OrganizationSwitcher } from "@clerk/clerk-react";
 
 const data = {
   user: {
@@ -48,6 +50,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       className="top-(--header-height) h-[calc(100svh-var(--header-height))]!"
       {...props}
     >
+      <SidebarHeader>
+        <OrganizationSwitcher />
+      </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />

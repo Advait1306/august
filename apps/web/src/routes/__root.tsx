@@ -9,6 +9,7 @@ import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
 import Guard from "../../components/guard";
 import { Toaster } from "@/components/ui/sonner";
 import { useEffect } from "react";
+import { shadcn } from "@clerk/themes";
 import { getSerwist } from "virtual:serwist";
 import { UpdateProvider } from "../contexts/update-context";
 import { UpdateToast } from "../../components/update-toast";
@@ -45,6 +46,9 @@ const RootLayout = () => {
               publishableKey={PUBLISHABLE_KEY}
               signInUrl={SIGN_IN_URL}
               signUpUrl={SIGN_UP_URL}
+              appearance={{
+                baseTheme: shadcn,
+              }}
             >
               <SignedIn>
                 <CommandMenuProvider>
@@ -70,7 +74,7 @@ const RootLayout = () => {
             <UpdateToast />
           </UpdateProvider>
         </ThemeProvider>
-        <TanStackRouterDevtools />
+        {/* <TanStackRouterDevtools /> */}
         <Toaster />
       </>
     );
