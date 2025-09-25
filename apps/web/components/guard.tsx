@@ -15,6 +15,45 @@ export default function Guard() {
   };
 
   useEffect(() => {
+    // Workaround to add auth to development mode
+    if (import.meta.env.DEV) {
+      // @ts-ignore
+      window.setAuth = async (ticket: string) => {
+        console.log("ticket received: ", ticket);
+        if (!signIn || !setActive || !ticket || user || state == "setting") {
+          return;
+        }
+
+        setState("setting");
+
+        try {
+          // Create the `SignIn` with the token
+          const signInAttempt = await signIn.create({
+            strategy: "ticket",
+            ticket: ticket as string,
+          });
+
+          // If the sign-in was successful, set the session to active
+          if (signInAttempt.status === "complete") {
+            setActive({
+              session: signInAttempt.createdSessionId,
+            });
+          } else {
+            // If the sign-in attempt is not complete, check why.
+            // User may need to complete further steps.
+            toast.error("Error authorising desktop application");
+            console.error(JSON.stringify(signInAttempt, null, 2));
+          }
+        } catch (err) {
+          // See https://clerk.com/docs/custom-flows/error-handling
+          // for more info on error handling
+          console.error("Error:", JSON.stringify(err, null, 2));
+        }
+      };
+    }
+  }, []);
+
+  useEffect(() => {
     const remove = window.api.auth.onTokenReceived(async (ticket) => {
       console.log("ticket received: ", ticket);
       if (!signIn || !setActive || !ticket || user || state == "setting") {
