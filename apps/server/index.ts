@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config({ path: "./.env" });
 
-import { clerkMiddleware } from "@clerk/express";
+import { clerkMiddleware, getAuth } from "@clerk/express";
 import express from "express";
 import cors from "cors";
 
@@ -11,7 +11,7 @@ app.use(cors());
 app.use(clerkMiddleware());
 
 app.get("/ticket", async (req, res) => {
-  const { isAuthenticated, userId } = req.auth();
+  const { isAuthenticated, userId } = getAuth(req);
 
   if (!isAuthenticated) {
     return res.status(401).json({ error: "User not authenticated" });
@@ -32,9 +32,7 @@ app.get("/ticket", async (req, res) => {
   if (!response.ok) {
     const errorData = await response.text();
     console.error("Clerk API error:", errorData);
-    return res
-      .status(500)
-      .json({ error: "Failed to generate token" }, { status: 500 });
+    return res.status(500).json({ error: "Failed to generate token" });
   }
 
   const data = await response.json();
