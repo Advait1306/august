@@ -19,7 +19,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
 import { Webhook } from "svix";
 import { ReadonlyJSONValue, withValidation } from "@rocicorp/zero";
-import { getTasksAndMessages, getUser } from "./query";
+import { AuthData, getTasksAndMessages } from "./query";
 const db = drizzle(process.env.DATABASE_URL!);
 const wh = new Webhook(process.env.CLERK_WEBHOOK_KEY!);
 
@@ -96,10 +96,17 @@ app.get("/ticket", async (req, res) => {
 
 // Zero get queries
 const validated = Object.fromEntries(
-  [getUser, getTasksAndMessages].map((q) => [q.queryName, withValidation(q)])
+  [
+    // auth'd query
+    getTasksAndMessages,
+  ].map((q) => [q.queryName, withValidation(q)])
 );
 
-function getQuery(name: string, args: readonly ReadonlyJSONValue[]) {
+function getQuery(
+  authData: AuthData,
+  name: string,
+  args: readonly ReadonlyJSONValue[]
+) {
   const q = validated[name];
   if (!q) {
     throw new Error(`No such query: ${name}`);
@@ -108,25 +115,31 @@ function getQuery(name: string, args: readonly ReadonlyJSONValue[]) {
     // First param is the context for contextful queries.
     // `args` are validated using the `parser` you provided with
     // the query definition.
-    query: q(undefined, ...args),
+    query: q(authData, ...args),
   };
 }
 
 app.post("/get-queries", async (req, res) => {
-  console.log("GET queries called");
+  const { isAuthenticated, userId } = getAuth(req);
 
-  console.log("req.body: ", req.headers);
+  if (!isAuthenticated) {
+    return res.status(401).json({ error: "User not authenticated" });
+  }
 
-  // TODO: Add auth data here
-  const r = await handleGetQueriesRequest(
-    (name, args) => getQuery(name, args),
-    schema,
-    req.body
+  return await res.json(
+    await handleGetQueriesRequest(
+      (name, args) =>
+        getQuery(
+          {
+            userId,
+          },
+          name,
+          args
+        ),
+      schema,
+      req.body
+    )
   );
-
-  console.log("response: ", JSON.stringify(r));
-
-  return await res.json(r);
 });
 
 app.listen(8080, () => {

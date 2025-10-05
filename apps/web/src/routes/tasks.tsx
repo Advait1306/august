@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useRef } from "react";
 import { getTasksAndMessages } from "../../../server/src/query";
 import { useQuery } from "@rocicorp/zero/react";
+import { useUser } from "@clerk/clerk-react";
 
 interface TasksProps {
   project?: string;
@@ -24,8 +25,13 @@ export const Route = createFileRoute("/tasks")({
 function Tasks() {
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
   const { project, agent } = Route.useSearch();
+  const { user } = useUser();
 
-  const t = useQuery(getTasksAndMessages(true));
+  const t = useQuery(
+    getTasksAndMessages({
+      userId: user?.id ?? "test",
+    })
+  );
   console.log("query: ", t);
 
   // Extract URL parameters for pre-selection

@@ -34,7 +34,11 @@ export const messages = pgTable("messages", {
   created_at: timestamp().notNull().defaultNow(),
 });
 
-export const threadToUserRelation = relations(tasks, ({ one }) => ({
+export const userToTaskRelation = relations(users, ({ many }) => ({
+  tasks: many(tasks),
+}));
+
+export const taskToUserRelation = relations(tasks, ({ one }) => ({
   user: one(users, {
     fields: [tasks.author_id],
     references: [users.id],

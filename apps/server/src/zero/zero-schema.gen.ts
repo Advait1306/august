@@ -178,6 +178,14 @@ export const schema = {
       ],
     },
     tasks: {
+      user: [
+        {
+          sourceField: ["author_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
       messages: [
         {
           sourceField: ["id"],
@@ -186,12 +194,14 @@ export const schema = {
           cardinality: "many",
         },
       ],
-      user: [
+    },
+    users: {
+      tasks: [
         {
-          sourceField: ["author_id"],
-          destField: ["id"],
-          destSchema: "users",
-          cardinality: "one",
+          sourceField: ["id"],
+          destField: ["author_id"],
+          destSchema: "tasks",
+          cardinality: "many",
         },
       ],
     },
