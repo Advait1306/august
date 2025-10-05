@@ -3,6 +3,8 @@ import { Thread } from "@/components/assistant-ui/thread";
 import { ThreadList } from "@/components/assistant-ui/thread-list";
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef } from "react";
+import { getTasksAndMessages } from "../../../server/src/query";
+import { useQuery } from "@rocicorp/zero/react";
 
 interface TasksProps {
   project?: string;
@@ -22,6 +24,9 @@ export const Route = createFileRoute("/tasks")({
 function Tasks() {
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
   const { project, agent } = Route.useSearch();
+
+  const t = useQuery(getTasksAndMessages(true));
+  console.log("query: ", t);
 
   // Extract URL parameters for pre-selection
   const preselectedProjectId = project;

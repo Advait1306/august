@@ -6,6 +6,8 @@ import express from "express";
 import cors from "cors";
 import { users } from "./db/schema";
 import bodyParser from "body-parser";
+import { handleGetQueriesRequest } from "@rocicorp/zero/server";
+import { schema } from "./zero/zero-schema.gen";
 
 const app = express();
 
@@ -16,9 +18,12 @@ import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
 import { Webhook } from "svix";
+import { ReadonlyJSONValue, withValidation } from "@rocicorp/zero";
+import { getTasksAndMessages, getUser } from "./query";
 const db = drizzle(process.env.DATABASE_URL!);
 const wh = new Webhook(process.env.CLERK_WEBHOOK_KEY!);
 
+// Clerk Websocket
 app.post(
   "/clerk",
   bodyParser.raw({ type: "application/json" }),
@@ -56,6 +61,7 @@ app.post(
 // Add JSON body parser for other routes
 app.use(bodyParser.json());
 
+// Clerk Ticket
 app.get("/ticket", async (req, res) => {
   const { isAuthenticated, userId } = getAuth(req);
 
@@ -86,6 +92,41 @@ app.get("/ticket", async (req, res) => {
   return res.status(200).json({
     ticket: data.token,
   });
+});
+
+// Zero get queries
+const validated = Object.fromEntries(
+  [getUser, getTasksAndMessages].map((q) => [q.queryName, withValidation(q)])
+);
+
+function getQuery(name: string, args: readonly ReadonlyJSONValue[]) {
+  const q = validated[name];
+  if (!q) {
+    throw new Error(`No such query: ${name}`);
+  }
+  return {
+    // First param is the context for contextful queries.
+    // `args` are validated using the `parser` you provided with
+    // the query definition.
+    query: q(undefined, ...args),
+  };
+}
+
+app.post("/get-queries", async (req, res) => {
+  console.log("GET queries called");
+
+  console.log("req.body: ", req.headers);
+
+  // TODO: Add auth data here
+  const r = await handleGetQueriesRequest(
+    (name, args) => getQuery(name, args),
+    schema,
+    req.body
+  );
+
+  console.log("response: ", JSON.stringify(r));
+
+  return await res.json(r);
 });
 
 app.listen(8080, () => {

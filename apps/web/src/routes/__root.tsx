@@ -1,18 +1,19 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { ThemeProvider } from "../contexts/theme-context";
+import { ThemeProvider } from "@/src/contexts/theme-context";
 import { CommandMenuProvider } from "@/components/command-menu";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
-import Guard from "../../components/guard";
+import Guard from "@/components/guard";
 import { Toaster } from "@/components/ui/sonner";
 import { useEffect } from "react";
 import { shadcn } from "@clerk/themes";
 import { getSerwist } from "virtual:serwist";
-import { UpdateProvider } from "../contexts/update-context";
-import { UpdateToast } from "../../components/update-toast";
+import { UpdateProvider } from "@/src/contexts/update-context";
+import { UpdateToast } from "@/components/update-toast";
+import { SyncEngine } from "./sync_engine";
 
 // Import your Publishable Key
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -38,6 +39,8 @@ const RootLayout = () => {
   }, []);
 
   if (window.electron) {
+    // Web app is running in electron shell,
+    // show all functionality.
     return (
       <>
         <ThemeProvider>
@@ -50,26 +53,28 @@ const RootLayout = () => {
                 baseTheme: shadcn,
               }}
             >
-              <SignedIn>
-                <CommandMenuProvider>
-                  <div className="[--header-height:calc(--spacing(9))]">
-                    <SidebarProvider className="flex flex-col">
-                      <SiteHeader />
-                      <div className="flex flex-1 overflow-hidden">
-                        <AppSidebar />
-                        <SidebarInset>
-                          <div className="rounded-lg border overflow-hidden flex-1 bg-background">
-                            <Outlet />
-                          </div>
-                        </SidebarInset>
-                      </div>
-                    </SidebarProvider>
-                  </div>
-                </CommandMenuProvider>
-              </SignedIn>
-              <SignedOut>
-                <Guard />
-              </SignedOut>
+              <SyncEngine>
+                <SignedIn>
+                  <CommandMenuProvider>
+                    <div className="[--header-height:calc(--spacing(9))]">
+                      <SidebarProvider className="flex flex-col">
+                        <SiteHeader />
+                        <div className="flex flex-1 overflow-hidden">
+                          <AppSidebar />
+                          <SidebarInset>
+                            <div className="rounded-lg border overflow-hidden flex-1 bg-background">
+                              <Outlet />
+                            </div>
+                          </SidebarInset>
+                        </div>
+                      </SidebarProvider>
+                    </div>
+                  </CommandMenuProvider>
+                </SignedIn>
+                <SignedOut>
+                  <Guard />
+                </SignedOut>
+              </SyncEngine>
             </ClerkProvider>
             <UpdateToast />
           </UpdateProvider>
@@ -79,6 +84,8 @@ const RootLayout = () => {
       </>
     );
   } else {
+    // Web app is running in user's browser,
+    // only show sign in / sign up functionality.
     return (
       <>
         <ThemeProvider>
