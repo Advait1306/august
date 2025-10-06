@@ -1,5 +1,5 @@
 import { ZeroProvider } from "@rocicorp/zero/react";
-import { schema } from "../../../server/src/zero/zero-schema.gen";
+import { schema } from "@jupiter/sync/zero/schema";
 import {
   ClerkLoaded,
   SignedIn,

@@ -9,7 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import type { Row } from "@rocicorp/zero";
-import { createBuilder, definePermissions } from "@rocicorp/zero";
+import { createBuilder } from "@rocicorp/zero";
 import type { DrizzleToZeroSchema, ZeroCustomType } from "drizzle-zero";
 import type * as drizzleSchema from "../db/schema";
 
@@ -236,6 +236,3 @@ export type User = Row<Schema["tables"]["users"]>;
  * This type is auto-generated from your Drizzle schema definition.
  */
 export const builder = createBuilder(schema);
-
-export const permissions: ReturnType<typeof definePermissions> =
-  definePermissions<unknown, Schema>(schema, () => ({}));

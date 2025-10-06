@@ -49,7 +49,8 @@
     "tailwind-merge": "^3.3.1",
     "ts-key-enum": "^3.0.13",
     "tw-animate-css": "^1.3.8",
-    "zustand": "^5.0.8"
+    "zustand": "^5.0.8",
+    "@jupiter/sync": "*"
   },
   "devDependencies": {
     "@serwist/vite": "latest",

@@ -3,7 +3,7 @@ import { Thread } from "@/components/assistant-ui/thread";
 import { ThreadList } from "@/components/assistant-ui/thread-list";
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef } from "react";
-import { getTasksAndMessages } from "../../../server/src/query";
+import { getTasksAndMessages } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useUser } from "@clerk/clerk-react";
 

@@ -1,8 +1,6 @@
-import { createBuilder, syncedQueryWithContext } from "@rocicorp/zero";
+import { syncedQueryWithContext } from "@rocicorp/zero";
 import z from "zod";
-import { schema } from "./zero/zero-schema.gen";
-
-const builder = createBuilder(schema);
+import { builder } from "../zero/schema";
 
 export type AuthData = {
   userId: string;

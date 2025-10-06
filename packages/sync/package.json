@@ -1,0 +1,39 @@
+{
+  "name": "@jupiter/sync",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@jupiter/typescript-config": "*",
+    "@rocicorp/zero": "^0.24.2025100400",
+    "electron": "^38.0.0",
+    "typescript": "latest"
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "zero:generate": "drizzle-zero generate --format --output ./src/zero/zero-schema.gen.ts"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.5",
+    "drizzle-kit": "^0.31.5",
+    "tsx": "^4.20.6"
+  },
+  "exports": {
+    "./queries/*": {
+      "types": "./src/queries/*.ts",
+      "default": "./dist/queries/*.js"
+    },
+    "./zero/*": {
+      "types": "./src/zero/*.ts",
+      "default": "./dist/zero/*.js"
+    },
+    "./db/*": {
+      "types": "./src/db/*.ts",
+      "default": "./dist/db/*.js"
+    }
+  }
+}

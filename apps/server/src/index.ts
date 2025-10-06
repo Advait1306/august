@@ -4,10 +4,10 @@ dotenv.config({ path: "./.env" });
 import { clerkMiddleware, getAuth } from "@clerk/express";
 import express from "express";
 import cors from "cors";
-import { users } from "./db/schema";
+import { users } from "@jupiter/sync/db/schema";
 import bodyParser from "body-parser";
 import { handleGetQueriesRequest } from "@rocicorp/zero/server";
-import { schema } from "./zero/zero-schema.gen";
+import { schema } from "@jupiter/sync/zero/schema";
 
 const app = express();
 
@@ -19,7 +19,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
 import { Webhook } from "svix";
 import { ReadonlyJSONValue, withValidation } from "@rocicorp/zero";
-import { AuthData, getTasksAndMessages } from "./query";
+import { AuthData, getTasksAndMessages } from "@jupiter/sync/queries/data"
+
 const db = drizzle(process.env.DATABASE_URL!);
 const wh = new Webhook(process.env.CLERK_WEBHOOK_KEY!);
 
