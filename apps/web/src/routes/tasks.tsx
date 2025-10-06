@@ -39,13 +39,13 @@ function Tasks() {
     <div className="flex h-[calc(100vh-var(--header-height))] w-full overflow-hidden">
       <div className="flex w-full h-full">
         {/* Thread List Sidebar */}
-        <div className="w-1/3 min-w-[300px] border-r border-border bg-[#E8E8E8] dark:bg-[#141414] flex flex-col h-full">
+        <div className="w-1/3 min-w-[200px] max-w-[300px] border-r border-border bg-[#E8E8E8] dark:bg-[#141414] flex flex-col h-full">
           <div className="p-4 border-b border-border flex-shrink-0">
             <h2 className="text-lg font-semibold">Tasks</h2>
           </div>
           <div className="flex-1 overflow-auto flex flex-col gap-1 p-2">
             <div
-              className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-black flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-black"
+              className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
               data-selected={selectedTask === "new-conversation"}
               onClick={() => selectTask("new-conversation")}
             >
@@ -56,7 +56,7 @@ function Tasks() {
             {tasks?.map((task: any) => (
               <div
                 key={task.id}
-                className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-black flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-black"
+                className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
                 data-selected={
                   selectedTask != "new-conversation" &&
                   selectedTask.id === task.id

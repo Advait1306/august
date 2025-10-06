@@ -63,7 +63,7 @@ export default function TaskWindow() {
       </div>
       <PromptInput
         onSubmit={() => {}}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-3xl"
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
       >
         <PromptInputBody>
           <PromptInputAttachments>

@@ -42,20 +42,26 @@ export const TaskRuntimeProvider = ({
     "new-conversation"
   );
 
+  const data = useQuery(
+    getTasks({
+      userId: user?.id ?? "no_user_id_available",
+    }),
+    {
+      enabled: !!user?.id,
+    }
+  );
+  const tasks = data[0]?.tasks;
+
   const selectedTasksMessages = useQuery(
     getMessages(
       { userId: user?.id ?? "no_user_id_available" },
       selectedTask.remote_id ?? ""
-    )
+    ),
+    {
+      enabled: !!selectedTask.remote_id,
+    }
   );
   console.log(selectedTasksMessages);
-
-  const data = useQuery(
-    getTasks({
-      userId: user?.id ?? "no_user_id_available",
-    })
-  );
-  const tasks = data[0]?.tasks;
 
   const selectTask = (task: Task | "new-conversation") => {
     setSelectedTask(task);
