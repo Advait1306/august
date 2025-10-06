@@ -1,8 +1,9 @@
 import { Permission } from "@jupiter/shared/types";
 import { createContext, useContext, useState } from "react";
-import { getTasksAndMessages } from "@jupiter/sync/queries/data";
+import { getMessages, getTasks } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useUser } from "@clerk/clerk-react";
+import { Task } from "@jupiter/sync/zero/zero-schema.gen";
 
 type PermissionState = Record<string, Permission>;
 type GenerationState = Record<string, string>;
@@ -13,12 +14,18 @@ type TaskRuntimeState = {
   permissions: PermissionState;
   generations: GenerationState;
   tasks: Tasks;
+  selectedTask: any | "new-conversation";
+  messages: any;
+  selectTask: (task: Task | "new-conversation") => void;
 };
 
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
   permissions: {},
   generations: {},
   tasks: [],
+  messages: [],
+  selectedTask: "new-conversation",
+  selectTask: () => {},
 });
 
 export const TaskRuntimeProvider = ({
@@ -26,21 +33,45 @@ export const TaskRuntimeProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
+  const { user } = useUser();
+
   const [permissions, setPermissions] = useState<PermissionState>({});
   const [generations, setGenerations] = useState<GenerationState>({});
 
-  const { user } = useUser();
+  const [selectedTask, setSelectedTask] = useState<any | "new-conversation">(
+    "new-conversation"
+  );
+
+  const selectedTasksMessages = useQuery(
+    getMessages(
+      { userId: user?.id ?? "no_user_id_available" },
+      selectedTask.remote_id ?? ""
+    )
+  );
+  console.log(selectedTasksMessages);
 
   const data = useQuery(
-    getTasksAndMessages({
+    getTasks({
       userId: user?.id ?? "no_user_id_available",
     })
   );
-  console.log(data);
   const tasks = data[0]?.tasks;
 
+  const selectTask = (task: Task | "new-conversation") => {
+    setSelectedTask(task);
+  };
+
   return (
-    <TaskRuntimeContext.Provider value={{ permissions, generations, tasks }}>
+    <TaskRuntimeContext.Provider
+      value={{
+        permissions,
+        generations,
+        tasks,
+        selectedTask,
+        selectTask,
+        messages: selectedTasksMessages[0]?.messages,
+      }}
+    >
       {children}
     </TaskRuntimeContext.Provider>
   );

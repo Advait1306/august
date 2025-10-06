@@ -19,7 +19,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
 import { Webhook } from "svix";
 import { ReadonlyJSONValue, withValidation } from "@rocicorp/zero";
-import { AuthData, getTasksAndMessages } from "@jupiter/sync/queries/data"
+import { AuthData, getMessages, getTasks } from "@jupiter/sync/queries/data";
 
 const db = drizzle(process.env.DATABASE_URL!);
 const wh = new Webhook(process.env.CLERK_WEBHOOK_KEY!);
@@ -99,7 +99,8 @@ app.get("/ticket", async (req, res) => {
 const validated = Object.fromEntries(
   [
     // auth'd query
-    getTasksAndMessages,
+    getTasks,
+    getMessages,
   ].map((q) => [q.queryName, withValidation(q)])
 );
 

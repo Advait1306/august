@@ -14,23 +14,24 @@ import {
   PromptInputActionMenuItem,
 } from "@/src/components/ai-elements/prompt-input";
 import { Response } from "@/src/components/ai-elements/response";
+import { useTaskRuntime } from "@/src/contexts/task-runtime";
 import { useAgentStore } from "@/src/stores/agentStore";
 import { useProjectStore } from "@/src/stores/projectStore";
 import { Agent } from "@/src/types/agent";
 import { Project } from "@/src/types/project";
+
 import { useEffect, useState } from "react";
 
 export default function TaskWindow() {
   const { projects, loadProjects } = useProjectStore();
   const { agents, loadAgents } = useAgentStore();
 
+  const { selectedTask, messages } = useTaskRuntime();
+
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
 
   const [prompt, setPrompt] = useState<string>("");
-
-  const text =
-    "**Hi there.** I am an AI model designed to help you. ``` This is a code snippet ``` \n The quadratic formula is $$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$ for solving $$ax^2 + bx + c = 0$$. Euler's identity: $$e^{i\pi} + 1 = 0$$ combines five fundamental";
 
   useEffect(() => {
     loadProjects();
@@ -40,10 +41,25 @@ export default function TaskWindow() {
   return (
     <div className="flex-1 relative">
       <div className="flex-1 h-full p-8">
-        <Message from="user">
-          <MessageContent className="rounded-3xl">Hi there!</MessageContent>
-        </Message>
-        <Response>{text}</Response>
+        {selectedTask != "new-conversation" && (
+          <div className="flex flex-col gap-4">
+            {messages?.map((message: any, index: number) => {
+              if (message.role === "user") {
+                return (
+                  <Message from="user" key={index}>
+                    <MessageContent className="rounded-3xl">
+                      {JSON.stringify(message)}
+                    </MessageContent>
+                  </Message>
+                );
+              } else {
+                return (
+                  <Response key={index}>{JSON.stringify(message)}</Response>
+                );
+              }
+            })}
+          </div>
+        )}
       </div>
       <PromptInput
         onSubmit={() => {}}
