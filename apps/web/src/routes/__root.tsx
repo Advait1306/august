@@ -14,6 +14,7 @@ import { getSerwist } from "virtual:serwist";
 import { UpdateProvider } from "@/src/contexts/update-context";
 import { UpdateToast } from "@/components/update-toast";
 import { SyncEngine } from "./sync_engine";
+import { TaskRuntimeProvider } from "@/src/contexts/task-runtime";
 
 // Import your Publishable Key
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -56,19 +57,21 @@ const RootLayout = () => {
               <SyncEngine>
                 <SignedIn>
                   <CommandMenuProvider>
-                    <div className="[--header-height:calc(--spacing(9))]">
-                      <SidebarProvider className="flex flex-col">
-                        <SiteHeader />
-                        <div className="flex flex-1 overflow-hidden">
-                          <AppSidebar />
-                          <SidebarInset>
-                            <div className="rounded-lg border overflow-hidden flex-1 bg-background">
-                              <Outlet />
-                            </div>
-                          </SidebarInset>
-                        </div>
-                      </SidebarProvider>
-                    </div>
+                    <TaskRuntimeProvider>
+                      <div className="[--header-height:calc(--spacing(9))]">
+                        <SidebarProvider className="flex flex-col">
+                          <SiteHeader />
+                          <div className="flex flex-1 overflow-hidden">
+                            <AppSidebar />
+                            <SidebarInset>
+                              <div className="rounded-lg border overflow-hidden flex-1 bg-background">
+                                <Outlet />
+                              </div>
+                            </SidebarInset>
+                          </div>
+                        </SidebarProvider>
+                      </div>
+                    </TaskRuntimeProvider>
                   </CommandMenuProvider>
                 </SignedIn>
                 <SignedOut>
