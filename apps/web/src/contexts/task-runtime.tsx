@@ -1,5 +1,5 @@
 import { Permission } from "@jupiter/shared/types";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { getMessages, getTasks } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useUser } from "@clerk/clerk-react";
@@ -16,8 +16,6 @@ type GenerationState = Record<string, string>;
 type Tasks = any;
 
 type TaskRuntimeState = {
-  permissions: PermissionState;
-  generations: GenerationState;
   tasks: Tasks;
   selectedTask: any | "new-conversation";
   messages: any;
@@ -25,6 +23,7 @@ type TaskRuntimeState = {
   sendMessage: (message: string) => void;
   composerStates: Record<string, ComposerState>;
   setComposerStates: (states: Record<string, ComposerState>) => void;
+  permissions: PermissionState;
 };
 
 type ComposerState = {
@@ -34,8 +33,6 @@ type ComposerState = {
 };
 
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
-  permissions: {},
-  generations: {},
   tasks: [],
   messages: [],
   selectedTask: "new-conversation",
@@ -43,6 +40,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   sendMessage: () => {},
   composerStates: {},
   setComposerStates: () => {},
+  permissions: {},
 });
 
 export const TaskRuntimeProvider = ({
@@ -53,11 +51,12 @@ export const TaskRuntimeProvider = ({
   const { user } = useUser();
   const z = useZero();
 
-  const [permissions, setPermissions] = useState<PermissionState>({});
-  const [generations, setGenerations] = useState<GenerationState>({});
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
   >({});
+
+  const [permissions, setPermissions] = useState<PermissionState>({});
+  const alwaysAllowTasks = useRef<string[]>([]);
 
   // We need to wait for the task to be created and then select it
   const [waitForSelect, setWaitForSelect] = useState<string | null>(null);
@@ -83,6 +82,51 @@ export const TaskRuntimeProvider = ({
       }
     }
   }, [tasks]);
+
+  useEffect(() => {
+    const removeListener = window.api.agent.addPermissionHandler((request) => {
+      if (alwaysAllowTasks.current.includes(request.threadId)) {
+        window.api.agent.grantPermission(request.id);
+        return;
+      }
+
+      setPermissions((prev) => ({
+        ...prev,
+        [request.threadId]: {
+          ...request,
+          alwaysAllow: () => {
+            alwaysAllowTasks.current.push(request.threadId);
+            window.api.agent.grantPermission(request.id);
+            setPermissions((prev) => {
+              const newPermissions = { ...prev };
+              delete newPermissions[request.threadId];
+              return newPermissions;
+            });
+          },
+          grant: () => {
+            window.api.agent.grantPermission(request.id);
+            setPermissions((prev) => {
+              const newPermissions = { ...prev };
+              delete newPermissions[request.threadId];
+              return newPermissions;
+            });
+          },
+          deny: () => {
+            window.api.agent.denyPermission(request.id);
+            setPermissions((prev) => {
+              const newPermissions = { ...prev };
+              delete newPermissions[request.threadId];
+              return newPermissions;
+            });
+          },
+        },
+      }));
+    });
+
+    return () => {
+      removeListener();
+    };
+  }, []);
 
   const selectedTasksMessages = useQuery(
     getMessages(
@@ -209,8 +253,6 @@ export const TaskRuntimeProvider = ({
   return (
     <TaskRuntimeContext.Provider
       value={{
-        permissions,
-        generations,
         tasks,
         selectedTask,
         selectTask,
@@ -218,6 +260,7 @@ export const TaskRuntimeProvider = ({
         sendMessage,
         composerStates,
         setComposerStates,
+        permissions,
       }}
     >
       {children}
@@ -231,4 +274,13 @@ export const useTaskRuntime = () => {
     throw new Error("useTaskRuntime must be used within a TaskRuntimeProvider");
   }
   return context;
+};
+
+export const usePermission = (threadId: string): Permission | undefined => {
+  const context = useContext(TaskRuntimeContext);
+
+  if (context === undefined)
+    throw new Error("usePermission must be used within a TaskRuntimeProvider");
+
+  return context.permissions[threadId];
 };

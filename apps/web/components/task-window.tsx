@@ -1,7 +1,5 @@
 import {
   PromptInput,
-  PromptInputAttachments,
-  PromptInputAttachment,
   PromptInputTextarea,
   PromptInputActionMenu,
   PromptInputActionMenuContent,
@@ -26,8 +24,8 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import { Message } from "@/components/ai-elements/message";
-import { MessageSquare } from "lucide-react";
+import { ButtonGroup } from "./ui/button-group";
+import { Button } from "./ui/button";
 
 export default function TaskWindow() {
   // Selector items
@@ -41,6 +39,7 @@ export default function TaskWindow() {
     sendMessage,
     composerStates,
     setComposerStates,
+    permissions,
   } = useTaskRuntime();
 
   // Derived state and functions for ease of use
@@ -49,6 +48,7 @@ export default function TaskWindow() {
   const prompt = composerState?.prompt ?? "";
   const agent = composerState?.agent ?? null;
   const project = composerState?.project ?? null;
+  const pendingPermissions = permissions[selectedTaskId];
 
   const setPrompt = useCallback(
     (prompt: string) => {
@@ -105,6 +105,7 @@ export default function TaskWindow() {
 
   return (
     <div className="flex-1 relative">
+      {/* Thread */}
       <Conversation
         className="absolute w-full h-full p-8 overflow-auto pb-40"
         key={selectedTaskId}
@@ -130,18 +131,51 @@ export default function TaskWindow() {
         </ConversationContent>
         <ConversationScrollButton className="mb-40" />
       </Conversation>
+
+      {/* Composer */}
       <PromptInput
         onSubmit={() => {}}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
       >
         <PromptInputBody>
-          <PromptInputAttachments>
-            {(attachment) => <PromptInputAttachment data={attachment} />}
-          </PromptInputAttachments>
-          <PromptInputTextarea
-            onChange={(e) => setPrompt(e.target.value)}
-            value={prompt}
-          />
+          {pendingPermissions ? (
+            <div className="flex justify-between items-center h-full pr-1 pl-4 py-1">
+              <div>
+                Allow <span>{pendingPermissions.toolName}</span> tool?
+              </div>
+              <ButtonGroup>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    pendingPermissions.alwaysAllow();
+                  }}
+                >
+                  Always Allow
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    pendingPermissions.grant();
+                  }}
+                >
+                  Allow
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    pendingPermissions.deny();
+                  }}
+                >
+                  Deny
+                </Button>
+              </ButtonGroup>
+            </div>
+          ) : (
+            <PromptInputTextarea
+              onChange={(e) => setPrompt(e.target.value)}
+              value={prompt}
+            />
+          )}
         </PromptInputBody>
         <PromptInputToolbar>
           <PromptInputTools>
