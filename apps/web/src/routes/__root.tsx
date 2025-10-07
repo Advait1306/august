@@ -13,7 +13,7 @@ import { shadcn } from "@clerk/themes";
 import { getSerwist } from "virtual:serwist";
 import { UpdateProvider } from "@/src/contexts/update-context";
 import { UpdateToast } from "@/components/update-toast";
-import { SyncEngine } from "./sync_engine";
+import { SyncEngine } from "../components/sync_engine";
 import { TaskRuntimeProvider } from "@/src/contexts/task-runtime";
 
 // Import your Publishable Key

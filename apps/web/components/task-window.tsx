@@ -11,7 +11,7 @@ import {
   PromptInputTools,
   PromptInputSubmit,
   PromptInputActionMenuItem,
-} from "@/src/components/ai-elements/prompt-input";
+} from "@/components/ai-elements/prompt-input";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
 import { useAgentStore } from "@/src/stores/agentStore";
 import { useProjectStore } from "@/src/stores/projectStore";
@@ -25,8 +25,8 @@ import {
   ConversationContent,
   ConversationEmptyState,
   ConversationScrollButton,
-} from "@/src/components/ai-elements/conversation";
-import { Message } from "@/src/components/ai-elements/message";
+} from "@/components/ai-elements/conversation";
+import { Message } from "@/components/ai-elements/message";
 import { MessageSquare } from "lucide-react";
 
 export default function TaskWindow() {

@@ -1,12 +1,12 @@
-import { Message, MessageContent } from "@/src/components/ai-elements/message";
-import { Response } from "@/src/components/ai-elements/response";
+import { Message, MessageContent } from "@/components/ai-elements/message";
+import { Response } from "@/components/ai-elements/response";
 import {
   Tool,
   ToolContent,
   ToolHeader,
   ToolInput,
   ToolOutput,
-} from "@/src/components/ai-elements/tool";
+} from "@/components/ai-elements/tool";
 import {
   AssistantContent,
   AssistantModelMessage,

@@ -4,7 +4,7 @@ import { getMessages, getTasks } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useUser } from "@clerk/clerk-react";
 import { Task } from "@jupiter/sync/zero/zero-schema.gen";
-import { useZero } from "../routes/sync_engine";
+import { useZero } from "../components/sync_engine";
 import { nanoid } from "nanoid";
 import { ModelMessage, UserModelMessage } from "ai";
 import { Agent } from "../types/agent";
