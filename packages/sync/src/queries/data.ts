@@ -14,7 +14,7 @@ export const getTasks = syncedQueryWithContext(
       .where("id", context.userId)
       .one()
       .related("tasks", (q) => {
-        return q.related("messages");
+        return q.orderBy("created_at", "desc").related("messages");
       });
   }
 );

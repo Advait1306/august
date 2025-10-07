@@ -1,11 +1,12 @@
 import { Permission } from "@jupiter/shared/types";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { getMessages, getTasks } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useUser } from "@clerk/clerk-react";
-import { Task } from "@jupiter/sync/zero/zero-schema.gen";
+import { Schema, Task } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "../routes/sync_engine";
 import { nanoid } from "nanoid";
+import { UserModelMessage } from "ai";
 
 type PermissionState = Record<string, Permission>;
 type GenerationState = Record<string, string>;
@@ -43,6 +44,8 @@ export const TaskRuntimeProvider = ({
   const [permissions, setPermissions] = useState<PermissionState>({});
   const [generations, setGenerations] = useState<GenerationState>({});
 
+  // We need to wait for the task to be created and then select it
+  const [waitForSelect, setWaitForSelect] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<any | "new-conversation">(
     "new-conversation"
   );
@@ -57,32 +60,53 @@ export const TaskRuntimeProvider = ({
   );
   const tasks = data[0]?.tasks;
 
+  useEffect(() => {
+    if (waitForSelect) {
+      const task = tasks?.find((task: Task) => task.id === waitForSelect);
+      if (task) {
+        setSelectedTask(task);
+      }
+    }
+  }, [tasks]);
+
   const selectedTasksMessages = useQuery(
     getMessages(
       { userId: user?.id ?? "no_user_id_available" },
-      selectedTask.remote_id ?? ""
+      selectedTask.id ?? ""
     ),
     {
-      enabled: !!selectedTask.remote_id,
+      enabled: !!selectedTask.id,
     }
   );
-  console.log(selectedTasksMessages);
 
   const selectTask = (task: Task | "new-conversation") => {
+    setWaitForSelect(null);
     setSelectedTask(task);
   };
 
-  const sendMessage = (message: string) => {
-    console.log(message);
-
+  const sendMessage = async (message: string) => {
     if (selectedTask === "new-conversation") {
+      const taskId = nanoid();
+      const messageId = nanoid();
+      const m = {
+        role: "user",
+        content: [{ type: "text", text: message }],
+      } as UserModelMessage;
+
       // Create new task
-      const result = z.mutate.tasks.create({
-        task_id: nanoid(),
+      z.mutate.tasks.create({
+        task_id: taskId,
+        message_data: {
+          task_id: taskId,
+          message_id: messageId,
+          role: m.role,
+          content: m.content as Record<string, any>[],
+          metadata: {},
+        },
       });
-      console.log(result);
+
+      setWaitForSelect(taskId);
     } else {
-      
     }
   };
 

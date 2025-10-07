@@ -1,22 +1,21 @@
-import {
-  ChatModelRunOptions,
-  ChatModelRunResult,
-  TextMessagePart,
-  ThreadAssistantMessagePart,
-  ThreadUserMessage,
-  ToolCallMessagePart
-} from '@assistant-ui/react'
 import AgentInterface from '../../agent-interface'
 import { query } from '@anthropic-ai/claude-code'
 import assert from 'node:assert'
 import log from 'electron-log/main'
 import { findClaudeBinary } from './find-claude-code'
+import {
+  AssistantContent,
+  AssistantModelMessage,
+  ModelMessage,
+  TextPart,
+  UserModelMessage
+} from 'ai'
 
 export class ClaudeCodeAgent implements AgentInterface {
   async *run(
     runOptions: {
-      messages: ChatModelRunOptions['messages']
-      runConfig: ChatModelRunOptions['runConfig']
+      messages: ModelMessage[]
+      runConfig: Record<string, unknown>
       threadId: string
     },
     permissionRequest: (request: {
@@ -26,13 +25,13 @@ export class ClaudeCodeAgent implements AgentInterface {
       threadId: string
     }) => Promise<boolean>,
     systemPrompt?: string
-  ): AsyncGenerator<ChatModelRunResult, void> {
+  ): AsyncGenerator<AssistantModelMessage, void> {
     // Claude code doesn't take old messages, it takes a session id that's generated and stored in all assistant messages
-    const sessionId = runOptions.messages.findLast((m) => m.role === 'assistant')?.metadata?.custom
-      ?.sessionId as string | undefined
+    const sessionId = runOptions.messages.findLast((m) => m.role === 'assistant')?.providerOptions
+      ?.claude?.session_id as string | undefined
 
-    const project = (runOptions.runConfig.custom?.project ??
-      runOptions.messages.find((m) => m.role === 'assistant')?.metadata?.custom?.project) as
+    const project = (runOptions.runConfig.project ??
+      runOptions.messages.find((m) => m.role === 'assistant')?.providerOptions?.claude?.project) as
       | {
           id: string
           path: string
@@ -42,10 +41,10 @@ export class ClaudeCodeAgent implements AgentInterface {
     assert(project != null, 'ClaudeCodeAgent: missing project')
 
     // Last message will always be user message
-    const lastMessage = runOptions.messages[runOptions.messages.length - 1] as ThreadUserMessage
+    const lastMessage = runOptions.messages[runOptions.messages.length - 1] as UserModelMessage
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const output: any[] = []
+    const output: any = []
 
     // Workaround for canUseTool - [https://github.com/anthropics/claude-code/issues/4775#issuecomment-3141104425]
     let done
@@ -64,7 +63,7 @@ export class ClaudeCodeAgent implements AgentInterface {
               type: 'user' as const,
               message: {
                 role: 'user' as const,
-                content: (lastMessage.content[0] as TextMessagePart).text
+                content: (lastMessage.content[0] as TextPart).text
               },
               parent_tool_use_id: null,
               session_id: sessionId || ''
@@ -92,16 +91,18 @@ export class ClaudeCodeAgent implements AgentInterface {
             }
           }
         })) {
-          if (data.type === 'system') {
+          if (data.type !== 'assistant' && data.type !== 'result') {
+            console.log('Skipping message type: ', data.type)
             continue
           }
 
-          if (data.type === 'assistant' || data.type === 'user') {
+          if (data.type === 'assistant') {
             output.push(...data.message.content)
             yield {
+              role: 'assistant',
               content: this.convertToGenericContent(output),
-              metadata: {
-                custom: {
+              providerOptions: {
+                claude: {
                   sessionId: data.session_id,
                   agent: 'claude-code',
                   project
@@ -126,8 +127,8 @@ export class ClaudeCodeAgent implements AgentInterface {
 
   // TODO: Fix type of parts, anthropic SDK doesn't expose for some reason
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private convertToGenericContent(parts: any[]): ThreadAssistantMessagePart[] {
-    const content: ThreadAssistantMessagePart[] = []
+  private convertToGenericContent(parts: any[]): AssistantContent {
+    const content: AssistantContent = []
 
     for (const part of parts) {
       switch (part.type) {
@@ -136,21 +137,17 @@ export class ClaudeCodeAgent implements AgentInterface {
             type: 'tool-call',
             toolCallId: part.id,
             toolName: part.name,
-            args: part.input,
-            argsText: JSON.stringify(part.input)
+            input: part.input
+            // argsText: JSON.stringify(part.input)
           })
           break
         case 'tool_result': {
-          const existingToolCallIndex = content.findIndex(
-            (c) => c.type === 'tool-call' && c.toolCallId === part.tool_use_id
-          )
-          if (existingToolCallIndex !== -1) {
-            const existingToolCall = content[existingToolCallIndex] as ToolCallMessagePart
-            content.splice(existingToolCallIndex, 1, {
-              ...existingToolCall,
-              result: part.content
-            })
-          }
+          content.push({
+            type: 'tool-result',
+            toolCallId: part.tool_use_id,
+            toolName: part.name,
+            output: part.content
+          })
           break
         }
         case 'text':

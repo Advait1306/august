@@ -1,10 +1,10 @@
-import { ChatModelRunOptions, ChatModelRunResult } from '@assistant-ui/react'
+import { AssistantModelMessage, ModelMessage } from 'ai'
 
 interface AgentInterface {
   run(
     runOptions: {
-      messages: ChatModelRunOptions['messages']
-      runConfig: ChatModelRunOptions['runConfig']
+      messages: ModelMessage[]
+      runConfig: Record<string, unknown>
       threadId: string
     },
     permissionRequest: (request: {
@@ -14,7 +14,7 @@ interface AgentInterface {
       threadId: string
     }) => Promise<boolean>,
     systemPrompt?: string
-  ): AsyncGenerator<ChatModelRunResult, void>
+  ): AsyncGenerator<AssistantModelMessage, void>
 }
 
 export default AgentInterface

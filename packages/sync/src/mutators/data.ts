@@ -10,7 +10,19 @@ export function createMutators(authData: AuthData) {
     tasks: {
       create: async (
         tx: Transaction<Schema>,
-        { task_id }: { task_id: string }
+        {
+          task_id,
+          message_data,
+        }: {
+          task_id: string;
+          message_data: {
+            task_id: string;
+            message_id: string;
+            role: string;
+            content: Record<string, any>[];
+            metadata: Record<string, any>;
+          };
+        }
       ) => {
         const user = await tx.query.users
           .where("id", authData.userId)
@@ -22,10 +34,19 @@ export function createMutators(authData: AuthData) {
           throw new Error("User not found");
         }
 
-        tx.mutate.tasks.insert({
+        await tx.mutate.tasks.insert({
           id: task_id,
           author_id: user.id,
           name: "New Task",
+        });
+
+        await tx.mutate.messages.upsert({
+          id: message_data.message_id,
+          task_id,
+          message_id: message_data.message_id,
+          role: message_data.role,
+          content: message_data.content,
+          metadata: message_data.metadata,
         });
       },
     },
@@ -42,19 +63,13 @@ export function createMutators(authData: AuthData) {
           task_id: string;
           message_id: string;
           role: string;
-          content: Record<string, any>;
+          content: Record<string, any>[];
           metadata: Record<string, any>;
         }
       ) => {
-        const task = await tx.query.tasks.where("id", task_id).one().run();
-
-        if (!task || !task.id) {
-          throw new Error("Task not found");
-        }
-
         tx.mutate.messages.upsert({
           id: message_id,
-          task_id: task.id,
+          task_id,
           message_id,
           role,
           content,
