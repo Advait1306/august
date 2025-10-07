@@ -36,10 +36,10 @@ function Tasks() {
   const { tasks, selectedTask, selectTask } = useTaskRuntime();
 
   return (
-    <div className="flex h-[calc(100vh-var(--header-height))] w-full overflow-hidden">
-      <div className="flex w-full h-full">
+    <div className="flex h-[calc(100vh-var(--header-height))] w-full">
+      <div className="flex flex-row w-full">
         {/* Thread List Sidebar */}
-        <div className="w-1/3 min-w-[200px] max-w-[300px] border-r border-border bg-[#E8E8E8] dark:bg-[#141414] flex flex-col h-full">
+        <div className="flex-1 min-w-[200px] max-w-[300px] bg-[#E8E8E8] border-r border-border dark:bg-[#141414] flex flex-col">
           <div className="p-4 border-b border-border flex-shrink-0">
             <h2 className="text-lg font-semibold">Tasks</h2>
           </div>
@@ -72,7 +72,7 @@ function Tasks() {
         </div>
 
         {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col h-full">
+        <div className="flex-3 flex flex-col h-full overflow-hidden">
           <TaskWindow />
         </div>
       </div>

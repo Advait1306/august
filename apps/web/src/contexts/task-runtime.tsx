@@ -107,6 +107,19 @@ export const TaskRuntimeProvider = ({
 
       setWaitForSelect(taskId);
     } else {
+      const messageId = nanoid();
+      const m = {
+        role: "user",
+        content: [{ type: "text", text: message }],
+      } as UserModelMessage;
+
+      z.mutate.message.upsert({
+        task_id: selectedTask.id,
+        message_id: messageId,
+        role: m.role,
+        content: m.content as Record<string, any>[],
+        metadata: {},
+      });
     }
   };
 

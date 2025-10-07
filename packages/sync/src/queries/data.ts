@@ -24,6 +24,11 @@ export const getMessages = syncedQueryWithContext(
   z.tuple([z.string()]),
   (context: AuthData, taskId: string) => {
     // TODO: Add check for the user having access to this task's messages
-    return builder.tasks.where("id", taskId).one().related("messages");
+    return builder.tasks
+      .where("id", taskId)
+      .one()
+      .related("messages", (q) => {
+        return q.orderBy("created_at", "asc");
+      });
   }
 );

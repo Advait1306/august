@@ -23,14 +23,16 @@ import { Project } from "@/src/types/project";
 import { useEffect, useState } from "react";
 
 export default function TaskWindow() {
+  // Selector items
   const { projects, loadProjects } = useProjectStore();
   const { agents, loadAgents } = useAgentStore();
 
+  // Messages
   const { selectedTask, messages, sendMessage } = useTaskRuntime();
 
+  // Message composer
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-
   const [prompt, setPrompt] = useState<string>("");
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function TaskWindow() {
 
   return (
     <div className="flex-1 relative">
-      <div className="flex-1 h-full p-8">
+      <div className="absolute flex-1 h-full p-8 overflow-auto pb-40">
         {selectedTask != "new-conversation" && (
           <div className="flex flex-col gap-4">
             {messages?.map((message: any, index: number) => {

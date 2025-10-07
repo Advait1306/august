@@ -29,7 +29,6 @@ export function createMutators(authData: AuthData) {
           .one()
           .run();
 
-        console.log(authData);
         if (!user || !user.id) {
           throw new Error("User not found");
         }
@@ -67,13 +66,13 @@ export function createMutators(authData: AuthData) {
           metadata: Record<string, any>;
         }
       ) => {
-        tx.mutate.messages.upsert({
+        await tx.mutate.messages.upsert({
           id: message_id,
           task_id,
-          message_id,
-          role,
-          content,
-          metadata,
+          message_id: message_id,
+          role: role,
+          content: content,
+          metadata: metadata,
         });
       },
     },
