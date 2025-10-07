@@ -20,7 +20,7 @@ import { useProjectStore } from "@/src/stores/projectStore";
 import { Agent } from "@/src/types/agent";
 import { Project } from "@/src/types/project";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 
 export default function TaskWindow() {
   // Selector items
@@ -28,12 +28,67 @@ export default function TaskWindow() {
   const { agents, loadAgents } = useAgentStore();
 
   // Messages
-  const { selectedTask, messages, sendMessage } = useTaskRuntime();
+  const {
+    selectedTask,
+    messages,
+    sendMessage,
+    composerStates,
+    setComposerStates,
+  } = useTaskRuntime();
 
-  // Message composer
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [prompt, setPrompt] = useState<string>("");
+  // Derived state and functions for ease of use
+  const composerState = composerStates[selectedTask.id as string];
+  const prompt = composerState?.prompt ?? "";
+  const agent = composerState?.agent ?? null;
+  const project = composerState?.project ?? null;
+
+  const setPrompt = useCallback(
+    (prompt: string) => {
+      // @ts-ignore
+      setComposerStates((prev) => {
+        return {
+          ...prev,
+          [selectedTask.id as string]: {
+            ...prev[selectedTask.id as string],
+            prompt,
+          },
+        };
+      });
+    },
+    [setComposerStates, selectedTask.id]
+  );
+
+  const setAgent = useCallback(
+    (agent: Agent) => {
+      // @ts-ignore
+      setComposerStates((prev) => {
+        return {
+          ...prev,
+          [selectedTask.id as string]: {
+            ...prev[selectedTask.id as string],
+            agent,
+          },
+        };
+      });
+    },
+    [setComposerStates, selectedTask.id]
+  );
+
+  const setProject = useCallback(
+    (project: Project) => {
+      // @ts-ignore
+      setComposerStates((prev) => {
+        return {
+          ...prev,
+          [selectedTask.id as string]: {
+            ...prev[selectedTask.id as string],
+            project,
+          },
+        };
+      });
+    },
+    [setComposerStates, selectedTask.id]
+  );
 
   useEffect(() => {
     loadProjects();
@@ -72,9 +127,7 @@ export default function TaskWindow() {
             {(attachment) => <PromptInputAttachment data={attachment} />}
           </PromptInputAttachments>
           <PromptInputTextarea
-            onChange={(e) => {
-              setPrompt(e.target.value);
-            }}
+            onChange={(e) => setPrompt(e.target.value)}
             value={prompt}
           />
         </PromptInputBody>
@@ -82,13 +135,13 @@ export default function TaskWindow() {
           <PromptInputTools>
             <PromptInputActionMenu>
               <PromptInputActionMenuTrigger size={"lg"}>
-                <span>{selectedAgent?.name || "Agent"}</span>
+                <span>{agent?.name || "Agent"}</span>
               </PromptInputActionMenuTrigger>
               <PromptInputActionMenuContent>
                 {agents.map((agent) => (
                   <PromptInputActionMenuItem
                     key={agent.id}
-                    onClick={() => setSelectedAgent(agent)}
+                    onClick={() => setAgent(agent)}
                   >
                     {agent.name}
                   </PromptInputActionMenuItem>
@@ -97,13 +150,13 @@ export default function TaskWindow() {
             </PromptInputActionMenu>
             <PromptInputActionMenu>
               <PromptInputActionMenuTrigger size={"lg"}>
-                <span>{selectedProject?.name || "Project"}</span>
+                <span>{project?.name || "Project"}</span>
               </PromptInputActionMenuTrigger>
               <PromptInputActionMenuContent>
                 {projects.map((project) => (
                   <PromptInputActionMenuItem
                     key={project.id}
-                    onClick={() => setSelectedProject(project)}
+                    onClick={() => setProject(project)}
                   >
                     {project.name}
                   </PromptInputActionMenuItem>

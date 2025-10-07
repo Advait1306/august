@@ -3,10 +3,12 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { getMessages, getTasks } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useUser } from "@clerk/clerk-react";
-import { Schema, Task } from "@jupiter/sync/zero/zero-schema.gen";
+import { Task } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "../routes/sync_engine";
 import { nanoid } from "nanoid";
 import { UserModelMessage } from "ai";
+import { Agent } from "../types/agent";
+import { Project } from "../types/project";
 
 type PermissionState = Record<string, Permission>;
 type GenerationState = Record<string, string>;
@@ -21,6 +23,14 @@ type TaskRuntimeState = {
   messages: any;
   selectTask: (task: Task | "new-conversation") => void;
   sendMessage: (message: string) => void;
+  composerStates: Record<string, ComposerState>;
+  setComposerStates: (states: Record<string, ComposerState>) => void;
+};
+
+type ComposerState = {
+  prompt: string;
+  agent: Agent;
+  project: Project;
 };
 
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
@@ -31,6 +41,8 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   selectedTask: "new-conversation",
   selectTask: () => {},
   sendMessage: () => {},
+  composerStates: {},
+  setComposerStates: () => {},
 });
 
 export const TaskRuntimeProvider = ({
@@ -43,6 +55,9 @@ export const TaskRuntimeProvider = ({
 
   const [permissions, setPermissions] = useState<PermissionState>({});
   const [generations, setGenerations] = useState<GenerationState>({});
+  const [composerStates, setComposerStates] = useState<
+    Record<string, ComposerState>
+  >({});
 
   // We need to wait for the task to be created and then select it
   const [waitForSelect, setWaitForSelect] = useState<string | null>(null);
@@ -85,8 +100,9 @@ export const TaskRuntimeProvider = ({
   };
 
   const sendMessage = async (message: string) => {
+    let taskId: string;
     if (selectedTask === "new-conversation") {
-      const taskId = nanoid();
+      taskId = nanoid();
       const messageId = nanoid();
       const m = {
         role: "user",
@@ -107,6 +123,7 @@ export const TaskRuntimeProvider = ({
 
       setWaitForSelect(taskId);
     } else {
+      taskId = selectedTask.id;
       const messageId = nanoid();
       const m = {
         role: "user",
@@ -114,13 +131,28 @@ export const TaskRuntimeProvider = ({
       } as UserModelMessage;
 
       z.mutate.message.upsert({
-        task_id: selectedTask.id,
+        task_id: taskId,
         message_id: messageId,
         role: m.role,
         content: m.content as Record<string, any>[],
         metadata: {},
       });
     }
+
+    const messages = await z.query.messages
+      .where("task_id", taskId)
+      .orderBy("created_at", "asc")
+      .run();
+
+    // TODO: Get Project and Agent for task
+
+    // for (message in window.api.agent.run("next-agent", {
+    //   messages,
+    //   runConfig: {},
+    //   threadId: taskId,
+    // })) {
+
+    // }
   };
 
   return (
@@ -133,6 +165,8 @@ export const TaskRuntimeProvider = ({
         selectTask,
         messages: selectedTasksMessages[0]?.messages,
         sendMessage,
+        composerStates,
+        setComposerStates,
       }}
     >
       {children}
