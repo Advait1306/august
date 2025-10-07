@@ -83,7 +83,7 @@ export const AssistantMessage = ({ message }: AssistantMessageProps) => {
         return (
           <Tool key={index}>
             <ToolHeader
-              type="tool-call"
+              type={`tool-${content.toolName}`}
               state={result ? "output-available" : "input-available"}
             />
             <ToolContent>
