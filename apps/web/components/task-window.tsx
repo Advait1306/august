@@ -1,4 +1,3 @@
-import { Message, MessageContent } from "@/src/components/ai-elements/message";
 import {
   PromptInput,
   PromptInputAttachments,
@@ -13,7 +12,6 @@ import {
   PromptInputSubmit,
   PromptInputActionMenuItem,
 } from "@/src/components/ai-elements/prompt-input";
-import { Response } from "@/src/components/ai-elements/response";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
 import { useAgentStore } from "@/src/stores/agentStore";
 import { useProjectStore } from "@/src/stores/projectStore";
@@ -21,6 +19,15 @@ import { Agent } from "@/src/types/agent";
 import { Project } from "@/src/types/project";
 
 import { useCallback, useEffect } from "react";
+import { AssistantMessage, UserMessage } from "./message";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationEmptyState,
+  ConversationScrollButton,
+} from "@/src/components/ai-elements/conversation";
+import { Message } from "@/src/components/ai-elements/message";
+import { MessageSquare } from "lucide-react";
 
 export default function TaskWindow() {
   // Selector items
@@ -37,7 +44,8 @@ export default function TaskWindow() {
   } = useTaskRuntime();
 
   // Derived state and functions for ease of use
-  const composerState = composerStates[selectedTask.id as string];
+  const selectedTaskId = selectedTask.id ?? "new-conversation";
+  const composerState = composerStates[selectedTaskId];
   const prompt = composerState?.prompt ?? "";
   const agent = composerState?.agent ?? null;
   const project = composerState?.project ?? null;
@@ -48,14 +56,14 @@ export default function TaskWindow() {
       setComposerStates((prev) => {
         return {
           ...prev,
-          [selectedTask.id as string]: {
-            ...prev[selectedTask.id as string],
+          [selectedTaskId]: {
+            ...prev[selectedTaskId],
             prompt,
           },
         };
       });
     },
-    [setComposerStates, selectedTask.id]
+    [setComposerStates, selectedTaskId]
   );
 
   const setAgent = useCallback(
@@ -64,14 +72,14 @@ export default function TaskWindow() {
       setComposerStates((prev) => {
         return {
           ...prev,
-          [selectedTask.id as string]: {
-            ...prev[selectedTask.id as string],
+          [selectedTaskId]: {
+            ...prev[selectedTaskId],
             agent,
           },
         };
       });
     },
-    [setComposerStates, selectedTask.id]
+    [setComposerStates, selectedTaskId]
   );
 
   const setProject = useCallback(
@@ -80,14 +88,14 @@ export default function TaskWindow() {
       setComposerStates((prev) => {
         return {
           ...prev,
-          [selectedTask.id as string]: {
-            ...prev[selectedTask.id as string],
+          [selectedTaskId]: {
+            ...prev[selectedTaskId],
             project,
           },
         };
       });
     },
-    [setComposerStates, selectedTask.id]
+    [setComposerStates, selectedTaskId]
   );
 
   useEffect(() => {
@@ -97,27 +105,31 @@ export default function TaskWindow() {
 
   return (
     <div className="flex-1 relative">
-      <div className="absolute flex-1 h-full p-8 overflow-auto pb-40">
-        {selectedTask != "new-conversation" && (
-          <div className="flex flex-col gap-4">
-            {messages?.map((message: any, index: number) => {
-              if (message.role === "user") {
-                return (
-                  <Message from="user" key={index}>
-                    <MessageContent className="rounded-3xl">
-                      {JSON.stringify(message)}
-                    </MessageContent>
-                  </Message>
-                );
-              } else {
-                return (
-                  <Response key={index}>{JSON.stringify(message)}</Response>
-                );
+      <Conversation
+        className="absolute w-full h-full p-8 overflow-auto pb-40"
+        key={selectedTaskId}
+      >
+        <ConversationContent>
+          {(messages ?? []).length === 0 ? (
+            <ConversationEmptyState
+              icon={
+                <div className="h-[40px] w-[40px] rounded-[20px] bg-primary" />
               }
-            })}
-          </div>
-        )}
-      </div>
+              title="Start a task"
+              description="Share an idea with your artificial helper"
+            />
+          ) : (
+            messages?.map((message: any, index: number) => {
+              if (message.role === "user") {
+                return <UserMessage key={index} message={message} />;
+              } else {
+                return <AssistantMessage key={index} message={message} />;
+              }
+            })
+          )}
+        </ConversationContent>
+        <ConversationScrollButton className="mb-40" />
+      </Conversation>
       <PromptInput
         onSubmit={() => {}}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"

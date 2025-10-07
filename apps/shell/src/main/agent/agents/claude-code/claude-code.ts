@@ -91,12 +91,14 @@ export class ClaudeCodeAgent implements AgentInterface {
             }
           }
         })) {
-          if (data.type !== 'assistant' && data.type !== 'result') {
+          // We also let the user message type through as
+          // tool results in CC SDK are treated as sent by user
+          if (data.type !== 'assistant' && data.type !== 'result' && data.type !== 'user') {
             console.log('Skipping message type: ', data.type)
             continue
           }
 
-          if (data.type === 'assistant') {
+          if (data.type === 'assistant' || data.type === 'user') {
             output.push(...data.message.content)
             yield {
               role: 'assistant',

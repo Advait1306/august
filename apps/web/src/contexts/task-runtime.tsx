@@ -6,7 +6,7 @@ import { useUser } from "@clerk/clerk-react";
 import { Task } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "../routes/sync_engine";
 import { nanoid } from "nanoid";
-import { UserModelMessage } from "ai";
+import { ModelMessage, UserModelMessage } from "ai";
 import { Agent } from "../types/agent";
 import { Project } from "../types/project";
 
@@ -101,16 +101,27 @@ export const TaskRuntimeProvider = ({
 
   const sendMessage = async (message: string) => {
     let taskId: string;
+    let agent: Agent;
+    let project: Project;
+    let chatMessages: ModelMessage[];
+
     if (selectedTask === "new-conversation") {
+      // Set states
       taskId = nanoid();
+      agent = composerStates["new-conversation"]?.agent;
+      project = composerStates["new-conversation"]?.project;
+
+      // Create task with first message
       const messageId = nanoid();
       const m = {
         role: "user",
         content: [{ type: "text", text: message }],
       } as UserModelMessage;
 
+      chatMessages = [m];
+
       // Create new task
-      z.mutate.tasks.create({
+      const result = z.mutate.tasks.create({
         task_id: taskId,
         message_data: {
           task_id: taskId,
@@ -121,38 +132,78 @@ export const TaskRuntimeProvider = ({
         },
       });
 
+      await result.client;
+
       setWaitForSelect(taskId);
     } else {
+      // Set states
       taskId = selectedTask.id;
+      agent = composerStates[taskId]?.agent;
+      project = composerStates[taskId]?.project;
+
+      // Create message
       const messageId = nanoid();
       const m = {
         role: "user",
         content: [{ type: "text", text: message }],
       } as UserModelMessage;
 
-      z.mutate.message.upsert({
+      let res = z.mutate.message.create({
         task_id: taskId,
         message_id: messageId,
         role: m.role,
         content: m.content as Record<string, any>[],
         metadata: {},
       });
+
+      await res.client;
+
+      const messages = await z.query.messages
+        .where("task_id", taskId)
+        .orderBy("created_at", "asc")
+        .run();
+
+      chatMessages = [];
+      // TODO: Map old messages
+      // chatMessages = messages.map((message) => {
+      //   return {
+      //     role: message.role,
+      //     content: message.content ,
+      //   };
+      // });
     }
 
-    const messages = await z.query.messages
-      .where("task_id", taskId)
-      .orderBy("created_at", "asc")
-      .run();
+    const replyId = nanoid();
 
-    // TODO: Get Project and Agent for task
+    // We have to create and update our message
+    // instead of using an upsert transaction because
+    // upsert seems to delete the row and add a new one
+    // which causes layout shifts.
+    const result = z.mutate.message.create({
+      task_id: taskId,
+      message_id: replyId,
+      role: "assistant",
+      content: [],
+      metadata: {},
+    });
 
-    // for (message in window.api.agent.run("next-agent", {
-    //   messages,
-    //   runConfig: {},
-    //   threadId: taskId,
-    // })) {
+    await result.client;
 
-    // }
+    for await (const reply of window.api.agent.run(agent.id, {
+      messages: chatMessages,
+      runConfig: {
+        project,
+      },
+      threadId: taskId,
+    })) {
+      z.mutate.message.update({
+        task_id: taskId,
+        message_id: replyId,
+        role: reply.role,
+        content: reply.content,
+        metadata: {},
+      });
+    }
   };
 
   return (

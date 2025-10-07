@@ -50,7 +50,7 @@ export function createMutators(authData: AuthData) {
       },
     },
     message: {
-      upsert: async (
+      create: async (
         tx: Transaction<Schema>,
         {
           task_id,
@@ -66,7 +66,32 @@ export function createMutators(authData: AuthData) {
           metadata: Record<string, any>;
         }
       ) => {
-        await tx.mutate.messages.upsert({
+        await tx.mutate.messages.insert({
+          id: message_id,
+          task_id,
+          message_id: message_id,
+          role: role,
+          content: content,
+          metadata: metadata,
+        });
+      },
+      update: async (
+        tx: Transaction<Schema>,
+        {
+          task_id,
+          message_id,
+          role,
+          content,
+          metadata,
+        }: {
+          task_id: string;
+          message_id: string;
+          role: string;
+          content: Record<string, any>[];
+          metadata: Record<string, any>;
+        }
+      ) => {
+        await tx.mutate.messages.update({
           id: message_id,
           task_id,
           message_id: message_id,
