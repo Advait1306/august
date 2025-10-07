@@ -4,19 +4,18 @@ import {
   jsonb,
   pgTable,
   timestamp,
+  unique,
   varchar,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
-  id: integer().primaryKey().generatedByDefaultAsIdentity(),
-  user_id: varchar().unique().notNull(),
+  id: varchar().primaryKey().notNull(),
 });
 
 export const tasks = pgTable("tasks", {
-  id: integer().primaryKey().generatedByDefaultAsIdentity(),
-  name: varchar(),
-  remote_id: varchar().notNull().unique(),
-  author_id: integer()
+  id: varchar().notNull().primaryKey(),
+  name: varchar().notNull(),
+  author_id: varchar()
     .notNull()
     .references(() => users.id),
   created_at: timestamp().notNull().defaultNow(),
@@ -24,10 +23,11 @@ export const tasks = pgTable("tasks", {
 });
 
 export const messages = pgTable("messages", {
-  id: integer().primaryKey().generatedByDefaultAsIdentity(),
-  thread_id: integer()
+  id: varchar().notNull().primaryKey(),
+  task_id: varchar()
     .notNull()
     .references(() => tasks.id),
+  message_id: varchar().notNull(),
   role: varchar().notNull(),
   content: jsonb().notNull(),
   metadata: jsonb(),
@@ -45,13 +45,13 @@ export const taskToUserRelation = relations(tasks, ({ one }) => ({
   }),
 }));
 
-export const messageToThreadRelation = relations(messages, ({ one }) => ({
-  thread: one(tasks, {
-    fields: [messages.thread_id],
+export const messageToTaskRelation = relations(messages, ({ one }) => ({
+  task: one(tasks, {
+    fields: [messages.task_id],
     references: [tasks.id],
   }),
 }));
 
-export const threadToMessagesRelation = relations(tasks, ({ many }) => ({
+export const taskToMessagesRelation = relations(tasks, ({ many }) => ({
   messages: many(messages),
 }));

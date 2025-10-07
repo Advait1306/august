@@ -26,7 +26,7 @@ export default function TaskWindow() {
   const { projects, loadProjects } = useProjectStore();
   const { agents, loadAgents } = useAgentStore();
 
-  const { selectedTask, messages } = useTaskRuntime();
+  const { selectedTask, messages, sendMessage } = useTaskRuntime();
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
@@ -109,7 +109,11 @@ export default function TaskWindow() {
               </PromptInputActionMenuContent>
             </PromptInputActionMenu>
           </PromptInputTools>
-          <PromptInputSubmit disabled={false} status={"ready"} />
+          <PromptInputSubmit
+            disabled={false}
+            status={"ready"}
+            onClick={() => sendMessage(prompt)}
+          />
         </PromptInputToolbar>
       </PromptInput>
     </div>

@@ -1,9 +1,20 @@
-import { createBuilder, definePermissions } from "@rocicorp/zero";
-import { schema, type Schema } from "./zero-schema.gen";
+import {
+  createBuilder,
+  definePermissions,
+  Schema as ZeroSchema,
+} from "@rocicorp/zero";
 
-export { schema, type Schema };
+import { schema as genSchema } from "./zero-schema.gen";
+
+export const schema = {
+  ...genSchema,
+  enableLegacyQueries: false,
+  enableLegacyMutators: false,
+} as const satisfies ZeroSchema;
 
 export const permissions: ReturnType<typeof definePermissions> =
-  definePermissions<unknown, Schema>(schema, () => ({}));
+  definePermissions<unknown, ZeroSchema>(schema, () => ({}));
 
 export const builder = createBuilder(schema);
+
+export type Schema = typeof schema;

@@ -5,8 +5,13 @@ import { clerkMiddleware, getAuth } from "@clerk/express";
 import express from "express";
 import cors from "cors";
 import { users } from "@jupiter/sync/db/schema";
+import { createMutators } from "@jupiter/sync/mutators/data";
 import bodyParser from "body-parser";
-import { handleGetQueriesRequest } from "@rocicorp/zero/server";
+import {
+  handleGetQueriesRequest,
+  PushProcessor,
+  ZQLDatabase,
+} from "@rocicorp/zero/server";
 import { schema } from "@jupiter/sync/zero/schema";
 
 const app = express();
@@ -20,6 +25,8 @@ import { eq } from "drizzle-orm";
 import { Webhook } from "svix";
 import { ReadonlyJSONValue, withValidation } from "@rocicorp/zero";
 import { AuthData, getMessages, getTasks } from "@jupiter/sync/queries/data";
+import { PostgresJSConnection } from "@rocicorp/zero/pg";
+import postgres from "postgres";
 
 const db = drizzle(process.env.DATABASE_URL!);
 const wh = new Webhook(process.env.CLERK_WEBHOOK_KEY!);
@@ -43,14 +50,14 @@ app.post(
 
     if (parsedPayload.type === "user.created") {
       const userInsert: typeof users.$inferInsert = {
-        user_id: parsedPayload.data.id,
+        id: parsedPayload.data.id,
       };
 
       await db.insert(users).values(userInsert);
 
       res.sendStatus(200);
     } else if (parsedPayload.type === "user.deleted") {
-      await db.delete(users).where(eq(users.user_id, parsedPayload.data.id));
+      await db.delete(users).where(eq(users.id, parsedPayload.data.id));
 
       res.sendStatus(200);
     } else {
@@ -142,6 +149,29 @@ app.post("/get-queries", async (req, res) => {
       req.body
     )
   );
+});
+
+const processor = new PushProcessor(
+  new ZQLDatabase(
+    new PostgresJSConnection(postgres(process.env.ZERO_UPSTREAM_DB! as string)),
+    schema
+  )
+);
+
+// Zero mutators
+app.post("/push", async (req, res) => {
+  const { isAuthenticated, userId } = getAuth(req);
+
+  if (!isAuthenticated) {
+    return res.status(401).json({ error: "User not authenticated" });
+  }
+
+  const result = await processor.process(
+    createMutators({ userId }),
+    req.query as Record<string, string>,
+    req.body
+  );
+  return await res.json(result);
 });
 
 app.listen(8080, () => {

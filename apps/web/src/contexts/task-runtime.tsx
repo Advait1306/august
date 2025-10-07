@@ -4,6 +4,8 @@ import { getMessages, getTasks } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useUser } from "@clerk/clerk-react";
 import { Task } from "@jupiter/sync/zero/zero-schema.gen";
+import { useZero } from "../routes/sync_engine";
+import { nanoid } from "nanoid";
 
 type PermissionState = Record<string, Permission>;
 type GenerationState = Record<string, string>;
@@ -17,6 +19,7 @@ type TaskRuntimeState = {
   selectedTask: any | "new-conversation";
   messages: any;
   selectTask: (task: Task | "new-conversation") => void;
+  sendMessage: (message: string) => void;
 };
 
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
@@ -26,6 +29,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   messages: [],
   selectedTask: "new-conversation",
   selectTask: () => {},
+  sendMessage: () => {},
 });
 
 export const TaskRuntimeProvider = ({
@@ -34,6 +38,7 @@ export const TaskRuntimeProvider = ({
   children: React.ReactNode;
 }) => {
   const { user } = useUser();
+  const z = useZero();
 
   const [permissions, setPermissions] = useState<PermissionState>({});
   const [generations, setGenerations] = useState<GenerationState>({});
@@ -67,6 +72,20 @@ export const TaskRuntimeProvider = ({
     setSelectedTask(task);
   };
 
+  const sendMessage = (message: string) => {
+    console.log(message);
+
+    if (selectedTask === "new-conversation") {
+      // Create new task
+      const result = z.mutate.tasks.create({
+        task_id: nanoid(),
+      });
+      console.log(result);
+    } else {
+      
+    }
+  };
+
   return (
     <TaskRuntimeContext.Provider
       value={{
@@ -76,6 +95,7 @@ export const TaskRuntimeProvider = ({
         selectedTask,
         selectTask,
         messages: selectedTasksMessages[0]?.messages,
+        sendMessage,
       }}
     >
       {children}

@@ -11,7 +11,7 @@ export const getTasks = syncedQueryWithContext(
   z.tuple([]),
   (context: AuthData) => {
     return builder.users
-      .where("user_id", context.userId)
+      .where("id", context.userId)
       .one()
       .related("tasks", (q) => {
         return q.related("messages");
@@ -24,6 +24,6 @@ export const getMessages = syncedQueryWithContext(
   z.tuple([z.string()]),
   (context: AuthData, taskId: string) => {
     // TODO: Add check for the user having access to this task's messages
-    return builder.tasks.where("remote_id", taskId).one().related("messages");
+    return builder.tasks.where("id", taskId).one().related("messages");
   }
 );

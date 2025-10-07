@@ -34,6 +34,10 @@
     "./db/*": {
       "types": "./src/db/*.ts",
       "default": "./dist/db/*.js"
+    },
+    "./mutators/*": {
+      "types": "./src/mutators/*.ts",
+      "default": "./dist/mutators/*.js"
     }
   }
 }

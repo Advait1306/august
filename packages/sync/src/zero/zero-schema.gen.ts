@@ -25,21 +25,30 @@ export const schema = {
       name: "messages",
       columns: {
         id: {
-          type: "number",
-          optional: true,
+          type: "string",
+          optional: false,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "messages",
             "id"
           >,
         },
-        thread_id: {
-          type: "number",
+        task_id: {
+          type: "string",
           optional: false,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "messages",
-            "thread_id"
+            "task_id"
+          >,
+        },
+        message_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "messages",
+            "message_id"
           >,
         },
         role: {
@@ -85,8 +94,8 @@ export const schema = {
       name: "tasks",
       columns: {
         id: {
-          type: "number",
-          optional: true,
+          type: "string",
+          optional: false,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "tasks",
@@ -95,24 +104,15 @@ export const schema = {
         },
         name: {
           type: "string",
-          optional: true,
+          optional: false,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "tasks",
             "name"
           >,
         },
-        remote_id: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "tasks",
-            "remote_id"
-          >,
-        },
         author_id: {
-          type: "number",
+          type: "string",
           optional: false,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
@@ -145,21 +145,12 @@ export const schema = {
       name: "users",
       columns: {
         id: {
-          type: "number",
-          optional: true,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "users",
-            "id"
-          >,
-        },
-        user_id: {
           type: "string",
           optional: false,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "users",
-            "user_id"
+            "id"
           >,
         },
       },
@@ -168,9 +159,9 @@ export const schema = {
   },
   relationships: {
     messages: {
-      thread: [
+      task: [
         {
-          sourceField: ["thread_id"],
+          sourceField: ["task_id"],
           destField: ["id"],
           destSchema: "tasks",
           cardinality: "one",
@@ -178,20 +169,20 @@ export const schema = {
       ],
     },
     tasks: {
+      messages: [
+        {
+          sourceField: ["id"],
+          destField: ["task_id"],
+          destSchema: "messages",
+          cardinality: "many",
+        },
+      ],
       user: [
         {
           sourceField: ["author_id"],
           destField: ["id"],
           destSchema: "users",
           cardinality: "one",
-        },
-      ],
-      messages: [
-        {
-          sourceField: ["id"],
-          destField: ["thread_id"],
-          destSchema: "messages",
-          cardinality: "many",
         },
       ],
     },

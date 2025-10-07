@@ -1,5 +1,6 @@
-import { ZeroProvider } from "@rocicorp/zero/react";
-import { schema } from "@jupiter/sync/zero/schema";
+import { createUseZero, ZeroProvider } from "@rocicorp/zero/react";
+import { schema, Schema } from "@jupiter/sync/zero/schema";
+import { createMutators, Mutators } from "@jupiter/sync/mutators/data";
 import {
   ClerkLoaded,
   SignedIn,
@@ -27,6 +28,9 @@ export const SyncEngine = ({ children }: { children: React.ReactNode }) => {
               // ZeroProvider expects undefined, not null
               return token === null ? undefined : token;
             }}
+            mutators={createMutators({
+              userId: user?.id ?? "",
+            })}
           >
             {children}
           </ZeroProvider>
@@ -36,3 +40,5 @@ export const SyncEngine = ({ children }: { children: React.ReactNode }) => {
     </>
   );
 };
+
+export const useZero = createUseZero<Schema, Mutators>();
