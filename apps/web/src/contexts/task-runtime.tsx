@@ -252,17 +252,20 @@ export const TaskRuntimeProvider = ({
           return {
             role: "user",
             content: message.content as Record<string, any>[],
+            providerOptions: message.metadata as Record<string, any>,
           } as UserModelMessage;
         } else if (message.role === "assistant") {
           return {
             role: "assistant",
             content: message.content as Record<string, any>[],
+            providerOptions: message.metadata as Record<string, any>,
           } as AssistantModelMessage;
         } else {
           // Fallback for unexpected roles
           return {
             role: message.role,
             content: message.content as Record<string, any>[],
+            providerOptions: message.metadata as Record<string, any>,
           } as ModelMessage;
         }
       });
@@ -299,7 +302,7 @@ export const TaskRuntimeProvider = ({
         message_id: replyId,
         role: reply.role,
         content: reply.content as Record<string, any>[],
-        metadata: {},
+        metadata: reply.providerOptions ?? {},
       });
     }
 

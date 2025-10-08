@@ -26,9 +26,14 @@ export class ClaudeCodeAgent implements AgentInterface {
     }) => Promise<boolean>,
     systemPrompt?: string
   ): AsyncGenerator<AssistantModelMessage, void> {
-    // Claude code doesn't take old messages, it takes a session id that's generated and stored in all assistant messages
+    // Claude code doesn't take old messages, it takes a session id
+    // that's generated and stored in assistant messages.
+    //
+    // NOTE: The session id changes with every new message, which is done
+    // to allow branching of chats. Hence we look for the last assistant message and
+    // use it's session id. Claude code will automatically string together the chat chain.
     const sessionId = runOptions.messages.findLast((m) => m.role === 'assistant')?.providerOptions
-      ?.claude?.session_id as string | undefined
+      ?.claude?.sessionId as string | undefined
 
     const project = (runOptions.runConfig.project ??
       runOptions.messages.find((m) => m.role === 'assistant')?.providerOptions?.claude?.project) as
