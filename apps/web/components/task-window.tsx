@@ -236,7 +236,6 @@ export default function TaskWindow() {
           <PromptInputSubmit
             disabled={isGenerating}
             status={isGenerating ? "streaming" : "ready"}
-            onClick={() => sendMessage(prompt)}
           />
         </PromptInputToolbar>
       </PromptInput>

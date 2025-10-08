@@ -38,6 +38,10 @@
     "./mutators/*": {
       "types": "./src/mutators/*.ts",
       "default": "./dist/mutators/*.js"
+    },
+    "./server-mutators/*": {
+      "types": "./src/server-mutators/*.ts",
+      "default": "./dist/server-mutators/*.js"
     }
   }
 }

@@ -63,7 +63,7 @@ function Tasks() {
                 }
                 onClick={() => selectTask(task)}
               >
-                <span className="pointer-events-none select-text">
+                <span className="pointer-events-none select-text line-clamp-1">
                   {task.name}
                 </span>
               </div>

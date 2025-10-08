@@ -113,10 +113,20 @@ export function createMutators(authData: AuthData) {
           };
         }
       ) => {
+        const name = message_data.content.find((part) => part.type === "text")
+          ?.text
+          ? (() => {
+              const text = message_data.content.find(
+                (part) => part.type === "text"
+              )!.text;
+              return text.length > 40 ? text.slice(0, 40) + "..." : text;
+            })()
+          : "New Task";
+
         await tx.mutate.tasks.insert({
           id: task_id,
           author_id: authData.userId,
-          name: "New Task",
+          name,
           project_id,
           agent_id,
         });

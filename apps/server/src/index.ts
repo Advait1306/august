@@ -6,6 +6,7 @@ import express from "express";
 import cors from "cors";
 import { users } from "@jupiter/sync/db/schema";
 import { createMutators } from "@jupiter/sync/mutators/data";
+import { createServerMutators } from "@jupiter/sync/server-mutators/data";
 import bodyParser from "body-parser";
 import {
   handleGetQueriesRequest,
@@ -174,11 +175,15 @@ app.post("/push", async (req, res) => {
     return res.status(401).json({ error: "User not authenticated" });
   }
 
+  const asyncTasks: Array<() => Promise<void>> = [];
+
   const result = await processor.process(
-    createMutators({ userId }),
+    createServerMutators(createMutators({ userId }), { userId }, asyncTasks),
     req.query as Record<string, string>,
     req.body
   );
+
+  await Promise.all(asyncTasks.map((task) => task()));
   return await res.json(result);
 });
 
