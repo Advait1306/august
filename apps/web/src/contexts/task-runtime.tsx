@@ -1,6 +1,11 @@
 import { Permission } from "@jupiter/shared/types";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { getMessages, getTasks } from "@jupiter/sync/queries/data";
+import {
+  getAgents,
+  getMessages,
+  getProjects,
+  getTasks,
+} from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useUser } from "@clerk/clerk-react";
 import { Agent, Task, Project } from "@jupiter/sync/zero/zero-schema.gen";
@@ -46,6 +51,12 @@ export const TaskRuntimeProvider = ({
 }) => {
   const { user } = useUser();
   const z = useZero();
+  const agents = useQuery(
+    getAgents({ userId: user?.id ?? "no_user_id_available" })
+  )[0];
+  const projects = useQuery(
+    getProjects({ userId: user?.id ?? "no_user_id_available" })
+  )[0];
 
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
@@ -137,6 +148,28 @@ export const TaskRuntimeProvider = ({
   const selectTask = (task: Task | "new-conversation") => {
     setWaitForSelect(null);
     setSelectedTask(task);
+
+    if (task !== "new-conversation") {
+      // Composer setup
+      let agent = agents.find((agent) => agent.id === task.agent_id);
+      let project = projects.find((project) => project.id === task.project_id);
+
+      // TODO (nitpick): If an agent or project name changes once a task is selected,
+      // they don't update automatically in the composer
+      if (project && agent) {
+        // Update composer with the agent and project of selected task
+        setComposerStates((prev) => {
+          return {
+            ...prev,
+            [task.id]: {
+              ...prev[task.id],
+              agent: agent,
+              project: project,
+            },
+          };
+        });
+      }
+    }
   };
 
   const sendMessage = async (message: string) => {
@@ -180,8 +213,8 @@ export const TaskRuntimeProvider = ({
     } else {
       // Set states
       taskId = selectedTask.id;
-      agent = composerStates[taskId]?.agent;
-      project = composerStates[taskId]?.project;
+      agent = selectedTask.agent;
+      project = selectedTask.project;
 
       // Create message
       const messageId = nanoid();
