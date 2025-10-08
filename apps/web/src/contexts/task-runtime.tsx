@@ -287,6 +287,8 @@ export const TaskRuntimeProvider = ({
 
     await result.client;
 
+    // TODO: Message receiving can happen in an async manner,
+    // which would allow the listener to survive a reload.
     for await (const reply of window.api.agent.run(
       {
         messages: chatMessages,

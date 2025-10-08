@@ -25,6 +25,7 @@ import { useQuery } from "@rocicorp/zero/react";
 import { getAgents, getProjects } from "@jupiter/sync/queries/data";
 import { useUser } from "@clerk/clerk-react";
 import { Agent, Project } from "@jupiter/sync/zero/zero-schema.gen";
+import { BlinkingCursor } from "./blinking-cursor";
 
 export default function TaskWindow() {
   const { user } = useUser();
@@ -53,8 +54,14 @@ export default function TaskWindow() {
   const selectedTaskId = selectedTask.id ?? "new-conversation";
   const composerState = composerStates[selectedTaskId];
   const prompt = composerState?.prompt ?? "";
-  const agent = composerState?.agent ?? null;
-  const project = composerState?.project ?? null;
+  const agent =
+    selectedTaskId === "new-conversation"
+      ? composerState?.agent
+      : agents.find((agent) => agent.id === selectedTask.agent_id);
+  const project =
+    selectedTaskId === "new-conversation"
+      ? composerState?.project
+      : projects.find((project) => project.id === selectedTask.project_id);
   const pendingPermissions = permissions[selectedTaskId];
   const isGenerating = generationState.includes(selectedTaskId);
 
@@ -74,6 +81,7 @@ export default function TaskWindow() {
     [setComposerStates, selectedTaskId]
   );
 
+  // Only allowed for "new-conversation"
   const setAgent = useCallback(
     (agent: Agent) => {
       // @ts-ignore
@@ -90,6 +98,7 @@ export default function TaskWindow() {
     [setComposerStates, selectedTaskId]
   );
 
+  // Only allowed for "new-conversation"
   const setProject = useCallback(
     (project: Project) => {
       // @ts-ignore
@@ -131,13 +140,17 @@ export default function TaskWindow() {
               }
             })
           )}
+          {isGenerating && <BlinkingCursor />}
         </ConversationContent>
+
         <ConversationScrollButton className="mb-40" />
       </Conversation>
 
       {/* Composer */}
       <PromptInput
-        onSubmit={() => {}}
+        onSubmit={() => {
+          sendMessage(prompt);
+        }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
       >
         <PromptInputBody>
