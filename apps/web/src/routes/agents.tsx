@@ -39,8 +39,7 @@ import { Separator } from "@/components/ui/separator";
 import { createFileRoute } from "@tanstack/react-router";
 import { ShellOnly } from "@/components/restrictor";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
-import { useUser } from "@clerk/clerk-react";
-import { useZero } from "../components/sync_engine";
+import { useSyncContext, useZero } from "../components/sync_engine";
 import { useQuery } from "@rocicorp/zero/react";
 import { getAgents } from "@jupiter/sync/queries/data";
 import { nanoid } from "nanoid";
@@ -49,15 +48,16 @@ export const Route = createFileRoute("/agents")({
   component: Agents,
 });
 
-type NewAgent = Omit<Agent, "id" | "created_at" | "author_id">;
+type NewAgent = Omit<
+  Agent,
+  "id" | "created_at" | "author_id" | "organisation_id"
+>;
 
 function Agents() {
-  const { user } = useUser();
   const z = useZero();
+  const syncContext = useSyncContext();
 
-  const agents = useQuery(
-    getAgents({ userId: user?.id ?? "no_user_id_available" })
-  )[0];
+  const agents = useQuery(getAgents(syncContext.authData))[0];
 
   // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState(false);

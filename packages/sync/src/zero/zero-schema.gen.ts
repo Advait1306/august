@@ -69,6 +69,15 @@ export const schema = {
             "created_at"
           >,
         },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "agents",
+            "organisation_id"
+          >,
+        },
         author_id: {
           type: "string",
           optional: false,
@@ -150,6 +159,21 @@ export const schema = {
       },
       primaryKey: ["id"],
     },
+    organisations: {
+      name: "organisations",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "organisations",
+            "id"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+    },
     projects: {
       name: "projects",
       columns: {
@@ -189,6 +213,15 @@ export const schema = {
             "created_at"
           >,
         },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "projects",
+            "organisation_id"
+          >,
+        },
         author_id: {
           type: "string",
           optional: false,
@@ -220,6 +253,15 @@ export const schema = {
             ZeroSchema,
             "tasks",
             "name"
+          >,
+        },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "tasks",
+            "organisation_id"
           >,
         },
         author_id: {
@@ -288,6 +330,14 @@ export const schema = {
   },
   relationships: {
     agents: {
+      user: [
+        {
+          sourceField: ["author_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
       tasks: [
         {
           sourceField: ["id"],
@@ -296,11 +346,11 @@ export const schema = {
           cardinality: "many",
         },
       ],
-      user: [
+      organisation: [
         {
-          sourceField: ["author_id"],
+          sourceField: ["organisation_id"],
           destField: ["id"],
-          destSchema: "users",
+          destSchema: "organisations",
           cardinality: "one",
         },
       ],
@@ -315,15 +365,33 @@ export const schema = {
         },
       ],
     },
-    projects: {
+    organisations: {
+      agents: [
+        {
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "agents",
+          cardinality: "many",
+        },
+      ],
+      projects: [
+        {
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "projects",
+          cardinality: "many",
+        },
+      ],
       tasks: [
         {
           sourceField: ["id"],
-          destField: ["project_id"],
+          destField: ["organisation_id"],
           destSchema: "tasks",
           cardinality: "many",
         },
       ],
+    },
+    projects: {
       user: [
         {
           sourceField: ["author_id"],
@@ -332,13 +400,45 @@ export const schema = {
           cardinality: "one",
         },
       ],
+      tasks: [
+        {
+          sourceField: ["id"],
+          destField: ["project_id"],
+          destSchema: "tasks",
+          cardinality: "many",
+        },
+      ],
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
     },
     tasks: {
+      user: [
+        {
+          sourceField: ["author_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
       agent: [
         {
           sourceField: ["agent_id"],
           destField: ["id"],
           destSchema: "agents",
+          cardinality: "one",
+        },
+      ],
+      project: [
+        {
+          sourceField: ["project_id"],
+          destField: ["id"],
+          destSchema: "projects",
           cardinality: "one",
         },
       ],
@@ -350,24 +450,24 @@ export const schema = {
           cardinality: "many",
         },
       ],
-      project: [
+      organisation: [
         {
-          sourceField: ["project_id"],
+          sourceField: ["organisation_id"],
           destField: ["id"],
-          destSchema: "projects",
-          cardinality: "one",
-        },
-      ],
-      user: [
-        {
-          sourceField: ["author_id"],
-          destField: ["id"],
-          destSchema: "users",
+          destSchema: "organisations",
           cardinality: "one",
         },
       ],
     },
     users: {
+      tasks: [
+        {
+          sourceField: ["id"],
+          destField: ["author_id"],
+          destSchema: "tasks",
+          cardinality: "many",
+        },
+      ],
       agents: [
         {
           sourceField: ["id"],
@@ -381,14 +481,6 @@ export const schema = {
           sourceField: ["id"],
           destField: ["author_id"],
           destSchema: "projects",
-          cardinality: "many",
-        },
-      ],
-      tasks: [
-        {
-          sourceField: ["id"],
-          destField: ["author_id"],
-          destSchema: "tasks",
           cardinality: "many",
         },
       ],
@@ -413,6 +505,11 @@ export type Agent = Row<Schema["tables"]["agents"]>;
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Message = Row<Schema["tables"]["messages"]>;
+/**
+ * Represents a row from the "organisations" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type Organisation = Row<Schema["tables"]["organisations"]>;
 /**
  * Represents a row from the "projects" table.
  * This type is auto-generated from your Drizzle schema definition.

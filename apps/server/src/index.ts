@@ -4,7 +4,7 @@ dotenv.config({ path: "./.env" });
 import { clerkMiddleware, getAuth } from "@clerk/express";
 import express from "express";
 import cors from "cors";
-import { users } from "@jupiter/sync/db/schema";
+import { organisations, users } from "@jupiter/sync/db/schema";
 import { createMutators } from "@jupiter/sync/mutators/data";
 import { createServerMutators } from "@jupiter/sync/server-mutators/data";
 import bodyParser from "body-parser";
@@ -55,20 +55,50 @@ app.post(
       return res.sendStatus(400);
     }
 
-    if (parsedPayload.type === "user.created") {
-      const userInsert: typeof users.$inferInsert = {
-        id: parsedPayload.data.id,
-      };
+    switch (parsedPayload.type) {
+      case "user.created": {
+        const userInsert: typeof users.$inferInsert = {
+          id: parsedPayload.data.id,
+        };
+        const orgInsert: typeof organisations.$inferInsert = {
+          id: parsedPayload.data.id,
+        };
+        await db.insert(users).values(userInsert);
+        await db.insert(organisations).values(orgInsert);
+        res.sendStatus(200);
+        break;
+      }
 
-      await db.insert(users).values(userInsert);
+      case "user.deleted": {
+        await db.delete(users).where(eq(users.id, parsedPayload.data.id));
+        await db
+          .delete(organisations)
+          .where(eq(organisations.id, parsedPayload.data.id));
+        res.sendStatus(200);
+        break;
+      }
 
-      res.sendStatus(200);
-    } else if (parsedPayload.type === "user.deleted") {
-      await db.delete(users).where(eq(users.id, parsedPayload.data.id));
+      case "organization.created": {
+        const organisationInsert: typeof organisations.$inferInsert = {
+          id: parsedPayload.data.id,
+        };
+        await db.insert(organisations).values(organisationInsert);
+        res.sendStatus(200);
+        break;
+      }
 
-      res.sendStatus(200);
-    } else {
-      res.sendStatus(400);
+      case "organization.deleted": {
+        await db
+          .delete(organisations)
+          .where(eq(organisations.id, parsedPayload.data.id));
+        res.sendStatus(200);
+        break;
+      }
+
+      default: {
+        res.sendStatus(400);
+        break;
+      }
     }
   }
 );
@@ -138,7 +168,7 @@ function getQuery(
 }
 
 app.post("/get-queries", async (req, res) => {
-  const { isAuthenticated, userId } = getAuth(req);
+  const { isAuthenticated, userId, orgId } = getAuth(req);
 
   if (!isAuthenticated) {
     return res.status(401).json({ error: "User not authenticated" });
@@ -150,6 +180,7 @@ app.post("/get-queries", async (req, res) => {
         getQuery(
           {
             userId,
+            orgId: orgId ?? userId,
           },
           name,
           args
@@ -169,7 +200,7 @@ const processor = new PushProcessor(
 
 // Zero mutators
 app.post("/push", async (req, res) => {
-  const { isAuthenticated, userId } = getAuth(req);
+  const { isAuthenticated, userId, orgId } = getAuth(req);
 
   if (!isAuthenticated) {
     return res.status(401).json({ error: "User not authenticated" });
@@ -178,7 +209,11 @@ app.post("/push", async (req, res) => {
   const asyncTasks: Array<() => Promise<void>> = [];
 
   const result = await processor.process(
-    createServerMutators(createMutators({ userId }), { userId }, asyncTasks),
+    createServerMutators(
+      createMutators({ userId, orgId: orgId ?? userId }),
+      { userId, orgId: orgId ?? userId },
+      asyncTasks
+    ),
     req.query as Record<string, string>,
     req.body
   );

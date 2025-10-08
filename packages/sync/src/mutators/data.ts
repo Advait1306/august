@@ -3,6 +3,7 @@ import { Schema } from "../zero/schema";
 
 type AuthData = {
   userId: string;
+  orgId: string;
 };
 
 export function createMutators(authData: AuthData) {
@@ -21,6 +22,7 @@ export function createMutators(authData: AuthData) {
           name,
           path,
           author_id: authData.userId,
+          organisation_id: authData.orgId,
         });
       },
       update: async (
@@ -65,6 +67,7 @@ export function createMutators(authData: AuthData) {
           system_prompt,
           base_agent,
           author_id: authData.userId,
+          organisation_id: authData.orgId,
         });
       },
       update: async (
@@ -129,6 +132,8 @@ export function createMutators(authData: AuthData) {
           name,
           project_id,
           agent_id,
+          organisation_id: authData.orgId,
+          created_at: Date.now(),
         });
 
         await tx.mutate.messages.upsert({
@@ -138,6 +143,7 @@ export function createMutators(authData: AuthData) {
           role: message_data.role,
           content: message_data.content,
           metadata: message_data.metadata,
+          created_at: Date.now(),
         });
       },
     },

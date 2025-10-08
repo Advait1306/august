@@ -2,8 +2,10 @@
 import { CustomMutatorDefs, Transaction } from "@rocicorp/zero";
 import { Schema } from "../zero/schema";
 
+
 type AuthData = {
   userId: string;
+  orgId: string;
 };
 
 type AsyncTask = Array<() => Promise<void>>;

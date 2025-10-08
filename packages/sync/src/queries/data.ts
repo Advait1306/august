@@ -4,13 +4,16 @@ import { builder } from "../zero/schema";
 
 export type AuthData = {
   userId: string;
+  orgId: string;
 };
 
 export const getProjects = syncedQueryWithContext(
   "getProjects",
   z.tuple([]),
   (context: AuthData) => {
-    return builder.projects.where("author_id", context.userId);
+    return builder.projects
+      .where("author_id", context.userId)
+      .where("organisation_id", context.orgId);
   }
 );
 
@@ -18,7 +21,9 @@ export const getAgents = syncedQueryWithContext(
   "getAgents",
   z.tuple([]),
   (context: AuthData) => {
-    return builder.agents.where("author_id", context.userId);
+    return builder.agents
+      .where("author_id", context.userId)
+      .where("organisation_id", context.orgId);
   }
 );
 
@@ -28,6 +33,7 @@ export const getTasks = syncedQueryWithContext(
   (context: AuthData) => {
     return builder.tasks
       .where("author_id", context.userId)
+      .where("organisation_id", context.orgId)
       .orderBy("created_at", "desc");
   }
 );

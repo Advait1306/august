@@ -22,9 +22,8 @@ import { useCommandMenu } from "@/components/command-menu";
 import { createFileRoute } from "@tanstack/react-router";
 import { ShellOnly } from "@/components/restrictor";
 import { getProjects } from "@jupiter/sync/queries/data";
-import { useUser } from "@clerk/clerk-react";
 import { useQuery } from "@rocicorp/zero/react";
-import { useZero } from "../components/sync_engine";
+import { useSyncContext, useZero } from "../components/sync_engine";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 
@@ -33,12 +32,10 @@ export const Route = createFileRoute("/projects")({
 });
 
 function Projects() {
-  const { user } = useUser();
   const z = useZero();
+  const syncData = useSyncContext();
 
-  const projects = useQuery(
-    getProjects({ userId: user?.id ?? "no_user_id_available" })
-  )[0];
+  const projects = useQuery(getProjects(syncData.authData))[0];
   const { addItemToContext, removeContextItem } = useCommandMenu();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);

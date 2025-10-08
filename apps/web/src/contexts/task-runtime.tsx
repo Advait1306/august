@@ -7,9 +7,8 @@ import {
   getTasks,
 } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
-import { useUser } from "@clerk/clerk-react";
 import { Agent, Task, Project } from "@jupiter/sync/zero/zero-schema.gen";
-import { useZero } from "../components/sync_engine";
+import { useSyncContext, useZero } from "../components/sync_engine";
 import { nanoid } from "nanoid";
 import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
 
@@ -51,22 +50,12 @@ export const TaskRuntimeProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const { user } = useUser();
+  const syncData = useSyncContext();
+
   const z = useZero();
-  const agents = useQuery(
-    getAgents({ userId: user?.id ?? "no_user_id_available" })
-  )[0];
-  const projects = useQuery(
-    getProjects({ userId: user?.id ?? "no_user_id_available" })
-  )[0];
-  const tasks = useQuery(
-    getTasks({
-      userId: user?.id ?? "no_user_id_available",
-    }),
-    {
-      enabled: !!user?.id,
-    }
-  )[0];
+  const agents = useQuery(getAgents(syncData.authData))[0];
+  const projects = useQuery(getProjects(syncData.authData))[0];
+  const tasks = useQuery(getTasks(syncData.authData))[0];
 
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
@@ -81,21 +70,25 @@ export const TaskRuntimeProvider = ({
     "new-conversation"
   );
   const selectedTasksMessages = useQuery(
-    getMessages(
-      { userId: user?.id ?? "no_user_id_available" },
-      selectedTask.id ?? ""
-    ),
-    {
-      enabled: !!selectedTask.id,
-    }
+    getMessages(syncData.authData, selectedTask.id ?? ""),
+    { enabled: !!selectedTask.id }
   );
 
   useEffect(() => {
+    // New task is added, select it
     if (waitForSelect) {
+      console.log("waitForSelect: ", waitForSelect);
       const task = tasks?.find((task) => task.id === waitForSelect);
+      console.log("waitingForSelectTask: ", task);
       if (task) {
         setSelectedTask(task);
+        resetNewConversation();
       }
+    }
+    // Task is either deleted or org is changed and task is lost
+    else if (!tasks.map((task) => task.id).includes(selectedTask.id)) {
+      setSelectedTask("new-conversation");
+      resetNewConversation();
     }
   }, [tasks]);
 
@@ -309,6 +302,14 @@ export const TaskRuntimeProvider = ({
     }
 
     setGenerationState((prev) => prev.filter((id) => id !== taskId));
+  };
+
+  const resetNewConversation = () => {
+    setComposerStates((prev) => {
+      const newState = { ...prev };
+      delete newState["new-conversation"];
+      return newState;
+    });
   };
 
   return (

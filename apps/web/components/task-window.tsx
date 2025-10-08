@@ -23,20 +23,20 @@ import { ButtonGroup } from "./ui/button-group";
 import { Button } from "./ui/button";
 import { useQuery } from "@rocicorp/zero/react";
 import { getAgents, getProjects } from "@jupiter/sync/queries/data";
-import { useUser } from "@clerk/clerk-react";
 import { Agent, Project } from "@jupiter/sync/zero/zero-schema.gen";
 import { BlinkingCursor } from "./blinking-cursor";
+import { useSyncContext } from "@/src/components/sync_engine";
 
 export default function TaskWindow() {
-  const { user } = useUser();
+  const syncData = useSyncContext();
 
   // Selector items
   const agents = useQuery(
-    getAgents({ userId: user?.id ?? "no_user_id_available" })
+    getAgents(syncData.authData)
   )[0];
 
   const projects = useQuery(
-    getProjects({ userId: user?.id ?? "no_user_id_available" })
+    getProjects(syncData.authData)
   )[0];
 
   // Messages

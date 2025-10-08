@@ -11,6 +11,10 @@ export const users = pgTable("users", {
   id: varchar().primaryKey().notNull(),
 });
 
+export const organisations = pgTable("organisations", {
+  id: varchar().primaryKey().notNull(),
+});
+
 export const baseAgent = pgEnum("base_agent", [
   "claude-code",
   "codex",
@@ -23,6 +27,9 @@ export const agents = pgTable("agents", {
   system_prompt: varchar().notNull(),
   base_agent: baseAgent().notNull(),
   created_at: timestamp().notNull().defaultNow(),
+  organisation_id: varchar()
+    .notNull()
+    .references(() => organisations.id),
   author_id: varchar()
     .notNull()
     .references(() => users.id),
@@ -33,6 +40,9 @@ export const projects = pgTable("projects", {
   name: varchar().notNull(),
   path: varchar().notNull(),
   created_at: timestamp().notNull().defaultNow(),
+  organisation_id: varchar()
+    .notNull()
+    .references(() => organisations.id),
   author_id: varchar()
     .notNull()
     .references(() => users.id),
@@ -42,6 +52,9 @@ export const projects = pgTable("projects", {
 export const tasks = pgTable("tasks", {
   id: varchar().notNull().primaryKey(),
   name: varchar().notNull(),
+  organisation_id: varchar()
+    .notNull()
+    .references(() => organisations.id),
   author_id: varchar()
     .notNull()
     .references(() => users.id),
@@ -68,70 +81,68 @@ export const messages = pgTable("messages", {
 });
 
 // User relations
-export const userToTaskRelation = relations(users, ({ many }) => ({
+export const userkRelations = relations(users, ({ many }) => ({
   tasks: many(tasks),
-}));
-
-export const userToAgentRelation = relations(users, ({ many }) => ({
   agents: many(agents),
-}));
-
-export const userToProjectRelation = relations(users, ({ many }) => ({
   projects: many(projects),
 }));
 
+// Organisation relations
+export const organisationRelations = relations(organisations, ({ many }) => ({
+  agents: many(agents),
+  projects: many(projects),
+  tasks: many(tasks),
+}));
+
 // Agent relations
-export const agentToUserRelation = relations(agents, ({ one }) => ({
+export const agentRelations = relations(agents, ({ one, many }) => ({
   user: one(users, {
     fields: [agents.author_id],
     references: [users.id],
   }),
-}));
-
-export const agentToTaskRelation = relations(agents, ({ many }) => ({
   tasks: many(tasks),
+  organisation: one(organisations, {
+    fields: [agents.organisation_id],
+    references: [organisations.id],
+  }),
 }));
 
 // Project relations
-export const projectToUserRelation = relations(projects, ({ one }) => ({
+export const projectRelations = relations(projects, ({ one, many }) => ({
   user: one(users, {
     fields: [projects.author_id],
     references: [users.id],
   }),
-}));
-
-export const projectToTaskRelation = relations(projects, ({ many }) => ({
   tasks: many(tasks),
+  organisation: one(organisations, {
+    fields: [projects.organisation_id],
+    references: [organisations.id],
+  }),
 }));
 
 // Task relations
-export const taskToUserRelation = relations(tasks, ({ one }) => ({
+export const taskRelations = relations(tasks, ({ one, many }) => ({
   user: one(users, {
     fields: [tasks.author_id],
     references: [users.id],
   }),
-}));
-
-export const taskToAgentRelation = relations(tasks, ({ one }) => ({
   agent: one(agents, {
     fields: [tasks.agent_id],
     references: [agents.id],
   }),
-}));
-
-export const taskToProjectRelation = relations(tasks, ({ one }) => ({
   project: one(projects, {
     fields: [tasks.project_id],
     references: [projects.id],
   }),
-}));
-
-export const taskToMessagesRelation = relations(tasks, ({ many }) => ({
   messages: many(messages),
+  organisation: one(organisations, {
+    fields: [tasks.organisation_id],
+    references: [organisations.id],
+  }),
 }));
 
 // Message relations
-export const messageToTaskRelation = relations(messages, ({ one }) => ({
+export const messageRelations = relations(messages, ({ one }) => ({
   task: one(tasks, {
     fields: [messages.task_id],
     references: [tasks.id],
