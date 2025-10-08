@@ -119,11 +119,11 @@ export default function TaskWindow() {
     <div className="flex-1 relative">
       {/* Thread */}
       <Conversation
-        className="absolute w-full h-full p-8 overflow-auto pb-40"
+        className="absolute w-full h-full p-8 overflow-auto pb-40 no-scrollbar"
         key={selectedTaskId}
       >
         <ConversationContent>
-          {(messages ?? []).length === 0 ? (
+          {selectedTaskId === "new-conversation" ? (
             <ConversationEmptyState
               icon={
                 <div className="h-[40px] w-[40px] rounded-[20px] bg-primary" />

@@ -35,7 +35,7 @@ export const getTasks = syncedQueryWithContext(
 export const getMessages = syncedQueryWithContext(
   "getMessages",
   z.tuple([z.string()]),
-  (context: AuthData, taskId: string) => {
+  (_: AuthData, taskId: string) => {
     // TODO: Add check for the user having access to this task's messages
     return builder.tasks
       .where("id", taskId)

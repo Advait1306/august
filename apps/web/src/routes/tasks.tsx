@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef } from "react";
+// import { useRef } from "react";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
 import TaskWindow from "@/components/task-window";
 import { PlusIcon } from "lucide-react";
@@ -20,18 +20,18 @@ export const Route = createFileRoute("/tasks")({
 });
 
 function Tasks() {
-  const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
-  const { project, agent } = Route.useSearch();
+  // const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
+  // const { project, agent } = Route.useSearch();
 
-  // Extract URL parameters for pre-selection
-  const preselectedProjectId = project;
-  const preselectedAgent = agent;
+  // // Extract URL parameters for pre-selection
+  // const preselectedProjectId = project;
+  // const preselectedAgent = agent;
 
-  const focusComposer = () => {
-    if (composerInputRef.current) {
-      composerInputRef.current.focus();
-    }
-  };
+  // const focusComposer = () => {
+  //   if (composerInputRef.current) {
+  //     composerInputRef.current.focus();
+  //   }
+  // };
 
   const { tasks, selectedTask, selectTask } = useTaskRuntime();
 
