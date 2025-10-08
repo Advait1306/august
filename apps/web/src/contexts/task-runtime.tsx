@@ -11,7 +11,7 @@ import { useUser } from "@clerk/clerk-react";
 import { Agent, Task, Project } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "../components/sync_engine";
 import { nanoid } from "nanoid";
-import { ModelMessage, UserModelMessage } from "ai";
+import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
 
 type PermissionState = Record<string, Permission>;
 type GenerationState = Record<string, string>;
@@ -57,11 +57,18 @@ export const TaskRuntimeProvider = ({
   const projects = useQuery(
     getProjects({ userId: user?.id ?? "no_user_id_available" })
   )[0];
+  const tasks = useQuery(
+    getTasks({
+      userId: user?.id ?? "no_user_id_available",
+    }),
+    {
+      enabled: !!user?.id,
+    }
+  )[0];
 
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
   >({});
-
   const [permissions, setPermissions] = useState<PermissionState>({});
   const alwaysAllowTasks = useRef<string[]>([]);
 
@@ -70,16 +77,15 @@ export const TaskRuntimeProvider = ({
   const [selectedTask, setSelectedTask] = useState<any | "new-conversation">(
     "new-conversation"
   );
-
-  const data = useQuery(
-    getTasks({
-      userId: user?.id ?? "no_user_id_available",
-    }),
+  const selectedTasksMessages = useQuery(
+    getMessages(
+      { userId: user?.id ?? "no_user_id_available" },
+      selectedTask.id ?? ""
+    ),
     {
-      enabled: !!user?.id,
+      enabled: !!selectedTask.id,
     }
   );
-  const tasks = data[0];
 
   useEffect(() => {
     if (waitForSelect) {
@@ -134,16 +140,6 @@ export const TaskRuntimeProvider = ({
       removeListener();
     };
   }, []);
-
-  const selectedTasksMessages = useQuery(
-    getMessages(
-      { userId: user?.id ?? "no_user_id_available" },
-      selectedTask.id ?? ""
-    ),
-    {
-      enabled: !!selectedTask.id,
-    }
-  );
 
   const selectTask = (task: Task | "new-conversation") => {
     setWaitForSelect(null);
@@ -213,8 +209,10 @@ export const TaskRuntimeProvider = ({
     } else {
       // Set states
       taskId = selectedTask.id;
-      agent = selectedTask.agent;
-      project = selectedTask.project;
+      agent = agents.find((agent) => agent.id === selectedTask.agent_id)!;
+      project = projects.find(
+        (project) => project.id === selectedTask.project_id
+      )!;
 
       // Create message
       const messageId = nanoid();
@@ -238,14 +236,25 @@ export const TaskRuntimeProvider = ({
         .orderBy("created_at", "asc")
         .run();
 
-      chatMessages = [];
-      // TODO: Map old messages
-      // chatMessages = messages.map((message) => {
-      //   return {
-      //     role: message.role,
-      //     content: message.content ,
-      //   };
-      // });
+      chatMessages = messages.map((message) => {
+        if (message.role === "user") {
+          return {
+            role: "user",
+            content: message.content as Record<string, any>[],
+          } as UserModelMessage;
+        } else if (message.role === "assistant") {
+          return {
+            role: "assistant",
+            content: message.content as Record<string, any>[],
+          } as AssistantModelMessage;
+        } else {
+          // Fallback for unexpected roles
+          return {
+            role: message.role,
+            content: message.content as Record<string, any>[],
+          } as ModelMessage;
+        }
+      });
     }
 
     const replyId = nanoid();
