@@ -21,6 +21,66 @@ type ZeroSchema = DrizzleToZeroSchema<typeof drizzleSchema>;
  */
 export const schema = {
   tables: {
+    agents: {
+      name: "agents",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "agents",
+            "id"
+          >,
+        },
+        name: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "agents",
+            "name"
+          >,
+        },
+        system_prompt: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "agents",
+            "system_prompt"
+          >,
+        },
+        base_agent: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "agents",
+            "base_agent"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "agents",
+            "created_at"
+          >,
+        },
+        author_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "agents",
+            "author_id"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+    },
     messages: {
       name: "messages",
       columns: {
@@ -90,6 +150,57 @@ export const schema = {
       },
       primaryKey: ["id"],
     },
+    projects: {
+      name: "projects",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "projects",
+            "id"
+          >,
+        },
+        name: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "projects",
+            "name"
+          >,
+        },
+        path: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "projects",
+            "path"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "projects",
+            "created_at"
+          >,
+        },
+        author_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "projects",
+            "author_id"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+    },
     tasks: {
       name: "tasks",
       columns: {
@@ -129,6 +240,24 @@ export const schema = {
             "created_at"
           >,
         },
+        agent_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "tasks",
+            "agent_id"
+          >,
+        },
+        project_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "tasks",
+            "project_id"
+          >,
+        },
         updated_at: {
           type: "number",
           optional: true,
@@ -158,22 +287,12 @@ export const schema = {
     },
   },
   relationships: {
-    messages: {
-      task: [
-        {
-          sourceField: ["task_id"],
-          destField: ["id"],
-          destSchema: "tasks",
-          cardinality: "one",
-        },
-      ],
-    },
-    tasks: {
-      messages: [
+    agents: {
+      tasks: [
         {
           sourceField: ["id"],
-          destField: ["task_id"],
-          destSchema: "messages",
+          destField: ["agent_id"],
+          destSchema: "tasks",
           cardinality: "many",
         },
       ],
@@ -186,7 +305,85 @@ export const schema = {
         },
       ],
     },
+    messages: {
+      task: [
+        {
+          sourceField: ["task_id"],
+          destField: ["id"],
+          destSchema: "tasks",
+          cardinality: "one",
+        },
+      ],
+    },
+    projects: {
+      tasks: [
+        {
+          sourceField: ["id"],
+          destField: ["project_id"],
+          destSchema: "tasks",
+          cardinality: "many",
+        },
+      ],
+      user: [
+        {
+          sourceField: ["author_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+    },
+    tasks: {
+      agent: [
+        {
+          sourceField: ["agent_id"],
+          destField: ["id"],
+          destSchema: "agents",
+          cardinality: "one",
+        },
+      ],
+      messages: [
+        {
+          sourceField: ["id"],
+          destField: ["task_id"],
+          destSchema: "messages",
+          cardinality: "many",
+        },
+      ],
+      project: [
+        {
+          sourceField: ["project_id"],
+          destField: ["id"],
+          destSchema: "projects",
+          cardinality: "one",
+        },
+      ],
+      user: [
+        {
+          sourceField: ["author_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+    },
     users: {
+      agents: [
+        {
+          sourceField: ["id"],
+          destField: ["author_id"],
+          destSchema: "agents",
+          cardinality: "many",
+        },
+      ],
+      projects: [
+        {
+          sourceField: ["id"],
+          destField: ["author_id"],
+          destSchema: "projects",
+          cardinality: "many",
+        },
+      ],
       tasks: [
         {
           sourceField: ["id"],
@@ -207,10 +404,20 @@ export const schema = {
  */
 export type Schema = typeof schema;
 /**
+ * Represents a row from the "agents" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type Agent = Row<Schema["tables"]["agents"]>;
+/**
  * Represents a row from the "messages" table.
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Message = Row<Schema["tables"]["messages"]>;
+/**
+ * Represents a row from the "projects" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type Project = Row<Schema["tables"]["projects"]>;
 /**
  * Represents a row from the "tasks" table.
  * This type is auto-generated from your Drizzle schema definition.

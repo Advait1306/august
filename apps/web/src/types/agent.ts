@@ -1,7 +1,7 @@
-import { ChatModelRunOptions, ChatModelRunResult } from "@assistant-ui/react";
 import { asyncGeneratorOverIPCConsumer } from "@jupiter/shared/async-generator-over-ipc-consumer";
 import { electronAPI } from "@electron-toolkit/preload";
 import { PermissionRequest } from "@jupiter/shared/types";
+import { AssistantModelMessage, ModelMessage } from "ai";
 
 // Define agent management types
 export interface BaseAgent {
@@ -9,14 +9,6 @@ export interface BaseAgent {
   name: string;
   apiKey: string | null;
   isBuiltIn: boolean;
-  createdAt: Date;
-}
-
-export interface Agent {
-  id: string;
-  name: string;
-  systemPrompt: string;
-  baseAgentId: string;
   createdAt: Date;
 }
 
@@ -43,8 +35,8 @@ export const agent = {
   run: (
     agentId: string, // Changed from agentName to agentId
     options: {
-      messages: ChatModelRunOptions["messages"];
-      runConfig: ChatModelRunOptions["runConfig"];
+      messages: ModelMessage[];
+      runConfig: Record<string, unknown>;
       threadId: string;
     }
   ) => {
@@ -83,22 +75,6 @@ export const agent = {
       electronAPI.ipcRenderer.invoke("base-agents:updateApiKey", id, apiKey),
   },
 
-  // Custom agent management
-  agents: {
-    getAll: (): Promise<Agent[]> =>
-      electronAPI.ipcRenderer.invoke("agents:getAll"),
-    create: (data: NewAgent): Promise<Agent> =>
-      electronAPI.ipcRenderer.invoke("agents:create", data),
-    get: (
-      id: string
-    ): Promise<Agent & { memories: AgentMemory[]; baseAgent: BaseAgent }> =>
-      electronAPI.ipcRenderer.invoke("agents:get", id),
-    update: (id: string, data: Partial<NewAgent>): Promise<Agent> =>
-      electronAPI.ipcRenderer.invoke("agents:update", id, data),
-    delete: (id: string): Promise<boolean> =>
-      electronAPI.ipcRenderer.invoke("agents:delete", id),
-  },
-
   // Memory management
   memories: {
     getAll: (agentId: string): Promise<AgentMemory[]> =>
@@ -114,13 +90,13 @@ export const agent = {
 
 export type agentTypes = {
   run: (
-    agentId: string,
     options: {
-      messages: ChatModelRunOptions["messages"];
-      runConfig: ChatModelRunOptions["runConfig"];
+      messages: ModelMessage[];
+      runConfig: Record<string, unknown>;
       threadId: string;
-    }
-  ) => AsyncGenerator<ChatModelRunResult, void>;
+    },
+    systemPrompt: string
+  ) => AsyncGenerator<AssistantModelMessage, void>;
 
   addPermissionHandler: (
     cb: (request: PermissionRequest) => void
@@ -133,16 +109,6 @@ export type agentTypes = {
     updateApiKey: (id: string, apiKey: string) => Promise<BaseAgent>;
   };
 
-  agents: {
-    getAll: () => Promise<Agent[]>;
-    create: (data: NewAgent) => Promise<Agent>;
-    get: (
-      id: string
-    ) => Promise<Agent & { memories: AgentMemory[]; baseAgent: BaseAgent }>;
-    update: (id: string, data: Partial<NewAgent>) => Promise<Agent>;
-    delete: (id: string) => Promise<boolean>;
-  };
-
   memories: {
     getAll: (agentId: string) => Promise<AgentMemory[]>;
     add: (data: NewAgentMemory) => Promise<AgentMemory>;
@@ -150,11 +116,6 @@ export type agentTypes = {
     delete: (id: string) => Promise<boolean>;
   };
 };
-
-export interface AgentWithDetails extends Agent {
-  memories: AgentMemory[];
-  baseAgent: BaseAgent;
-}
 
 export interface NewAgent {
   name: string;

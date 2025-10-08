@@ -3,20 +3,16 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { getMessages, getTasks } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useUser } from "@clerk/clerk-react";
-import { Task } from "@jupiter/sync/zero/zero-schema.gen";
+import { Agent, Task, Project } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "../components/sync_engine";
 import { nanoid } from "nanoid";
 import { ModelMessage, UserModelMessage } from "ai";
-import { Agent } from "../types/agent";
-import { Project } from "../types/project";
 
 type PermissionState = Record<string, Permission>;
 type GenerationState = Record<string, string>;
-// TODO: Create correct type for tasks
-type Tasks = any;
 
 type TaskRuntimeState = {
-  tasks: Tasks;
+  tasks: Task[];
   selectedTask: any | "new-conversation";
   messages: any;
   selectTask: (task: Task | "new-conversation") => void;
@@ -72,11 +68,11 @@ export const TaskRuntimeProvider = ({
       enabled: !!user?.id,
     }
   );
-  const tasks = data[0]?.tasks;
+  const tasks = data[0];
 
   useEffect(() => {
     if (waitForSelect) {
-      const task = tasks?.find((task: Task) => task.id === waitForSelect);
+      const task = tasks?.find((task) => task.id === waitForSelect);
       if (task) {
         setSelectedTask(task);
       }
@@ -167,6 +163,8 @@ export const TaskRuntimeProvider = ({
       // Create new task
       const result = z.mutate.tasks.create({
         task_id: taskId,
+        project_id: project.id,
+        agent_id: agent.id,
         message_data: {
           task_id: taskId,
           message_id: messageId,
@@ -233,18 +231,21 @@ export const TaskRuntimeProvider = ({
 
     await result.client;
 
-    for await (const reply of window.api.agent.run(agent.id, {
-      messages: chatMessages,
-      runConfig: {
-        project,
+    for await (const reply of window.api.agent.run(
+      {
+        messages: chatMessages,
+        runConfig: {
+          project,
+        },
+        threadId: taskId,
       },
-      threadId: taskId,
-    })) {
+      agent.system_prompt
+    )) {
       z.mutate.message.update({
         task_id: taskId,
         message_id: replyId,
         role: reply.role,
-        content: reply.content,
+        content: reply.content as Record<string, any>[],
         metadata: {},
       });
     }

@@ -41,15 +41,15 @@ export interface NewAgentMemory {
 export const agent = {
   // Agent execution
   run: (
-    agentId: string, // Changed from agentName to agentId
     options: {
       messages: ModelMessage[]
       runConfig: Record<string, unknown>
       threadId: string
-    }
+    },
+    systemPrompt: string
   ) => {
     return asyncGeneratorOverIPCConsumer(async (id) => {
-      await electronAPI.ipcRenderer.invoke('agent:run', id, agentId, options)
+      await electronAPI.ipcRenderer.invoke('agent:run', id, options, systemPrompt)
     })
   },
 

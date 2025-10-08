@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useAgentStore } from "@/src/stores/agentStore";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import {
@@ -37,24 +36,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import type { NewAgent, Agent } from "@/src/types/agent";
 import { createFileRoute } from "@tanstack/react-router";
 import { ShellOnly } from "@/components/restrictor";
+import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
+import { useUser } from "@clerk/clerk-react";
+import { useZero } from "../components/sync_engine";
+import { useQuery } from "@rocicorp/zero/react";
+import { getAgents } from "@jupiter/sync/queries/data";
+import { nanoid } from "nanoid";
 
 export const Route = createFileRoute("/agents")({
   component: Agents,
 });
 
+type NewAgent = Omit<Agent, "id" | "created_at" | "author_id">;
+
 function Agents() {
-  const {
-    agents,
-    baseAgents,
-    loadAgents,
-    loadBaseAgents,
-    createAgent,
-    updateAgentData,
-    deleteAgent,
-  } = useAgentStore();
+  const { user } = useUser();
+  const z = useZero();
+
+  const agents = useQuery(
+    getAgents({ userId: user?.id ?? "no_user_id_available" })
+  )[0];
 
   // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -68,22 +71,33 @@ function Agents() {
   // Form data
   const [newAgentForm, setNewAgentForm] = useState<NewAgent>({
     name: "",
-    systemPrompt: "",
-    baseAgentId: "",
+    system_prompt: "",
+    base_agent: "claude-code" as Agent["base_agent"],
   });
-  const [editAgentForm, setEditAgentForm] = useState<Partial<NewAgent>>({});
 
-  useEffect(() => {
-    loadAgents();
-    loadBaseAgents();
-  }, [loadAgents, loadBaseAgents]);
+  const [editAgentForm, setEditAgentForm] = useState<NewAgent>({
+    name: "",
+    system_prompt: "",
+    base_agent: "claude-code" as Agent["base_agent"],
+  });
 
   // Handlers
   const handleCreateAgent = async () => {
     try {
-      await createAgent(newAgentForm);
+      const result = z.mutate.agents.create({
+        agent_id: nanoid(),
+        name: newAgentForm.name,
+        system_prompt: newAgentForm.system_prompt,
+        base_agent: newAgentForm.base_agent,
+      });
+
+      await result.client;
       setShowCreateDialog(false);
-      setNewAgentForm({ name: "", systemPrompt: "", baseAgentId: "" });
+      setNewAgentForm({
+        name: "",
+        system_prompt: "",
+        base_agent: "claude-code" as Agent["base_agent"],
+      });
     } catch (error) {
       console.error("Failed to create agent:", error);
     }
@@ -92,10 +106,20 @@ function Agents() {
   const handleEditAgent = async () => {
     if (!selectedAgent) return;
     try {
-      await updateAgentData(selectedAgent.id, editAgentForm);
+      const result = z.mutate.agents.update({
+        agent_id: selectedAgent.id,
+        name: editAgentForm.name,
+        system_prompt: editAgentForm.system_prompt,
+      });
+
+      await result.client;
       setShowEditDialog(false);
       setSelectedAgent(null);
-      setEditAgentForm({});
+      setEditAgentForm({
+        name: "",
+        system_prompt: "",
+        base_agent: "claude-code" as Agent["base_agent"],
+      });
     } catch (error) {
       console.error("Failed to update agent:", error);
     }
@@ -104,7 +128,11 @@ function Agents() {
   const handleDeleteAgent = async () => {
     if (!agentToDelete) return;
     try {
-      await deleteAgent(agentToDelete);
+      const result = z.mutate.agents.delete({
+        agent_id: agentToDelete,
+      });
+
+      await result.client;
       setShowDeleteDialog(false);
       setAgentToDelete(null);
     } catch (error) {
@@ -116,8 +144,8 @@ function Agents() {
     setSelectedAgent(agent);
     setEditAgentForm({
       name: agent.name,
-      systemPrompt: agent.systemPrompt,
-      baseAgentId: agent.baseAgentId,
+      system_prompt: agent.system_prompt,
+      base_agent: agent.base_agent,
     });
     setShowEditDialog(true);
   };
@@ -214,20 +242,25 @@ function Agents() {
               <div className="grid gap-2">
                 <Label htmlFor="baseAgent">Base Agent</Label>
                 <Select
-                  value={newAgentForm.baseAgentId}
+                  value={newAgentForm.base_agent}
                   onValueChange={(value) =>
-                    setNewAgentForm({ ...newAgentForm, baseAgentId: value })
+                    setNewAgentForm({
+                      ...newAgentForm,
+                      base_agent: value as Agent["base_agent"],
+                    })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select base agent" />
                   </SelectTrigger>
                   <SelectContent>
-                    {baseAgents.map((baseAgent) => (
-                      <SelectItem key={baseAgent.id} value={baseAgent.id}>
-                        {baseAgent.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="claude-code">Claude Code</SelectItem>
+                    <SelectItem value="codex" disabled>
+                      Codex (Coming Soon)
+                    </SelectItem>
+                    <SelectItem value="opencode" disabled>
+                      OpenCode (Coming Soon)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -235,11 +268,11 @@ function Agents() {
                 <Label htmlFor="systemPrompt">System Prompt</Label>
                 <Textarea
                   id="systemPrompt"
-                  value={newAgentForm.systemPrompt}
+                  value={newAgentForm.system_prompt}
                   onChange={(e) =>
                     setNewAgentForm({
                       ...newAgentForm,
-                      systemPrompt: e.target.value,
+                      system_prompt: e.target.value,
                     })
                   }
                   placeholder="Enter the system prompt that defines your agent's behavior..."
@@ -283,20 +316,25 @@ function Agents() {
               <div className="grid gap-2">
                 <Label htmlFor="editBaseAgent">Base Agent</Label>
                 <Select
-                  value={editAgentForm.baseAgentId}
+                  value={editAgentForm.base_agent}
                   onValueChange={(value) =>
-                    setEditAgentForm({ ...editAgentForm, baseAgentId: value })
+                    setEditAgentForm({
+                      ...editAgentForm,
+                      base_agent: value as Agent["base_agent"],
+                    })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select base agent" />
                   </SelectTrigger>
                   <SelectContent>
-                    {baseAgents.map((baseAgent) => (
-                      <SelectItem key={baseAgent.id} value={baseAgent.id}>
-                        {baseAgent.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="claude-code">Claude Code</SelectItem>
+                    <SelectItem value="codex" disabled>
+                      Codex (Coming Soon)
+                    </SelectItem>
+                    <SelectItem value="opencode" disabled>
+                      OpenCode (Coming Soon)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -304,11 +342,11 @@ function Agents() {
                 <Label htmlFor="editSystemPrompt">System Prompt</Label>
                 <Textarea
                   id="editSystemPrompt"
-                  value={editAgentForm.systemPrompt || ""}
+                  value={editAgentForm.system_prompt || ""}
                   onChange={(e) =>
                     setEditAgentForm({
                       ...editAgentForm,
-                      systemPrompt: e.target.value,
+                      system_prompt: e.target.value,
                     })
                   }
                   placeholder="Enter the system prompt that defines your agent's behavior..."

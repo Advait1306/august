@@ -7,14 +7,103 @@ type AuthData = {
 
 export function createMutators(authData: AuthData) {
   return {
+    projects: {
+      create: async (
+        tx: Transaction<Schema>,
+        {
+          project_id,
+          name,
+          path,
+        }: { project_id: string; name: string; path: string }
+      ) => {
+        await tx.mutate.projects.insert({
+          id: project_id,
+          name,
+          path,
+          author_id: authData.userId,
+        });
+      },
+      update: async (
+        tx: Transaction<Schema>,
+        {
+          project_id,
+          name,
+          path,
+        }: { project_id: string; name: string; path: string }
+      ) => {
+        await tx.mutate.projects.update({
+          id: project_id,
+          name,
+          path,
+        });
+      },
+      delete: async (
+        tx: Transaction<Schema>,
+        { project_id }: { project_id: string }
+      ) => {
+        await tx.mutate.projects.delete({ id: project_id });
+      },
+    },
+    agents: {
+      create: async (
+        tx: Transaction<Schema>,
+        {
+          agent_id,
+          name,
+          system_prompt,
+          base_agent,
+        }: {
+          agent_id: string;
+          name: string;
+          system_prompt: string;
+          base_agent: "claude-code" | "codex" | "opencode";
+        }
+      ) => {
+        await tx.mutate.agents.insert({
+          id: agent_id,
+          name,
+          system_prompt,
+          base_agent,
+          author_id: authData.userId,
+        });
+      },
+      update: async (
+        tx: Transaction<Schema>,
+        {
+          agent_id,
+          name,
+          system_prompt,
+        }: {
+          agent_id: string;
+          name: string;
+          system_prompt: string;
+        }
+      ) => {
+        await tx.mutate.agents.update({
+          id: agent_id,
+          name,
+          system_prompt,
+        });
+      },
+      delete: async (
+        tx: Transaction<Schema>,
+        { agent_id }: { agent_id: string }
+      ) => {
+        await tx.mutate.agents.delete({ id: agent_id });
+      },
+    },
     tasks: {
       create: async (
         tx: Transaction<Schema>,
         {
           task_id,
+          project_id,
+          agent_id,
           message_data,
         }: {
           task_id: string;
+          project_id: string;
+          agent_id: string;
           message_data: {
             task_id: string;
             message_id: string;
@@ -24,19 +113,12 @@ export function createMutators(authData: AuthData) {
           };
         }
       ) => {
-        const user = await tx.query.users
-          .where("id", authData.userId)
-          .one()
-          .run();
-
-        if (!user || !user.id) {
-          throw new Error("User not found");
-        }
-
         await tx.mutate.tasks.insert({
           id: task_id,
-          author_id: user.id,
+          author_id: authData.userId,
           name: "New Task",
+          project_id,
+          agent_id,
         });
 
         await tx.mutate.messages.upsert({

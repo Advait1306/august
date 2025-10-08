@@ -24,7 +24,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
 import { Webhook } from "svix";
 import { ReadonlyJSONValue, withValidation } from "@rocicorp/zero";
-import { AuthData, getMessages, getTasks } from "@jupiter/sync/queries/data";
+import { AuthData, getAgents, getMessages, getProjects, getTasks } from "@jupiter/sync/queries/data";
 import { PostgresJSConnection } from "@rocicorp/zero/pg";
 import postgres from "postgres";
 
@@ -108,6 +108,8 @@ const validated = Object.fromEntries(
     // auth'd query
     getTasks,
     getMessages,
+    getAgents,
+    getProjects,
   ].map((q) => [q.queryName, withValidation(q)])
 );
 

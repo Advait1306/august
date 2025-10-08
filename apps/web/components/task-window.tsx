@@ -11,12 +11,7 @@ import {
   PromptInputActionMenuItem,
 } from "@/components/ai-elements/prompt-input";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
-import { useAgentStore } from "@/src/stores/agentStore";
-import { useProjectStore } from "@/src/stores/projectStore";
-import { Agent } from "@/src/types/agent";
-import { Project } from "@/src/types/project";
-
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { AssistantMessage, UserMessage } from "./message";
 import {
   Conversation,
@@ -26,11 +21,22 @@ import {
 } from "@/components/ai-elements/conversation";
 import { ButtonGroup } from "./ui/button-group";
 import { Button } from "./ui/button";
+import { useQuery } from "@rocicorp/zero/react";
+import { getAgents, getProjects } from "@jupiter/sync/queries/data";
+import { useUser } from "@clerk/clerk-react";
+import { Agent, Project } from "@jupiter/sync/zero/zero-schema.gen";
 
 export default function TaskWindow() {
+  const { user } = useUser();
+
   // Selector items
-  const { projects, loadProjects } = useProjectStore();
-  const { agents, loadAgents } = useAgentStore();
+  const agents = useQuery(
+    getAgents({ userId: user?.id ?? "no_user_id_available" })
+  )[0];
+
+  const projects = useQuery(
+    getProjects({ userId: user?.id ?? "no_user_id_available" })
+  )[0];
 
   // Messages
   const {
@@ -97,11 +103,6 @@ export default function TaskWindow() {
     },
     [setComposerStates, selectedTaskId]
   );
-
-  useEffect(() => {
-    loadProjects();
-    loadAgents();
-  }, [loadProjects, loadAgents]);
 
   return (
     <div className="flex-1 relative">
@@ -180,7 +181,10 @@ export default function TaskWindow() {
         <PromptInputToolbar>
           <PromptInputTools>
             <PromptInputActionMenu>
-              <PromptInputActionMenuTrigger size={"lg"}>
+              <PromptInputActionMenuTrigger
+                size={"lg"}
+                disabled={selectedTaskId !== "new-conversation"}
+              >
                 <span>{agent?.name || "Agent"}</span>
               </PromptInputActionMenuTrigger>
               <PromptInputActionMenuContent>
@@ -195,7 +199,10 @@ export default function TaskWindow() {
               </PromptInputActionMenuContent>
             </PromptInputActionMenu>
             <PromptInputActionMenu>
-              <PromptInputActionMenuTrigger size={"lg"}>
+              <PromptInputActionMenuTrigger
+                size={"lg"}
+                disabled={selectedTaskId !== "new-conversation"}
+              >
                 <span>{project?.name || "Project"}</span>
               </PromptInputActionMenuTrigger>
               <PromptInputActionMenuContent>

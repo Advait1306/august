@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { useProjectStore } from "@/src/stores/projectStore";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FolderIcon, Plus } from "lucide-react";
 import {
@@ -22,29 +21,57 @@ import { Separator } from "@/components/ui/separator";
 import { useCommandMenu } from "@/components/command-menu";
 import { createFileRoute } from "@tanstack/react-router";
 import { ShellOnly } from "@/components/restrictor";
+import { getProjects } from "@jupiter/sync/queries/data";
+import { useUser } from "@clerk/clerk-react";
+import { useQuery } from "@rocicorp/zero/react";
+import { useZero } from "../components/sync_engine";
+import { nanoid } from "nanoid";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/projects")({
   component: Projects,
 });
 
 function Projects() {
-  const { projects, loadProjects, selectNewProject, deleteProject } =
-    useProjectStore();
+  const { user } = useUser();
+  const z = useZero();
+
+  const projects = useQuery(
+    getProjects({ userId: user?.id ?? "no_user_id_available" })
+  )[0];
   const { addItemToContext, removeContextItem } = useCommandMenu();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
-
   const handleAddProject = async () => {
-    await selectNewProject();
+    const folder = await window.api.projects.selectFolder();
+
+    if (folder) {
+      // Check if project already exists
+      const existingProject = projects.find(
+        (project) => project.path === folder.path
+      );
+
+      if (existingProject) {
+        toast.error(`Project ${folder.name} already exists`);
+        return;
+      }
+
+      z.mutate.projects.create({
+        project_id: nanoid(),
+        name: folder.name,
+        path: folder.path,
+      });
+    }
   };
 
   const handleDeleteProject = async () => {
     if (projectToDelete) {
-      await deleteProject(projectToDelete);
+      const result = z.mutate.projects.delete({
+        project_id: projectToDelete,
+      });
+
+      await result.client;
       setDeleteDialogOpen(false);
       setProjectToDelete(null);
     }
@@ -92,7 +119,7 @@ function Projects() {
                       onMouseEnter={() =>
                         addItemToContext("project", project.id, project.name, {
                           path: project.path,
-                          createdAt: project.createdAt,
+                          createdAt: project.created_at,
                         })
                       }
                       onMouseLeave={() => removeContextItem()}
