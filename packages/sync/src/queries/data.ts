@@ -26,7 +26,9 @@ export const getTasks = syncedQueryWithContext(
   "getTasks",
   z.tuple([]),
   (context: AuthData) => {
-    return builder.tasks.where("author_id", context.userId);
+    return builder.tasks
+      .where("author_id", context.userId)
+      .orderBy("created_at", "desc");
   }
 );
 

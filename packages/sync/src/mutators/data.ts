@@ -155,6 +155,7 @@ export function createMutators(authData: AuthData) {
           role: role,
           content: content,
           metadata: metadata,
+          created_at: Date.now(),
         });
       },
       update: async (

@@ -14,7 +14,7 @@ import { nanoid } from "nanoid";
 import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
 
 type PermissionState = Record<string, Permission>;
-type GenerationState = Record<string, string>;
+type GenerationState = string[];
 
 type TaskRuntimeState = {
   tasks: Task[];
@@ -25,6 +25,7 @@ type TaskRuntimeState = {
   composerStates: Record<string, ComposerState>;
   setComposerStates: (states: Record<string, ComposerState>) => void;
   permissions: PermissionState;
+  generationState: GenerationState;
 };
 
 type ComposerState = {
@@ -42,6 +43,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   composerStates: {},
   setComposerStates: () => {},
   permissions: {},
+  generationState: [],
 });
 
 export const TaskRuntimeProvider = ({
@@ -71,6 +73,7 @@ export const TaskRuntimeProvider = ({
   >({});
   const [permissions, setPermissions] = useState<PermissionState>({});
   const alwaysAllowTasks = useRef<string[]>([]);
+  const [generationState, setGenerationState] = useState<GenerationState>([]);
 
   // We need to wait for the task to be created and then select it
   const [waitForSelect, setWaitForSelect] = useState<string | null>(null);
@@ -169,6 +172,14 @@ export const TaskRuntimeProvider = ({
   };
 
   const sendMessage = async (message: string) => {
+    // Clear composer prompt
+    setComposerStates((prev) => {
+      return {
+        ...prev,
+        [selectedTask.id]: { ...prev[selectedTask.id], prompt: "" },
+      };
+    });
+
     let taskId: string;
     let agent: Agent;
     let project: Project;
@@ -257,8 +268,8 @@ export const TaskRuntimeProvider = ({
       });
     }
 
+    setGenerationState((prev) => [...prev, taskId]);
     const replyId = nanoid();
-
     // We have to create and update our message
     // instead of using an upsert transaction because
     // upsert seems to delete the row and add a new one
@@ -291,6 +302,8 @@ export const TaskRuntimeProvider = ({
         metadata: {},
       });
     }
+
+    setGenerationState((prev) => prev.filter((id) => id !== taskId));
   };
 
   return (
@@ -304,6 +317,7 @@ export const TaskRuntimeProvider = ({
         composerStates,
         setComposerStates,
         permissions,
+        generationState,
       }}
     >
       {children}

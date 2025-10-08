@@ -46,6 +46,7 @@ export default function TaskWindow() {
     composerStates,
     setComposerStates,
     permissions,
+    generationState,
   } = useTaskRuntime();
 
   // Derived state and functions for ease of use
@@ -55,6 +56,7 @@ export default function TaskWindow() {
   const agent = composerState?.agent ?? null;
   const project = composerState?.project ?? null;
   const pendingPermissions = permissions[selectedTaskId];
+  const isGenerating = generationState.includes(selectedTaskId);
 
   const setPrompt = useCallback(
     (prompt: string) => {
@@ -174,6 +176,7 @@ export default function TaskWindow() {
           ) : (
             <PromptInputTextarea
               onChange={(e) => setPrompt(e.target.value)}
+              disabled={isGenerating}
               value={prompt}
             />
           )}
@@ -218,8 +221,8 @@ export default function TaskWindow() {
             </PromptInputActionMenu>
           </PromptInputTools>
           <PromptInputSubmit
-            disabled={false}
-            status={"ready"}
+            disabled={isGenerating}
+            status={isGenerating ? "streaming" : "ready"}
             onClick={() => sendMessage(prompt)}
           />
         </PromptInputToolbar>
