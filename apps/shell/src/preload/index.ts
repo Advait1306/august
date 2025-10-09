@@ -6,11 +6,7 @@ import { agent } from './agent'
 // Custom APIs for renderer
 const api = {
   projects: {
-    getAll: () => electronAPI.ipcRenderer.invoke('projects:getAll'),
-    selectFolder: () => electronAPI.ipcRenderer.invoke('projects:selectFolder'),
-    remove: (id: string) => electronAPI.ipcRenderer.invoke('projects:remove', id),
-    update: (id: string, updates: any) =>
-      electronAPI.ipcRenderer.invoke('projects:update', id, updates)
+    selectFolder: () => electronAPI.ipcRenderer.invoke('projects:selectFolder')
   },
   chat: {
     // Thread management
