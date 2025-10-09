@@ -168,6 +168,7 @@ function getQuery(
 }
 
 app.post("/get-queries", async (req, res) => {
+  console.log("get-queries");
   const { isAuthenticated, userId, orgId } = getAuth(req);
 
   if (!isAuthenticated) {
