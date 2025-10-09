@@ -11,12 +11,13 @@
   },
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc",
+    "build": "tsc && tsc-esm-fix --target=dist",
     "zero:generate": "drizzle-zero generate --format --output ./src/zero/zero-schema.gen.ts"
   },
   "devDependencies": {
     "@types/pg": "^8.15.5",
     "drizzle-kit": "^0.31.5",
+    "tsc-esm-fix": "^3.1.2",
     "tsx": "^4.20.6"
   },
   "exports": {
