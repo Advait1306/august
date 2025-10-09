@@ -193,7 +193,7 @@ app.post("/get-queries", async (req, res) => {
 
 const processor = new PushProcessor(
   new ZQLDatabase(
-    new PostgresJSConnection(postgres(process.env.ZERO_UPSTREAM_DB! as string)),
+    new PostgresJSConnection(postgres(process.env.DATABASE_URL! as string)),
     schema
   )
 );

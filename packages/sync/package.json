@@ -12,9 +12,6 @@
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc",
-    "db:push": "drizzle-kit push",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
     "zero:generate": "drizzle-zero generate --format --output ./src/zero/zero-schema.gen.ts"
   },
   "devDependencies": {
