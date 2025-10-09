@@ -1,13 +1,23 @@
-FROM postgres:16.2-alpine
+ARG POSTGRES_VERSION=17
+FROM postgres:${POSTGRES_VERSION}
 
-ENV POSTGRES_USER=user
-ENV POSTGRES_DB=postgres
-ENV POSTGRES_PASSWORD=password
+# Install OpenSSL and sudo
+RUN apt-get update && apt-get install -y openssl sudo
 
-# Configure PostgreSQL settings
+# Allow the postgres user to execute certain commands as root without a password
+RUN echo "postgres ALL=(root) NOPASSWD: /usr/bin/mkdir, /bin/chown, /usr/bin/openssl" > /etc/sudoers.d/postgres
+
+# Add init scripts while setting permissions
+COPY --chmod=755 init-ssl.sh /docker-entrypoint-initdb.d/init-ssl.sh
+COPY --chmod=755 wrapper.sh /usr/local/bin/wrapper.sh
+
+ENTRYPOINT ["wrapper.sh"]
+
 CMD ["postgres", \
-     "-c", "wal_level=logical", \
-     "-c", "max_wal_senders=10", \
-     "-c", "max_replication_slots=5", \
-     "-c", "hot_standby=on", \
-     "-c", "hot_standby_feedback=on"]
+"-p", "5432", \
+"-c", "listen_addresses=*", \
+"-c", "wal_level=logical", \
+"-c", "max_wal_senders=10", \
+"-c", "max_replication_slots=5", \
+"-c", "hot_standby=on", \
+"-c", "hot_standby_feedback=on"]

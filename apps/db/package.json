@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev:db-up": "docker build -t august_postgres . && docker run --name august_postgres -p 5430:5432 -v august_pgdata:/var/lib/postgresql/data --shm-size=1g --health-cmd='pg_isready -U user --dbname=postgres' --health-interval=10s --health-timeout=5s --health-retries=5 august_postgres",
+    "dev:db-up": "docker build -t august_postgres . && docker run --name august_postgres -p 5430:5432 -v august_pgdata:/var/lib/postgresql/data --env-file ./.env --shm-size=1g --health-cmd='pg_isready -U user --dbname=postgres' --health-interval=10s --health-timeout=5s --health-retries=5 august_postgres",
     "dev:db-down": "docker stop august_postgres && docker rm august_postgres"
   },
   "author": "",
