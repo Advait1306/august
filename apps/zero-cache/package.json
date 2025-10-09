@@ -6,8 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "zero-cache-dev -p ./schema.ts",
-    "build": "docker build -t zero-image .",
-    "start": "docker rm -f zero >/dev/null 2>&1 || true && docker run -d --name zero --add-host=host.docker.internal:host-gateway --env-file ./.local.env -p 4848:4848 -v zero_data:/data zero-image"
+    "docker:build": "docker build -t zero-image .",
+    "docker:start": "docker rm -f zero >/dev/null 2>&1 || true && docker run -d --name zero --add-host=host.docker.internal:host-gateway --env-file ./.local.env -p 4848:4848 -v zero_data:/data zero-image"
   },
   "author": "",
   "license": "ISC",
