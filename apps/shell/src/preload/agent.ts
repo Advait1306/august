@@ -1,7 +1,7 @@
-import { ChatModelRunOptions, ChatModelRunResult } from '@assistant-ui/react'
 import { asyncGeneratorOverIPCConsumer } from '@jupiter/shared/async-generator-over-ipc-consumer'
 import { electronAPI } from '@electron-toolkit/preload'
 import { PermissionRequest } from '@jupiter/shared/types'
+import { AssistantModelMessage, ModelMessage } from 'ai'
 
 // Define agent management types
 export interface BaseAgent {
@@ -41,15 +41,15 @@ export interface NewAgentMemory {
 export const agent = {
   // Agent execution
   run: (
-    agentId: string, // Changed from agentName to agentId
     options: {
-      messages: ChatModelRunOptions['messages']
-      runConfig: ChatModelRunOptions['runConfig']
+      messages: ModelMessage[]
+      runConfig: Record<string, unknown>
       threadId: string
-    }
+    },
+    systemPrompt: string
   ) => {
     return asyncGeneratorOverIPCConsumer(async (id) => {
-      await electronAPI.ipcRenderer.invoke('agent:run', id, agentId, options)
+      await electronAPI.ipcRenderer.invoke('agent:run', id, options, systemPrompt)
     })
   },
 
@@ -111,11 +111,11 @@ export type agentTypes = {
   run: (
     agentId: string,
     options: {
-      messages: ChatModelRunOptions['messages']
-      runConfig: ChatModelRunOptions['runConfig']
+      messages: ModelMessage[]
+      runConfig: Record<string, unknown>
       threadId: string
     }
-  ) => AsyncGenerator<ChatModelRunResult, void>
+  ) => AsyncGenerator<AssistantModelMessage, void>
 
   addPermissionHandler: (cb: (request: PermissionRequest) => void) => () => void
   grantPermission: (requestId: string) => void

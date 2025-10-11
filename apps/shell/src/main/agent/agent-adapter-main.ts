@@ -1,4 +1,3 @@
-import { ChatModelRunOptions } from '@assistant-ui/react'
 import AgentInterface from './agent-interface'
 import { ClaudeCodeAgent } from './agents/claude-code/claude-code'
 import { CodexAgent } from './agents/codex'
@@ -9,7 +8,7 @@ import {
   asyncGeneratorOverIPCSender
 } from '@jupiter/shared/async-generator-over-ipc-sender'
 import { agentRequestPermissionOverIPC } from '@jupiter/shared/agent-request-permission-over-ipc'
-import { agentService } from '../services/agent-service'
+import { ModelMessage } from 'ai'
 
 export class AgentAdapterMain {
   private static instance: AgentAdapterMain | null = null
@@ -27,14 +26,14 @@ export class AgentAdapterMain {
       async (
         event,
         id: string,
-        agentId: string,
         options: {
-          messages: ChatModelRunOptions['messages']
-          runConfig: ChatModelRunOptions['runConfig']
+          messages: ModelMessage[]
+          runConfig: Record<string, unknown>
           threadId: string
-        }
+        },
+        systemPrompt: string
       ) => {
-        await this.runAgent(event, id, agentId, options)
+        await this.runAgent(event, id, options, systemPrompt)
       }
     )
   }
@@ -54,56 +53,25 @@ export class AgentAdapterMain {
   public async runAgent(
     event: IpcMainInvokeEvent,
     id: string,
-    agentId: string,
     runOptions: {
-      messages: ChatModelRunOptions['messages']
-      runConfig: ChatModelRunOptions['runConfig']
+      messages: ModelMessage[]
+      runConfig: Record<string, unknown>
       threadId: string
-    }
+    },
+    systemPrompt: string
   ): Promise<void> {
-    // Get custom agent + base agent + memories from DB
-    const agentDetails = await agentService.getAgentWithMemories(agentId)
-
-    // Get base agent implementation using hardcoded mapping
-    const baseAgent = this.agents[agentDetails.baseAgent.id]
-    if (!baseAgent) {
-      throw new Error(`AgentAdapterMain: base agent ${agentDetails.baseAgent.id} not found`)
-    }
-
-    // Combine system prompt with memories
-    const enhancedSystemPrompt = this.buildEnhancedSystemPrompt(agentDetails)
-
     // Run enhanced agent
-    for await (const message of baseAgent.run(
+    for await (const message of this.agents['claude-code'].run(
       runOptions,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (request: { toolName: string; input: Record<string, any>; threadId: string }) => {
         return agentRequestPermissionOverIPC(event, request)
       },
-      enhancedSystemPrompt
+      systemPrompt
     )) {
       asyncGeneratorOverIPCSender(event, id, message)
     }
 
     asyncGeneratorOverIPCCloser(event, id)
-  }
-
-  private buildEnhancedSystemPrompt(agentDetails: {
-    name: string
-    systemPrompt: string
-    memories: Array<{ memory: string }>
-    baseAgent: { name: string }
-  }): string {
-    // Combine system prompt with memories
-    let enhancedSystemPrompt = agentDetails.systemPrompt
-
-    if (agentDetails.memories.length > 0) {
-      enhancedSystemPrompt += '\n\n# Agent Memories:\n'
-      agentDetails.memories.forEach((mem, index) => {
-        enhancedSystemPrompt += `${index + 1}. ${mem.memory}\n`
-      })
-    }
-
-    return enhancedSystemPrompt
   }
 }

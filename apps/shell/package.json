@@ -29,6 +29,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@jupiter/shared": "*",
+    "ai": "^5.0.60",
     "better-sqlite3": "12.4.1",
     "drizzle-orm": "^0.44.5",
     "electron-log": "^5.4.3",
