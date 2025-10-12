@@ -77,9 +77,7 @@ export const TaskRuntimeProvider = ({
   useEffect(() => {
     // New task is added, select it
     if (waitForSelect) {
-      console.log("waitForSelect: ", waitForSelect);
       const task = tasks?.find((task) => task.id === waitForSelect);
-      console.log("waitingForSelectTask: ", task);
       if (task) {
         setSelectedTask(task);
         resetNewConversation();

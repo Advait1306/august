@@ -1,5 +1,11 @@
 import { AssistantModelMessage, ModelMessage } from 'ai'
 
+/**
+ * Agent interface for all agents in the system.
+ *
+ * Implementing classes should cache expensive operations (like binary detection)
+ * in a static variable to avoid re-running on every message.
+ */
 interface AgentInterface {
   run(
     runOptions: {
