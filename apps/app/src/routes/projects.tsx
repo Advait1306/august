@@ -23,9 +23,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ShellOnly } from "@/components/restrictor";
 import { getProjects } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
-import { useSyncContext, useZero } from "../components/sync_engine";
+import { useSyncContext } from "../components/sync_engine";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
+import { useZero } from "@/src/hooks/useZero";
 
 export const Route = createFileRoute("/projects")({
   component: Projects,

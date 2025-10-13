@@ -8,7 +8,8 @@ import {
 } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { Agent, Task, Project } from "@jupiter/sync/zero/zero-schema.gen";
-import { useSyncContext, useZero } from "../components/sync_engine";
+import { useSyncContext } from "@/src/components/sync_engine";
+import { useZero } from "@/src/hooks/useZero";
 import { nanoid } from "nanoid";
 import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
 
