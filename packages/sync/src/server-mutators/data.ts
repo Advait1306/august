@@ -1,6 +1,8 @@
 // server-mutators.ts
 import { CustomMutatorDefs, Transaction } from "@rocicorp/zero";
 import { Schema } from "../zero/schema";
+import { wrapMutatorsWithAnalytics } from "./analytics-wrapper";
+import mixpanel from "mixpanel";
 
 type AuthData = {
   userId: string;
@@ -12,11 +14,95 @@ type AsyncTask = Array<() => Promise<void>>;
 export function createServerMutators(
   clientMutators: CustomMutatorDefs,
   authData: AuthData,
-  asyncTasks: AsyncTask
+  asyncTasks: AsyncTask,
+  mixpanel: mixpanel.Mixpanel
 ) {
+  // Analytics configuration
+  const analyticsConfig = {
+    projects: {
+      create: {
+        event: "project_created",
+        getProperties: (args: any) => ({
+          project_id: args.project_id,
+          name: args.name,
+        }),
+      },
+      update: {
+        event: "project_updated",
+        getProperties: (args: any) => ({ project_id: args.project_id }),
+      },
+      delete: {
+        event: "project_deleted",
+        getProperties: (args: any) => ({ project_id: args.project_id }),
+      },
+    },
+    agents: {
+      create: {
+        event: "agent_created",
+        getProperties: (args: any) => ({
+          agent_id: args.agent_id,
+          base_agent: args.base_agent,
+        }),
+      },
+      update: {
+        event: "agent_updated",
+        getProperties: (args: any) => ({ agent_id: args.agent_id }),
+      },
+      delete: {
+        event: "agent_deleted",
+        getProperties: (args: any) => ({ agent_id: args.agent_id }),
+      },
+    },
+    tasks: {
+      create: {
+        event: "task_created",
+        getProperties: (args: any) => ({
+          task_id: args.task_id,
+          project_id: args.project_id,
+          agent_id: args.agent_id,
+        }),
+      },
+    },
+    message: {
+      create: {
+        event: "message_created",
+        getProperties: (args: any) => ({
+          task_id: args.task_id,
+          message_id: args.message_id,
+          role: args.role,
+        }),
+      },
+      update: {
+        event: "message_updated",
+        getProperties: (args: any) => ({
+          task_id: args.task_id,
+          message_id: args.message_id,
+        }),
+      },
+    },
+  };
+
+  // Analytics tracking function
+  const trackEvent = async (event: string, properties: Record<string, any>) => {
+    asyncTasks.push(async () => {
+      mixpanel.track(event, {
+        $user_id: authData.userId,
+        org_id: authData.orgId,
+        ...properties,
+      });
+    });
+  };
+
+  // Wrap client mutators with analytics
+  const wrappedMutators = wrapMutatorsWithAnalytics(
+    clientMutators,
+    analyticsConfig,
+    trackEvent
+  );
+
+  // Override specific mutators that need custom server-side logic
   return {
-    // Reuse all client mutators
-    ...clientMutators,
+    ...wrappedMutators,
     message: {
       create: async (
         tx: Transaction<Schema>,
@@ -50,6 +136,15 @@ export function createServerMutators(
           message_id,
           role,
           content,
+          metadata,
+          created_at: Date.now(),
+        });
+
+        // Track analytics manually for custom mutator
+        await trackEvent("message_created", {
+          task_id,
+          message_id,
+          role,
         });
       },
 
@@ -86,6 +181,12 @@ export function createServerMutators(
           role: role,
           content: content,
           metadata: metadata,
+        });
+
+        // Track analytics manually for custom mutator
+        await trackEvent("message_updated", {
+          task_id,
+          message_id,
         });
       },
     },
