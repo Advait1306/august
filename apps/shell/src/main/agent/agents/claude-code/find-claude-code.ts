@@ -3,6 +3,7 @@ import { existsSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import log from 'electron-log/main'
+import { shellEnv } from 'shell-env'
 
 export enum InstallationType {
   System = 'system',
@@ -16,10 +17,11 @@ export interface ClaudeInstallation {
   installationType: InstallationType
 }
 
-export function findClaudeBinary(): { path: string; env: NodeJS.ProcessEnv } {
+export async function findClaudeBinary(): Promise<{ path: string; env: NodeJS.ProcessEnv }> {
   log.info('Searching for claude binary...')
 
-  const installations = discoverSystemInstallations()
+  const env = await createEnvironmentForPath()
+  const installations = discoverSystemInstallations(env)
 
   if (installations.length === 0) {
     throw new Error(
@@ -42,14 +44,15 @@ export function findClaudeBinary(): { path: string; env: NodeJS.ProcessEnv } {
 
   return {
     path: best.path,
-    env: createEnvironmentForPath(best.path)
+    env
   }
 }
 
-export function discoverClaudeInstallations(): ClaudeInstallation[] {
+export async function discoverClaudeInstallations(): Promise<ClaudeInstallation[]> {
   log.info('Discovering all Claude installations...')
 
-  const installations = discoverSystemInstallations()
+  const env = await createEnvironmentForPath()
+  const installations = discoverSystemInstallations(env)
 
   installations.sort((a, b) => {
     if (a.version && b.version) {
@@ -91,16 +94,16 @@ function sourcePreference(installation: ClaudeInstallation): number {
   return preferences[installation.source] || 13
 }
 
-function discoverSystemInstallations(): ClaudeInstallation[] {
+function discoverSystemInstallations(env: NodeJS.ProcessEnv): ClaudeInstallation[] {
   const installations: ClaudeInstallation[] = []
 
-  const whichInstallation = tryWhichCommand()
+  const whichInstallation = tryWhichCommand(env)
   if (whichInstallation) {
     installations.push(whichInstallation)
   }
 
-  installations.push(...findNvmInstallations())
-  installations.push(...findStandardInstallations())
+  installations.push(...findNvmInstallations(env))
+  installations.push(...findStandardInstallations(env))
 
   const uniquePaths = new Set<string>()
   return installations.filter((install) => {
@@ -112,7 +115,7 @@ function discoverSystemInstallations(): ClaudeInstallation[] {
   })
 }
 
-function tryWhichCommand(): ClaudeInstallation | null {
+function tryWhichCommand(env: NodeJS.ProcessEnv): ClaudeInstallation | null {
   log.debug("Trying 'which claude' to find binary...")
 
   try {
@@ -138,7 +141,7 @@ function tryWhichCommand(): ClaudeInstallation | null {
       return null
     }
 
-    const version = getClaudeVersion(path)
+    const version = getClaudeVersion(path, env)
 
     return {
       path,
@@ -151,7 +154,7 @@ function tryWhichCommand(): ClaudeInstallation | null {
   }
 }
 
-function findNvmInstallations(): ClaudeInstallation[] {
+function findNvmInstallations(env: NodeJS.ProcessEnv): ClaudeInstallation[] {
   const installations: ClaudeInstallation[] = []
   const home = homedir()
   const nvmDir = join(home, '.nvm', 'versions', 'node')
@@ -172,7 +175,7 @@ function findNvmInstallations(): ClaudeInstallation[] {
         if (existsSync(claudePath) && statSync(claudePath).isFile()) {
           log.debug(`Found Claude in NVM node ${entry}: ${claudePath}`)
 
-          const version = getClaudeVersion(claudePath)
+          const version = getClaudeVersion(claudePath, env)
 
           installations.push({
             path: claudePath,
@@ -190,7 +193,7 @@ function findNvmInstallations(): ClaudeInstallation[] {
   return installations
 }
 
-function findStandardInstallations(): ClaudeInstallation[] {
+function findStandardInstallations(env: NodeJS.ProcessEnv): ClaudeInstallation[] {
   const installations: ClaudeInstallation[] = []
   const home = homedir()
 
@@ -213,7 +216,7 @@ function findStandardInstallations(): ClaudeInstallation[] {
     if (existsSync(path) && statSync(path).isFile()) {
       log.debug(`Found claude at standard path: ${path} (${source})`)
 
-      const version = getClaudeVersion(path)
+      const version = getClaudeVersion(path, env)
 
       installations.push({
         path,
@@ -242,9 +245,8 @@ function findStandardInstallations(): ClaudeInstallation[] {
   return installations
 }
 
-function getClaudeVersion(path: string): string | undefined {
+function getClaudeVersion(path: string, env: NodeJS.ProcessEnv): string | undefined {
   try {
-    const env = createEnvironmentForPath(path)
     const output = execSync(`"${path}" --version`, { encoding: 'utf8', env })
     return extractVersionFromOutput(output)
   } catch (error) {
@@ -320,52 +322,6 @@ function compareVersions(a: string, b: string): number {
   return 0
 }
 
-export function createEnvironmentForPath(claudePath: string): NodeJS.ProcessEnv {
-  const env = { ...process.env }
-
-  log.info('Creating environment for Claude path:', claudePath)
-
-  // If this is a Node.js installation, extract the bin directory from the claude path
-  const nodeBinMatch = claudePath.match(/^(.+\/bin)\/claude$/)
-  if (nodeBinMatch) {
-    const nodeBinDir = nodeBinMatch[1]
-
-    // Verify this looks like a Node.js bin directory by checking if node exists
-    const nodeExecutable = join(nodeBinDir, 'node')
-    if (existsSync(nodeExecutable)) {
-      log.info(`Setting up Node.js environment for bin directory: ${nodeBinDir}`)
-
-      // Ensure the Node.js bin directory is first in PATH
-      const currentPath = env.PATH || ''
-      if (!currentPath.split(':').includes(nodeBinDir)) {
-        env.PATH = `${nodeBinDir}:${currentPath}`
-        log.info('Updated PATH:', env.PATH)
-      }
-
-      // If this is an NVM installation, also set NVM-related environment variables
-      if (claudePath.includes('/.nvm/versions/node/')) {
-        const nodeVersionMatch = claudePath.match(/\.nvm\/versions\/node\/([^/]+)/)
-        if (nodeVersionMatch) {
-          env.NVM_DIR = join(homedir(), '.nvm')
-          env.NVM_BIN = nodeBinDir
-          env.NVM_PATH = nodeBinDir
-          log.info(`Also setting NVM environment variables for node ${nodeVersionMatch[1]}`)
-        }
-      }
-    }
-  }
-
-  // If this is a Homebrew installation, ensure Homebrew paths are available
-  if (claudePath.includes('/homebrew/') || claudePath.includes('/opt/homebrew/')) {
-    const brewBinDir = claudePath.includes('/opt/homebrew/')
-      ? '/opt/homebrew/bin'
-      : '/usr/local/bin'
-    const currentPath = env.PATH || ''
-    if (!currentPath.includes(brewBinDir)) {
-      env.PATH = `${brewBinDir}:${currentPath}`
-      log.info('Added Homebrew bin directory to PATH:', brewBinDir)
-    }
-  }
-
-  return env
+export async function createEnvironmentForPath(): Promise<NodeJS.ProcessEnv> {
+  return await shellEnv()
 }
