@@ -35,8 +35,6 @@ export default function GettingStarted() {
     }
   }, [imageDivRef, imageDivRef.current?.clientHeight]);
 
-  console.log(height);
-
   return (
     <div
       className="flex flex-col md:flex-row w-full border rounded-xl"

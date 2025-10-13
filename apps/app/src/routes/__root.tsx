@@ -15,6 +15,7 @@ import { UpdateProvider } from "@/src/contexts/update-context";
 import { UpdateToast } from "@/components/update-toast";
 import { SyncEngine } from "../components/sync_engine";
 import { TaskRuntimeProvider } from "@/src/contexts/task-runtime";
+import { Analytics } from "@/src/components/analytics";
 
 // Import your Publishable Key
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -54,30 +55,32 @@ const RootLayout = () => {
                 baseTheme: shadcn,
               }}
             >
-              <SyncEngine>
-                <SignedIn>
-                  <CommandMenuProvider>
-                    <TaskRuntimeProvider>
-                      <div className="[--header-height:calc(--spacing(9))]">
-                        <SidebarProvider className="flex flex-col">
-                          <SiteHeader />
-                          <div className="flex flex-1 overflow-hidden">
-                            <AppSidebar />
-                            <SidebarInset>
-                              <div className="rounded-lg border overflow-hidden flex-1 bg-background">
-                                <Outlet />
-                              </div>
-                            </SidebarInset>
-                          </div>
-                        </SidebarProvider>
-                      </div>
-                    </TaskRuntimeProvider>
-                  </CommandMenuProvider>
-                </SignedIn>
-                <SignedOut>
-                  <Guard />
-                </SignedOut>
-              </SyncEngine>
+              <Analytics>
+                <SyncEngine>
+                  <SignedIn>
+                    <CommandMenuProvider>
+                      <TaskRuntimeProvider>
+                        <div className="[--header-height:calc(--spacing(9))]">
+                          <SidebarProvider className="flex flex-col">
+                            <SiteHeader />
+                            <div className="flex flex-1 overflow-hidden">
+                              <AppSidebar />
+                              <SidebarInset>
+                                <div className="rounded-lg border overflow-hidden flex-1 bg-background">
+                                  <Outlet />
+                                </div>
+                              </SidebarInset>
+                            </div>
+                          </SidebarProvider>
+                        </div>
+                      </TaskRuntimeProvider>
+                    </CommandMenuProvider>
+                  </SignedIn>
+                  <SignedOut>
+                    <Guard />
+                  </SignedOut>
+                </SyncEngine>
+              </Analytics>
             </ClerkProvider>
             <UpdateToast />
           </UpdateProvider>
@@ -97,7 +100,9 @@ const RootLayout = () => {
             signInUrl={SIGN_IN_URL}
             signUpUrl={SIGN_UP_URL}
           >
-            <Outlet />
+            <Analytics>
+              <Outlet />
+            </Analytics>
           </ClerkProvider>
         </ThemeProvider>
         <TanStackRouterDevtools />

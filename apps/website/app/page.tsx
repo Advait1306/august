@@ -3,6 +3,7 @@
 import GettingStarted from "@/components/getting-started";
 import { Button } from "@/components/ui/button";
 import { ThemeSwitcher } from "@/components/ui/shadcn-io/theme-switcher";
+import mixpanel from "mixpanel-browser";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 
@@ -20,6 +21,7 @@ export default function Home() {
         />
         <Button
           onClick={() => {
+            mixpanel.track("download_button");
             window.location.href =
               "https://github.com/sixhuman/august-shell-release/releases";
           }}
