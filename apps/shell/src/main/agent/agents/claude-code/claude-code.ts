@@ -13,10 +13,17 @@ import {
 
 export class ClaudeCodeAgent implements AgentInterface {
   private static agentInfo: { path: string; env: NodeJS.ProcessEnv } | null = null
+  private static initPromise: Promise<void> | null = null
 
   constructor() {
+    if (ClaudeCodeAgent.initPromise === null) {
+      ClaudeCodeAgent.initPromise = this.initialize()
+    }
+  }
+
+  private async initialize(): Promise<void> {
     if (ClaudeCodeAgent.agentInfo === null) {
-      ClaudeCodeAgent.agentInfo = findClaudeBinary()
+      ClaudeCodeAgent.agentInfo = await findClaudeBinary()
       log.info('Initialized Claude executable:', ClaudeCodeAgent.agentInfo.path)
     }
   }
@@ -67,6 +74,11 @@ export class ClaudeCodeAgent implements AgentInterface {
     })
 
     try {
+      // Wait for initialization to complete
+      if (ClaudeCodeAgent.initPromise) {
+        await ClaudeCodeAgent.initPromise
+      }
+
       if (ClaudeCodeAgent.agentInfo === null) {
         throw new Error('ClaudeCodeAgent not initialized properly.')
       }

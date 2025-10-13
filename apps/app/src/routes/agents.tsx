@@ -39,10 +39,11 @@ import { Separator } from "@/components/ui/separator";
 import { createFileRoute } from "@tanstack/react-router";
 import { ShellOnly } from "@/components/restrictor";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
-import { useSyncContext, useZero } from "../components/sync_engine";
+import { useSyncContext } from "../components/sync_engine";
 import { useQuery } from "@rocicorp/zero/react";
 import { getAgents } from "@jupiter/sync/queries/data";
 import { nanoid } from "nanoid";
+import { useZero } from "@/src/hooks/useZero";
 
 export const Route = createFileRoute("/agents")({
   component: Agents,
