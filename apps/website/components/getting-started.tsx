@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { usePreloadImages } from "@/hooks/usePreloadImages";
 
 const steps = [
   {
@@ -29,13 +28,6 @@ export default function GettingStarted() {
   const imageDivRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
   const [hidden, setHidden] = useState(true);
-
-  // Preload all step images
-  const imageUrls = steps.flatMap((_, index) => [
-    `/steps_light/${index}.png`,
-    `/steps_dark/${index}.png`,
-  ]);
-  usePreloadImages(imageUrls);
 
   useEffect(() => {
     if (imageDivRef.current) {
@@ -118,25 +110,29 @@ export default function GettingStarted() {
             </div>
           ))}
         </div>
-        <div className="flex-7 overflow-hidden p-2 h-full" ref={imageDivRef}>
-          <Image
-            src={`/steps_light/${activeStep}.png`}
-            priority
-            width={1600}
-            height={800}
-            alt={steps[activeStep].title}
-            className="shadow border rounded dark:hidden"
-            onLoad={() => setHidden(false)}
-          />
-          <Image
-            src={`/steps_dark/${activeStep}.png`}
-            priority
-            width={1600}
-            height={800}
-            alt={steps[activeStep].title}
-            className="shadow border rounded hidden dark:block"
-            onLoad={() => setHidden(false)}
-          />
+        <div ref={imageDivRef} className="flex-7 overflow-hidden p-2 h-full">
+          {steps.map((step, index) => (
+            <div hidden={index !== activeStep} key={index}>
+              <Image
+                src={`/steps_light/${index}.png`}
+                priority
+                width={1600}
+                height={800}
+                alt={step.title}
+                className="shadow border rounded dark:hidden"
+                onLoad={() => setHidden(false)}
+              />
+              <Image
+                src={`/steps_dark/${index}.png`}
+                priority
+                width={1600}
+                height={800}
+                alt={step.title}
+                className="shadow border rounded hidden dark:block"
+                onLoad={() => setHidden(false)}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </>

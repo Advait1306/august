@@ -27,8 +27,7 @@ export default function Home() {
           </span>
           <span className="text-muted-foreground md:w-[60%]">
             Create, manage, and deploy agents for your company, allowing you to
-            focus on decision-making while your agents handle
-            execution.
+            focus on decision-making while your agents handle execution.
           </span>
         </div>
 
@@ -36,7 +35,7 @@ export default function Home() {
           src={"/hero_dark.png"}
           priority
           width={1600}
-          height={800}
+          height={1000}
           alt="Hero"
           className="shadow border rounded-[4px] md:rounded-[12px] hidden dark:block"
         />
@@ -44,7 +43,7 @@ export default function Home() {
           src={"/hero_light.png"}
           priority
           width={1600}
-          height={800}
+          height={1000}
           alt="Hero"
           className="shadow border rounded-[4px] md:rounded-[12px] dark:hidden"
         />
