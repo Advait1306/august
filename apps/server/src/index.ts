@@ -108,8 +108,8 @@ app.post(
 );
 
 // Add JSON body parser for other routes
-app.use(bodyParser.json({ limit: "10mb" }));
-app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
 // Clerk Ticket
 app.get("/ticket", async (req, res) => {
