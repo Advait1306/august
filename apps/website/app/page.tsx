@@ -1,14 +1,13 @@
 "use client";
 
+import DownloadButton from "@/components/download-button";
 import GettingStarted from "@/components/getting-started";
-import { Button } from "@/components/ui/button";
 import { ThemeSwitcher } from "@/components/ui/shadcn-io/theme-switcher";
-import mixpanel from "mixpanel-browser";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 
 export default function Home() {
-  const { setTheme } = useTheme();
+  const { setTheme, theme } = useTheme();
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <header className="w-full flex flex-row items-center justify-between max-w-[1100px] mx-auto">
@@ -19,20 +18,12 @@ export default function Home() {
           alt="August"
           className="rounded"
         />
-        <Button
-          onClick={() => {
-            mixpanel.track("download_button");
-            window.location.href =
-              "https://github.com/sixhuman/august-shell-release/releases";
-          }}
-        >
-          Download now
-        </Button>
+        <DownloadButton />
       </header>
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start max-w-[1100px]">
         <div className="flex flex-col gap-2">
           <span className="w-full text-4xl font-medium tracking-tight">
-            Artificial employees for your team
+            Artificial helpers for your team
           </span>
           <span className="text-muted-foreground md:w-[60%]">
             Create, manage, and deploy agents for your company, allowing you to
@@ -68,7 +59,10 @@ export default function Home() {
         <span className="text-sm text-muted-foreground">
           © {new Date().getFullYear()} sixhuman technologies private limited
         </span>
-        <ThemeSwitcher onChange={setTheme} />
+        <ThemeSwitcher
+          onChange={setTheme}
+          value={theme as "light" | "dark" | "system"}
+        />
       </footer>
     </div>
   );

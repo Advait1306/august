@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "August",
-  description: "Artificial employees for your team",
+  description: "Artificial helpers for your team",
 };
 
 export default function RootLayout({
