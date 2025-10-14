@@ -16,6 +16,9 @@ import {
 import { schema } from "@jupiter/sync/zero/schema";
 
 const app = express();
+const mp = mixpanel.init(process.env.MIXPANEL_TOKEN!, {
+  host: "api-eu.mixpanel.com",
+});
 
 app.use(cors());
 app.use(clerkMiddleware());
@@ -34,6 +37,7 @@ import {
 } from "@jupiter/sync/queries/data";
 import { PostgresJSConnection } from "@rocicorp/zero/pg";
 import postgres from "postgres";
+import mixpanel from "mixpanel";
 
 const db = drizzle(process.env.DATABASE_URL!);
 const wh = new Webhook(process.env.CLERK_WEBHOOK_KEY!);
@@ -168,7 +172,6 @@ function getQuery(
 }
 
 app.post("/get-queries", async (req, res) => {
-  console.log("get-queries");
   const { isAuthenticated, userId, orgId } = getAuth(req);
 
   if (!isAuthenticated) {
@@ -213,7 +216,8 @@ app.post("/push", async (req, res) => {
     createServerMutators(
       createMutators({ userId, orgId: orgId ?? userId }),
       { userId, orgId: orgId ?? userId },
-      asyncTasks
+      asyncTasks,
+      mp
     ),
     req.query as Record<string, string>,
     req.body

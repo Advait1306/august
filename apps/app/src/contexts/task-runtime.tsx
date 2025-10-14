@@ -8,7 +8,8 @@ import {
 } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { Agent, Task, Project } from "@jupiter/sync/zero/zero-schema.gen";
-import { useSyncContext, useZero } from "../components/sync_engine";
+import { useSyncContext } from "@/src/components/sync_engine";
+import { useZero } from "@/src/hooks/useZero";
 import { nanoid } from "nanoid";
 import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
 
@@ -77,9 +78,7 @@ export const TaskRuntimeProvider = ({
   useEffect(() => {
     // New task is added, select it
     if (waitForSelect) {
-      console.log("waitForSelect: ", waitForSelect);
       const task = tasks?.find((task) => task.id === waitForSelect);
-      console.log("waitingForSelectTask: ", task);
       if (task) {
         setSelectedTask(task);
         resetNewConversation();

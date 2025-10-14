@@ -7,6 +7,7 @@
     "@jupiter/typescript-config": "*",
     "@rocicorp/zero": "^0.24.2025100400",
     "electron": "^38.0.0",
+    "mixpanel": "^0.18.1",
     "typescript": "latest"
   },
   "scripts": {

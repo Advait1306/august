@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
+import { Analytics } from "@/components/analytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "August",
-  description: "Artificial employees for your team",
+  description: "Artificial helpers for your team",
 };
 
 export default function RootLayout({
@@ -28,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider attribute="class">{children}</ThemeProvider>
+        <Analytics>
+          <ThemeProvider attribute="class">{children}</ThemeProvider>
+        </Analytics>
       </body>
     </html>
   );

@@ -1,7 +1,7 @@
 import AgentInterface from './agent-interface'
 import { ClaudeCodeAgent } from './agents/claude-code/claude-code'
-import { CodexAgent } from './agents/codex'
-import { OpenCodeAgent } from './agents/opencode'
+// import { CodexAgent } from './agents/codex'
+// import { OpenCodeAgent } from './agents/opencode'
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
 import {
   asyncGeneratorOverIPCCloser,
@@ -17,8 +17,8 @@ export class AgentAdapterMain {
   private constructor() {
     // Base agents are mapped by their hardcoded IDs
     this.registerAgent('claude-code', new ClaudeCodeAgent())
-    this.registerAgent('codex', new CodexAgent())
-    this.registerAgent('opencode', new OpenCodeAgent())
+    // this.registerAgent('codex', new CodexAgent())
+    // this.registerAgent('opencode', new OpenCodeAgent())
 
     // IPC handler now uses agent ID instead of agent name
     ipcMain.handle(

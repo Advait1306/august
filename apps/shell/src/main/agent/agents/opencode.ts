@@ -1,32 +1,32 @@
-import { ChatModelRunOptions, ChatModelRunResult } from '@assistant-ui/react'
-import AgentInterface from '../agent-interface'
+// import { ChatModelRunOptions, ChatModelRunResult } from '@assistant-ui/react'
+// import AgentInterface from '../agent-interface'
 
-export class OpenCodeAgent implements AgentInterface {
-  async *run(
-    _runOptions: {
-      messages: ChatModelRunOptions['messages']
-      runConfig: ChatModelRunOptions['runConfig']
-      threadId: string
-    },
-    _permissionRequest: (request: {
-      toolName: string
-      input: Record<string, any>
-      threadId: string
-    }) => Promise<boolean>,
-    _systemPrompt?: string
-  ): AsyncGenerator<ChatModelRunResult, void> {
-    // TODO: Implement OpenCode agent functionality
-    // For now, return an error message
-    yield {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'OpenCode agent is not yet implemented. Please use Claude Code agent instead.'
-        }
-      ],
-      metadata: {
-        custom: {}
-      }
-    }
-  }
-}
+// export class OpenCodeAgent implements AgentInterface {
+//   async *run(
+//     _runOptions: {
+//       messages: ChatModelRunOptions['messages']
+//       runConfig: ChatModelRunOptions['runConfig']
+//       threadId: string
+//     },
+//     _permissionRequest: (request: {
+//       toolName: string
+//       input: Record<string, any>
+//       threadId: string
+//     }) => Promise<boolean>,
+//     _systemPrompt?: string
+//   ): AsyncGenerator<ChatModelRunResult, void> {
+//     // TODO: Implement OpenCode agent functionality
+//     // For now, return an error message
+//     yield {
+//       content: [
+//         {
+//           type: 'text' as const,
+//           text: 'OpenCode agent is not yet implemented. Please use Claude Code agent instead.'
+//         }
+//       ],
+//       metadata: {
+//         custom: {}
+//       }
+//     }
+//   }
+// }

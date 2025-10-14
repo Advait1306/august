@@ -12,6 +12,22 @@ import {
 } from 'ai'
 
 export class ClaudeCodeAgent implements AgentInterface {
+  private static agentInfo: { path: string; env: NodeJS.ProcessEnv } | null = null
+  private static initPromise: Promise<void> | null = null
+
+  constructor() {
+    if (ClaudeCodeAgent.initPromise === null) {
+      ClaudeCodeAgent.initPromise = this.initialize()
+    }
+  }
+
+  private async initialize(): Promise<void> {
+    if (ClaudeCodeAgent.agentInfo === null) {
+      ClaudeCodeAgent.agentInfo = await findClaudeBinary()
+      log.info('Initialized Claude executable:', ClaudeCodeAgent.agentInfo.path)
+    }
+  }
+
   async *run(
     runOptions: {
       messages: ModelMessage[]
@@ -58,8 +74,17 @@ export class ClaudeCodeAgent implements AgentInterface {
     })
 
     try {
-      const claudeInfo = findClaudeBinary()
-      log.info('Using Claude executable:', claudeInfo.path)
+      // Wait for initialization to complete
+      if (ClaudeCodeAgent.initPromise) {
+        await ClaudeCodeAgent.initPromise
+      }
+
+      if (ClaudeCodeAgent.agentInfo === null) {
+        throw new Error('ClaudeCodeAgent not initialized properly.')
+      }
+
+      const agentInfo = ClaudeCodeAgent.agentInfo
+      log.info('Using Claude executable:', agentInfo.path)
 
       try {
         for await (const data of query({
@@ -76,8 +101,8 @@ export class ClaudeCodeAgent implements AgentInterface {
             await receivedResult
           })(),
           options: {
-            pathToClaudeCodeExecutable: claudeInfo.path,
-            env: claudeInfo.env,
+            pathToClaudeCodeExecutable: agentInfo.path,
+            env: agentInfo.env,
             resume: sessionId,
             cwd: project.path,
             appendSystemPrompt: systemPrompt,
