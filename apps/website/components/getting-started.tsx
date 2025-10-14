@@ -122,18 +122,18 @@ export default function GettingStarted() {
           <Image
             src={`/steps_light/${activeStep}.png`}
             priority
-            width={800}
-            height={400}
-            alt="Hero"
+            width={1600}
+            height={800}
+            alt={steps[activeStep].title}
             className="shadow border rounded dark:hidden"
             onLoad={() => setHidden(false)}
           />
           <Image
             src={`/steps_dark/${activeStep}.png`}
             priority
-            width={800}
-            height={400}
-            alt="Hero"
+            width={1600}
+            height={800}
+            alt={steps[activeStep].title}
             className="shadow border rounded hidden dark:block"
             onLoad={() => setHidden(false)}
           />
