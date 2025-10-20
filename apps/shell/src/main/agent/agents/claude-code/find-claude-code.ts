@@ -198,6 +198,8 @@ function findStandardInstallations(env: NodeJS.ProcessEnv): ClaudeInstallation[]
   const home = homedir()
 
   const pathsToCheck: Array<[string, string]> = [
+    // Add bundled binary check first (highest priority)
+    [join(process.resourcesPath, 'binaries', `claude-darwin-${process.arch}`), 'bundled'],
     ['/usr/local/bin/claude', 'system'],
     ['/opt/homebrew/bin/claude', 'homebrew'],
     ['/usr/bin/claude', 'system'],

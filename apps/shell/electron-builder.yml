@@ -12,6 +12,7 @@ files:
   - "!**/@anthropic-ai/claude-code/vendor/claude-code-jetbrains-plugin/**"
 asarUnpack:
   - resources/**
+  - binaries/**
 win:
   executableName: August
 nsis:
