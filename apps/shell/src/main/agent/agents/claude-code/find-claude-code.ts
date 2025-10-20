@@ -4,6 +4,7 @@ import { join } from 'path'
 import { homedir } from 'os'
 import log from 'electron-log/main'
 import { shellEnv } from 'shell-env'
+import { app } from 'electron'
 
 export enum InstallationType {
   System = 'system',
@@ -197,9 +198,26 @@ function findStandardInstallations(env: NodeJS.ProcessEnv): ClaudeInstallation[]
   const installations: ClaudeInstallation[] = []
   const home = homedir()
 
+  // Determine bundled binary path based on whether app is packaged or in dev mode
+  let bundledBinaryPath: string
+  if (app.isPackaged) {
+    // Production: binary in app.asar.unpacked
+    bundledBinaryPath = join(
+      process.resourcesPath,
+      'app.asar.unpacked',
+      'binaries',
+      `claude-darwin-${process.arch}`
+    )
+    log.info('App is packaged, looking for bundled binary at:', bundledBinaryPath)
+  } else {
+    // Development: binary in shell/binaries relative to app path
+    bundledBinaryPath = join(app.getAppPath(), 'binaries', `claude-darwin-${process.arch}`)
+    log.info('App is in development mode, looking for bundled binary at:', bundledBinaryPath)
+  }
+
   const pathsToCheck: Array<[string, string]> = [
     // Add bundled binary check first (highest priority)
-    [join(process.resourcesPath, 'binaries', `claude-darwin-${process.arch}`), 'bundled'],
+    [bundledBinaryPath, 'bundled'],
     ['/usr/local/bin/claude', 'system'],
     ['/opt/homebrew/bin/claude', 'homebrew'],
     ['/usr/bin/claude', 'system'],
@@ -215,17 +233,26 @@ function findStandardInstallations(env: NodeJS.ProcessEnv): ClaudeInstallation[]
   ]
 
   for (const [path, source] of pathsToCheck) {
-    if (existsSync(path) && statSync(path).isFile()) {
-      log.debug(`Found claude at standard path: ${path} (${source})`)
+    try {
+      if (existsSync(path)) {
+        const stats = statSync(path)
+        log.debug('Checking path:', path, 'source:', source, 'isFile:', stats.isFile())
 
-      const version = getClaudeVersion(path, env)
+        if (stats.isFile()) {
+          log.debug(`Found claude at standard path: ${path} (${source})`)
 
-      installations.push({
-        path,
-        version,
-        source,
-        installationType: InstallationType.System
-      })
+          const version = getClaudeVersion(path, env)
+
+          installations.push({
+            path,
+            version,
+            source,
+            installationType: InstallationType.System
+          })
+        }
+      }
+    } catch (error) {
+      log.debug(`Error checking path ${path}:`, error)
     }
   }
 

@@ -23,7 +23,10 @@ export class ClaudeCodeAgent implements AgentInterface {
 
   private async initialize(): Promise<void> {
     if (ClaudeCodeAgent.agentInfo === null) {
-      ClaudeCodeAgent.agentInfo = await findClaudeBinary()
+      log.info('Finding Claude executable...')
+      const binary = await findClaudeBinary()
+      log.debug('Found Claude executable:', binary)
+      ClaudeCodeAgent.agentInfo = binary
       log.info('Initialized Claude executable:', ClaudeCodeAgent.agentInfo.path)
     }
   }
@@ -42,6 +45,12 @@ export class ClaudeCodeAgent implements AgentInterface {
     }) => Promise<boolean>,
     systemPrompt?: string
   ): AsyncGenerator<AssistantModelMessage, void> {
+    log.info('ClaudeCodeAgent.run called', {
+      threadId: runOptions.threadId,
+      messageCount: runOptions.messages.length,
+      hasSystemPrompt: !!systemPrompt
+    })
+
     // Claude code doesn't take old messages, it takes a session id
     // that's generated and stored in assistant messages.
     //
@@ -51,6 +60,8 @@ export class ClaudeCodeAgent implements AgentInterface {
     const sessionId = runOptions.messages.findLast((m) => m.role === 'assistant')?.providerOptions
       ?.claude?.sessionId as string | undefined
 
+    log.info('Resolved session ID:', sessionId || 'new session')
+
     const project = (runOptions.runConfig.project ??
       runOptions.messages.find((m) => m.role === 'assistant')?.providerOptions?.claude?.project) as
       | {
@@ -59,10 +70,15 @@ export class ClaudeCodeAgent implements AgentInterface {
         }
       | undefined
 
+    log.info('Resolved project:', project)
     assert(project != null, 'ClaudeCodeAgent: missing project')
 
     // Last message will always be user message
     const lastMessage = runOptions.messages[runOptions.messages.length - 1] as UserModelMessage
+    log.info('Last message:', {
+      role: lastMessage.role,
+      contentLength: JSON.stringify(lastMessage.content).length
+    })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const output: any = []
@@ -75,11 +91,14 @@ export class ClaudeCodeAgent implements AgentInterface {
 
     try {
       // Wait for initialization to complete
+      log.info('Waiting for initialization...')
       if (ClaudeCodeAgent.initPromise) {
         await ClaudeCodeAgent.initPromise
       }
+      log.info('Initialization complete')
 
       if (ClaudeCodeAgent.agentInfo === null) {
+        log.error('ClaudeCodeAgent.agentInfo is null after initialization')
         throw new Error('ClaudeCodeAgent not initialized properly.')
       }
 
@@ -87,8 +106,15 @@ export class ClaudeCodeAgent implements AgentInterface {
       log.info('Using Claude executable:', agentInfo.path)
 
       try {
+        log.info('Starting query to Claude Code binary', {
+          cwd: project.path,
+          hasSessionId: !!sessionId,
+          hasSystemPrompt: !!systemPrompt
+        })
+
         for await (const data of query({
           prompt: (async function* () {
+            log.info('Yielding user prompt to Claude Code')
             yield {
               type: 'user' as const,
               message: {
@@ -98,7 +124,9 @@ export class ClaudeCodeAgent implements AgentInterface {
               parent_tool_use_id: null,
               session_id: sessionId || ''
             }
+            log.info('Waiting for receivedResult promise...')
             await receivedResult
+            log.info('receivedResult resolved')
           })(),
           options: {
             pathToClaudeCodeExecutable: agentInfo.path,
@@ -107,6 +135,7 @@ export class ClaudeCodeAgent implements AgentInterface {
             cwd: project.path,
             appendSystemPrompt: systemPrompt,
             canUseTool: async (toolName, input) => {
+              log.debug('Permission requested for tool:', toolName)
               if (
                 await permissionRequest({
                   toolName,
@@ -114,21 +143,30 @@ export class ClaudeCodeAgent implements AgentInterface {
                   threadId: runOptions.threadId
                 })
               ) {
+                log.debug('Tool permission granted:', toolName)
                 return { behavior: 'allow', updatedInput: input }
               } else {
+                log.debug('Tool permission denied:', toolName)
                 return { behavior: 'deny', message: 'Permission denied' }
               }
             }
           }
         })) {
+          log.debug('Received data from Claude Code:', { type: data.type })
+
           // We also let the user message type through as
           // tool results in CC SDK are treated as sent by user
           if (data.type !== 'assistant' && data.type !== 'result' && data.type !== 'user') {
+            log.warn('Skipping message type:', data.type)
             console.log('Skipping message type: ', data.type)
             continue
           }
 
           if (data.type === 'assistant' || data.type === 'user') {
+            log.debug('Processing assistant/user message', {
+              contentLength: data.message.content.length,
+              sessionId: data.session_id
+            })
             output.push(...data.message.content)
             yield {
               role: 'assistant',
@@ -144,27 +182,36 @@ export class ClaudeCodeAgent implements AgentInterface {
           }
 
           if (data.type === 'result') {
+            log.info('Received result type, calling done() and returning')
             done()
             return
           }
         }
+        log.info('Query loop completed without result type')
       } catch (error) {
-        log.error('Error in ClaudeCodeAgent:', error)
-        console.error('Error in ClaudeCodeAgent:', error)
+        log.error('Error in ClaudeCodeAgent query loop:', error)
+        console.error('Error in ClaudeCodeAgent query loop:', error)
+        throw error
       }
     } catch (error) {
-      log.error('Error executing "which claude":', error)
+      log.error('Error in ClaudeCodeAgent initialization or execution:', error)
+      throw error
+    } finally {
+      log.info('ClaudeCodeAgent.run completed', { threadId: runOptions.threadId })
     }
   }
 
   // TODO: Fix type of parts, anthropic SDK doesn't expose for some reason
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private convertToGenericContent(parts: any[]): AssistantContent {
+    log.debug('Converting content parts:', { partCount: parts.length })
     const content: AssistantContent = []
 
     for (const part of parts) {
+      log.debug('Converting part type:', part.type)
       switch (part.type) {
         case 'tool_use':
+          log.debug('Converting tool_use:', { toolName: part.name, toolId: part.id })
           content.push({
             type: 'tool-call',
             toolCallId: part.id,
@@ -174,6 +221,7 @@ export class ClaudeCodeAgent implements AgentInterface {
           })
           break
         case 'tool_result': {
+          log.debug('Converting tool_result:', { toolName: part.name, toolUseId: part.tool_use_id })
           content.push({
             type: 'tool-result',
             toolCallId: part.tool_use_id,
@@ -183,12 +231,14 @@ export class ClaudeCodeAgent implements AgentInterface {
           break
         }
         case 'text':
+          log.debug('Converting text:', { textLength: part.text?.length || 0 })
           content.push({
             type: 'text',
             text: part.text
           })
           break
         default:
+          log.error('ClaudeCodeAgent: unknown message part type:', part.type)
           console.error('ClaudeCodeAgent: unknown message part type: ', part.type)
           content.push({
             type: 'text',
@@ -198,6 +248,7 @@ export class ClaudeCodeAgent implements AgentInterface {
       }
     }
 
+    log.debug('Converted content:', { outputPartCount: content.length })
     return content
   }
 }
