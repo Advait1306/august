@@ -24,7 +24,7 @@ import {
   Archive,
   Trash2,
 } from "lucide-react";
-import { useTheme } from "@/src/contexts/theme-context";
+import { useNestedSetting } from "@/src/contexts/settings-context";
 
 import {
   CommandDialog,
@@ -146,7 +146,7 @@ function CommandMenuDialog({
   setIsResetRequired: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const navigate = useNavigate();
-  const { setTheme } = useTheme();
+  const [, setTheme] = useNestedSetting("appearance", "theme");
   const [keySequence, setKeySequence] = useState<string[]>([]);
   const keySequenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastKeyTimeRef = useRef<number>(0);

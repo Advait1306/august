@@ -44,6 +44,7 @@ export type Settings = {
     notifications: boolean;
   };
   appearance: {
+    theme: "dark" | "light" | "system";
     fontSize: "small" | "medium" | "large";
     compactMode: boolean;
   };
@@ -80,6 +81,7 @@ const defaultSettingsValues: Settings = {
     notifications: true,
   },
   appearance: {
+    theme: "system",
     fontSize: "medium",
     compactMode: false,
   },

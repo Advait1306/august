@@ -1,6 +1,6 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { ThemeProvider } from "@/src/contexts/theme-context";
+import { Theme } from "@/src/components/theme";
+import { SettingsProvider } from "@/src/contexts/settings-context";
 import { CommandMenuProvider } from "@/components/command-menu";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -45,47 +45,48 @@ const RootLayout = () => {
     // show all functionality.
     return (
       <>
-        <ThemeProvider>
-          <UpdateProvider>
-            <ClerkProvider
-              publishableKey={PUBLISHABLE_KEY}
-              signInUrl={SIGN_IN_URL}
-              signUpUrl={SIGN_UP_URL}
-              appearance={{
-                baseTheme: shadcn,
-              }}
-            >
-              <Analytics>
-                <SyncEngine>
-                  <SignedIn>
-                    <CommandMenuProvider>
-                      <TaskRuntimeProvider>
-                        <div className="[--header-height:calc(--spacing(9))]">
-                          <SidebarProvider className="flex flex-col">
-                            <SiteHeader />
-                            <div className="flex flex-1 overflow-hidden">
-                              <AppSidebar />
-                              <SidebarInset>
-                                <div className="rounded-lg border overflow-hidden flex-1 bg-background">
-                                  <Outlet />
-                                </div>
-                              </SidebarInset>
-                            </div>
-                          </SidebarProvider>
-                        </div>
-                      </TaskRuntimeProvider>
-                    </CommandMenuProvider>
-                  </SignedIn>
-                  <SignedOut>
-                    <Guard />
-                  </SignedOut>
-                </SyncEngine>
-              </Analytics>
-            </ClerkProvider>
-            <UpdateToast />
-          </UpdateProvider>
-        </ThemeProvider>
-        {/* <TanStackRouterDevtools /> */}
+        <SettingsProvider>
+          <Theme>
+            <UpdateProvider>
+              <ClerkProvider
+                publishableKey={PUBLISHABLE_KEY}
+                signInUrl={SIGN_IN_URL}
+                signUpUrl={SIGN_UP_URL}
+                appearance={{
+                  baseTheme: shadcn,
+                }}
+              >
+                <Analytics>
+                  <SyncEngine>
+                    <SignedIn>
+                      <CommandMenuProvider>
+                        <TaskRuntimeProvider>
+                          <div className="[--header-height:calc(--spacing(9))]">
+                            <SidebarProvider className="flex flex-col">
+                              <SiteHeader />
+                              <div className="flex flex-1 overflow-hidden">
+                                <AppSidebar />
+                                <SidebarInset>
+                                  <div className="rounded-lg border overflow-hidden flex-1 bg-background">
+                                    <Outlet />
+                                  </div>
+                                </SidebarInset>
+                              </div>
+                            </SidebarProvider>
+                          </div>
+                        </TaskRuntimeProvider>
+                      </CommandMenuProvider>
+                    </SignedIn>
+                    <SignedOut>
+                      <Guard />
+                    </SignedOut>
+                  </SyncEngine>
+                </Analytics>
+              </ClerkProvider>
+              <UpdateToast />
+            </UpdateProvider>
+          </Theme>
+        </SettingsProvider>
         <Toaster />
       </>
     );
@@ -94,18 +95,19 @@ const RootLayout = () => {
     // only show sign in / sign up functionality.
     return (
       <>
-        <ThemeProvider>
-          <ClerkProvider
-            publishableKey={PUBLISHABLE_KEY}
-            signInUrl={SIGN_IN_URL}
-            signUpUrl={SIGN_UP_URL}
-          >
-            <Analytics>
-              <Outlet />
-            </Analytics>
-          </ClerkProvider>
-        </ThemeProvider>
-        <TanStackRouterDevtools />
+        <SettingsProvider>
+          <Theme>
+            <ClerkProvider
+              publishableKey={PUBLISHABLE_KEY}
+              signInUrl={SIGN_IN_URL}
+              signUpUrl={SIGN_UP_URL}
+            >
+              <Analytics>
+                <Outlet />
+              </Analytics>
+            </ClerkProvider>
+          </Theme>
+        </SettingsProvider>
         <Toaster />
       </>
     );
