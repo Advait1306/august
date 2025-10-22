@@ -6,6 +6,9 @@ declare global {
   interface Window {
     electron: ElectronAPI;
     api: {
+      claudeCode: {
+        discoverInstallations: () => Promise<ClaudeInstallation[]>;
+      };
       projects: {
         getAll: () => Promise<Project[]>;
         selectFolder: () => Promise<Project | null>;

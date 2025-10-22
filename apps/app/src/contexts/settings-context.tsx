@@ -34,6 +34,13 @@ import {
   type ReactNode,
 } from "react";
 
+export interface ClaudeInstallation {
+  path: string;
+  version?: string;
+  source: string;
+  installationType: "system" | "custom";
+}
+
 /**
  * Application settings organized into logical sections.
  * All settings are persisted to localStorage automatically.
@@ -50,6 +57,7 @@ export type Settings = {
   };
   claudeCode: {
     binaryPath: string;
+    selectedInstallation?: ClaudeInstallation;
     autoUpdate: boolean;
     enableLogging: boolean;
   };
@@ -87,6 +95,7 @@ const defaultSettingsValues: Settings = {
   },
   claudeCode: {
     binaryPath: "",
+    selectedInstallation: undefined,
     autoUpdate: true,
     enableLogging: false,
   },

@@ -42,7 +42,10 @@ const api = {
     quitAndInstall: () => electronAPI.ipcRenderer.invoke('auto-updater:quit-and-install'),
     getUpdateInfo: () => electronAPI.ipcRenderer.invoke('auto-updater:get-update-info')
   },
-  agent: agent
+  agent: agent,
+  claudeCode: {
+    discoverInstallations: () => electronAPI.ipcRenderer.invoke('claude-code:discoverInstallations')
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

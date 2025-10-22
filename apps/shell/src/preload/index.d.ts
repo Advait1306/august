@@ -3,6 +3,13 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 import type { Project, ProjectUpdate } from '../shared/types'
 import type { agentTypes } from './agent'
 
+export interface ClaudeInstallation {
+  path: string
+  version?: string
+  source: string
+  installationType: 'system' | 'custom'
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -33,6 +40,9 @@ declare global {
         getUpdateInfo: () => Promise<{ success: boolean; data?: any; error?: string }>
       }
       agent: agentTypes
+      claudeCode: {
+        discoverInstallations: () => Promise<ClaudeInstallation[]>
+      }
     }
   }
 }

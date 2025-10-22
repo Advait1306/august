@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { agentService } from '../services/agent-service'
 import type { NewAgent, NewAgentMemory } from '../db/schema'
+import { discoverClaudeInstallations } from '../agent/agents/claude-code/find-claude-code'
 
 export function registerAgentIpcHandlers(): void {
   // Base agents (limited operations)
@@ -50,5 +51,10 @@ export function registerAgentIpcHandlers(): void {
   ipcMain.handle('agents:deleteMemory', async (_, id: string) => {
     await agentService.deleteMemory(id)
     return true
+  })
+
+  // Claude Code installations
+  ipcMain.handle('claude-code:discoverInstallations', async () => {
+    return await discoverClaudeInstallations()
   })
 }
