@@ -1,5 +1,5 @@
 import AgentInterface from '../../agent-interface'
-import { query } from '@anthropic-ai/claude-code'
+import { query } from '@anthropic-ai/claude-agent-sdk'
 import assert from 'node:assert'
 import log from 'electron-log/main'
 import { findClaudeBinary } from './find-claude-code'
@@ -133,7 +133,7 @@ export class ClaudeCodeAgent implements AgentInterface {
             env: agentInfo.env,
             resume: sessionId,
             cwd: project.path,
-            appendSystemPrompt: systemPrompt,
+            systemPrompt: { type: 'preset', preset: 'claude_code', append: systemPrompt },
             canUseTool: async (toolName, input) => {
               log.debug('Permission requested for tool:', toolName)
               if (
