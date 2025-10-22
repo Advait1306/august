@@ -18,6 +18,11 @@ import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
+import { Route as SettingsPrivacyRouteImport } from './routes/settings/privacy'
+import { Route as SettingsGeneralRouteImport } from './routes/settings/general'
+import { Route as SettingsExperimentalRouteImport } from './routes/settings/experimental'
+import { Route as SettingsClaudeCodeRouteImport } from './routes/settings/claude-code'
+import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
@@ -64,6 +69,31 @@ const SignInSplatRoute = SignInSplatRouteImport.update({
   path: '/sign-in/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsPrivacyRoute = SettingsPrivacyRouteImport.update({
+  id: '/settings/privacy',
+  path: '/settings/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsGeneralRoute = SettingsGeneralRouteImport.update({
+  id: '/settings/general',
+  path: '/settings/general',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsExperimentalRoute = SettingsExperimentalRouteImport.update({
+  id: '/settings/experimental',
+  path: '/settings/experimental',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsClaudeCodeRoute = SettingsClaudeCodeRouteImport.update({
+  id: '/settings/claude-code',
+  path: '/settings/claude-code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
+  id: '/settings/appearance',
+  path: '/settings/appearance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -73,6 +103,11 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/claude-code': typeof SettingsClaudeCodeRoute
+  '/settings/experimental': typeof SettingsExperimentalRoute
+  '/settings/general': typeof SettingsGeneralRoute
+  '/settings/privacy': typeof SettingsPrivacyRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
 }
@@ -84,6 +119,11 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/claude-code': typeof SettingsClaudeCodeRoute
+  '/settings/experimental': typeof SettingsExperimentalRoute
+  '/settings/general': typeof SettingsGeneralRoute
+  '/settings/privacy': typeof SettingsPrivacyRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
 }
@@ -96,6 +136,11 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
+  '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/claude-code': typeof SettingsClaudeCodeRoute
+  '/settings/experimental': typeof SettingsExperimentalRoute
+  '/settings/general': typeof SettingsGeneralRoute
+  '/settings/privacy': typeof SettingsPrivacyRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
 }
@@ -109,6 +154,11 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/projects'
     | '/tasks'
+    | '/settings/appearance'
+    | '/settings/claude-code'
+    | '/settings/experimental'
+    | '/settings/general'
+    | '/settings/privacy'
     | '/sign-in/$'
     | '/sign-up/$'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +170,11 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/projects'
     | '/tasks'
+    | '/settings/appearance'
+    | '/settings/claude-code'
+    | '/settings/experimental'
+    | '/settings/general'
+    | '/settings/privacy'
     | '/sign-in/$'
     | '/sign-up/$'
   id:
@@ -131,6 +186,11 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/projects'
     | '/tasks'
+    | '/settings/appearance'
+    | '/settings/claude-code'
+    | '/settings/experimental'
+    | '/settings/general'
+    | '/settings/privacy'
     | '/sign-in/$'
     | '/sign-up/$'
   fileRoutesById: FileRoutesById
@@ -143,6 +203,11 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   ProjectsRoute: typeof ProjectsRoute
   TasksRoute: typeof TasksRoute
+  SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsClaudeCodeRoute: typeof SettingsClaudeCodeRoute
+  SettingsExperimentalRoute: typeof SettingsExperimentalRoute
+  SettingsGeneralRoute: typeof SettingsGeneralRoute
+  SettingsPrivacyRoute: typeof SettingsPrivacyRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
 }
@@ -212,6 +277,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/privacy': {
+      id: '/settings/privacy'
+      path: '/settings/privacy'
+      fullPath: '/settings/privacy'
+      preLoaderRoute: typeof SettingsPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/general': {
+      id: '/settings/general'
+      path: '/settings/general'
+      fullPath: '/settings/general'
+      preLoaderRoute: typeof SettingsGeneralRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/experimental': {
+      id: '/settings/experimental'
+      path: '/settings/experimental'
+      fullPath: '/settings/experimental'
+      preLoaderRoute: typeof SettingsExperimentalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/claude-code': {
+      id: '/settings/claude-code'
+      path: '/settings/claude-code'
+      fullPath: '/settings/claude-code'
+      preLoaderRoute: typeof SettingsClaudeCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/appearance': {
+      id: '/settings/appearance'
+      path: '/settings/appearance'
+      fullPath: '/settings/appearance'
+      preLoaderRoute: typeof SettingsAppearanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -223,6 +323,11 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   ProjectsRoute: ProjectsRoute,
   TasksRoute: TasksRoute,
+  SettingsAppearanceRoute: SettingsAppearanceRoute,
+  SettingsClaudeCodeRoute: SettingsClaudeCodeRoute,
+  SettingsExperimentalRoute: SettingsExperimentalRoute,
+  SettingsGeneralRoute: SettingsGeneralRoute,
+  SettingsPrivacyRoute: SettingsPrivacyRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,
 }

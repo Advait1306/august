@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -36,13 +35,19 @@ export function NavMain({
   }[];
 }) {
   const location = useLocation();
+  const isSettingsPage = location.pathname.startsWith("/settings");
+  const fromParam = isSettingsPage ? (location.search as any)?.from : undefined;
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const isActive = location.pathname === item.url;
+          const linkProps =
+            isSettingsPage && fromParam
+              ? { to: item.url, search: { from: fromParam } }
+              : { to: item.url };
+
           return (
             <Collapsible key={item.title} asChild defaultOpen={isActive}>
               <SidebarMenuItem>
@@ -51,7 +56,7 @@ export function NavMain({
                   tooltip={item.title}
                   isActive={isActive}
                 >
-                  <Link to={item.url}>
+                  <Link {...linkProps}>
                     <item.icon />
                     <span>{item.title}</span>
                   </Link>

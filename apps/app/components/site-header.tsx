@@ -11,6 +11,24 @@ export function SiteHeader() {
   const location = useLocation();
 
   const getPageTitle = (pathname: string) => {
+    if (pathname.startsWith("/settings/")) {
+      const section = pathname.split("/")[2];
+      switch (section) {
+        case "general":
+          return "General";
+        case "appearance":
+          return "Appearance";
+        case "claude-code":
+          return "Claude Code";
+        case "privacy":
+          return "Privacy";
+        case "experimental":
+          return "Experimental";
+        default:
+          return "Settings";
+      }
+    }
+
     switch (pathname) {
       case "/tasks":
         return "Tasks";
