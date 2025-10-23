@@ -3,13 +3,8 @@ import { query } from '@anthropic-ai/claude-agent-sdk'
 import assert from 'node:assert'
 import log from 'electron-log/main'
 import { findClaudeBinary } from './find-claude-code'
-import {
-  AssistantContent,
-  AssistantModelMessage,
-  ModelMessage,
-  TextPart,
-  UserModelMessage
-} from 'ai'
+import { IPC } from '@jupiter/shared/ipc'
+import { AssistantContent, AssistantModelMessage, TextPart, UserModelMessage } from 'ai'
 
 export class ClaudeCodeAgent implements AgentInterface {
   private static agentInfo: { path: string; env: NodeJS.ProcessEnv } | null = null
@@ -32,25 +27,18 @@ export class ClaudeCodeAgent implements AgentInterface {
   }
 
   async *run(
-    runOptions: {
-      messages: ModelMessage[]
-      runConfig: Record<string, unknown>
-      threadId: string
-    },
+    params: IPC.Agent.RunParams,
     permissionRequest: (request: {
       toolName: string
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       input: Record<string, any>
       threadId: string
-    }) => Promise<boolean>,
-    systemPrompt?: string,
-    pathToClaudeCode?: string,
-    env?: Record<string, string>
+    }) => Promise<boolean>
   ): AsyncGenerator<AssistantModelMessage, void> {
     log.info('ClaudeCodeAgent.run called', {
-      threadId: runOptions.threadId,
-      messageCount: runOptions.messages.length,
-      hasSystemPrompt: !!systemPrompt
+      threadId: params.options.threadId,
+      messageCount: params.options.messages.length,
+      hasSystemPrompt: !!params.systemPrompt
     })
 
     // Claude code doesn't take old messages, it takes a session id
@@ -59,13 +47,14 @@ export class ClaudeCodeAgent implements AgentInterface {
     // NOTE: The session id changes with every new message, which is done
     // to allow branching of chats. Hence we look for the last assistant message and
     // use it's session id. Claude code will automatically string together the chat chain.
-    const sessionId = runOptions.messages.findLast((m) => m.role === 'assistant')?.providerOptions
-      ?.claude?.sessionId as string | undefined
+    const sessionId = params.options.messages.findLast((m) => m.role === 'assistant')
+      ?.providerOptions?.claude?.sessionId as string | undefined
 
     log.info('Resolved session ID:', sessionId || 'new session')
 
-    const project = (runOptions.runConfig.project ??
-      runOptions.messages.find((m) => m.role === 'assistant')?.providerOptions?.claude?.project) as
+    const project = (params.options.runConfig.project ??
+      params.options.messages.find((m) => m.role === 'assistant')?.providerOptions?.claude
+        ?.project) as
       | {
           id: string
           path: string
@@ -76,7 +65,9 @@ export class ClaudeCodeAgent implements AgentInterface {
     assert(project != null, 'ClaudeCodeAgent: missing project')
 
     // Last message will always be user message
-    const lastMessage = runOptions.messages[runOptions.messages.length - 1] as UserModelMessage
+    const lastMessage = params.options.messages[
+      params.options.messages.length - 1
+    ] as UserModelMessage
     log.info('Last message:', {
       role: lastMessage.role,
       contentLength: JSON.stringify(lastMessage.content).length
@@ -108,16 +99,16 @@ export class ClaudeCodeAgent implements AgentInterface {
       log.info('Using Claude executable:', agentInfo.path)
 
       // Merge provided env with agentInfo.env
-      const mergedEnv = { ...agentInfo.env, ...env }
+      const mergedEnv = { ...agentInfo.env, ...params.env }
 
       try {
         log.info('Starting query to Claude Code binary', {
           cwd: project.path,
           hasSessionId: !!sessionId,
-          hasSystemPrompt: !!systemPrompt
+          hasSystemPrompt: !!params.systemPrompt
         })
 
-        log.info('Path to Claude Code executable:', pathToClaudeCode)
+        log.info('Path to Claude Code executable:', params.path)
         log.info('Environment:', mergedEnv)
 
         for await (const data of query({
@@ -137,18 +128,18 @@ export class ClaudeCodeAgent implements AgentInterface {
             log.info('receivedResult resolved')
           })(),
           options: {
-            pathToClaudeCodeExecutable: pathToClaudeCode,
+            pathToClaudeCodeExecutable: params.path,
             env: mergedEnv,
             resume: sessionId,
             cwd: project.path,
-            systemPrompt: { type: 'preset', preset: 'claude_code', append: systemPrompt },
+            systemPrompt: { type: 'preset', preset: 'claude_code', append: params.systemPrompt },
             canUseTool: async (toolName, input) => {
               log.debug('Permission requested for tool:', toolName)
               if (
                 await permissionRequest({
                   toolName,
                   input,
-                  threadId: runOptions.threadId
+                  threadId: params.options.threadId
                 })
               ) {
                 log.debug('Tool permission granted:', toolName)
@@ -205,7 +196,7 @@ export class ClaudeCodeAgent implements AgentInterface {
       log.error('Error in ClaudeCodeAgent initialization or execution:', error)
       throw error
     } finally {
-      log.info('ClaudeCodeAgent.run completed', { threadId: runOptions.threadId })
+      log.info('ClaudeCodeAgent.run completed', { threadId: params.options.threadId })
     }
   }
 

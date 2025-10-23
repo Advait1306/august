@@ -344,23 +344,24 @@ export const TaskRuntimeProvider = ({
 
     // TODO: Message receiving can happen in an async manner,
     // which would allow the listener to survive a reload.
-    for await (const reply of window.api.agent.run(
-      {
+    for await (const reply of window.api.agent.run({
+      options: {
         messages: chatMessages,
         runConfig: {
           project,
         },
         threadId: taskId,
       },
-      agent.system_prompt,
-      claudeCode.selectedInstallation?.path,
+      systemPrompt: agent.system_prompt,
+      path: claudeCode.selectedInstallation?.path,
       // TODO: Add auth information and send the request to our servers
-      claudeCode.selectedInstallation?.source === "bundled"
-        ? {
-            ANTHROPIC_API_KEY: "",
-          }
-        : undefined
-    )) {
+      env:
+        claudeCode.selectedInstallation?.source === "bundled"
+          ? {
+              ANTHROPIC_API_KEY: "",
+            }
+          : undefined,
+    })) {
       z.mutate.message.update({
         task_id: taskId,
         message_id: replyId,

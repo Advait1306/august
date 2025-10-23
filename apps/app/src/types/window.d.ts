@@ -1,2 +1,2 @@
 // Import shared Window type definitions
-import '@jupiter/shared/types'
+import "@jupiter/shared/types";

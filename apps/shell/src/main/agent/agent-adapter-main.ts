@@ -8,7 +8,7 @@ import {
   asyncGeneratorOverIPCSender
 } from '@jupiter/shared/async-generator-over-ipc-sender'
 import { agentRequestPermissionOverIPC } from '@jupiter/shared/agent-request-permission-over-ipc'
-import { ModelMessage } from 'ai'
+import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
 
 export class AgentAdapterMain {
   private static instance: AgentAdapterMain | null = null
@@ -22,20 +22,9 @@ export class AgentAdapterMain {
 
     // IPC handler now uses agent ID instead of agent name
     ipcMain.handle(
-      'agent:run',
-      async (
-        event,
-        id: string,
-        options: {
-          messages: ModelMessage[]
-          runConfig: Record<string, unknown>
-          threadId: string
-        },
-        systemPrompt: string,
-        pathToClaudeCode?: string,
-        env?: Record<string, string>
-      ) => {
-        await this.runAgent(event, id, options, systemPrompt, pathToClaudeCode, env)
+      IPC_CHANNELS.AGENT.RUN,
+      async (event: IpcMainInvokeEvent, params: IPC.Agent.RunParams) => {
+        await this.runAgent(event, params)
       }
     )
   }
@@ -52,32 +41,18 @@ export class AgentAdapterMain {
     this.agents[name] = agent
   }
 
-  public async runAgent(
-    event: IpcMainInvokeEvent,
-    id: string,
-    runOptions: {
-      messages: ModelMessage[]
-      runConfig: Record<string, unknown>
-      threadId: string
-    },
-    systemPrompt: string,
-    pathToClaudeCode?: string,
-    env?: Record<string, string>
-  ): Promise<void> {
+  public async runAgent(event: IpcMainInvokeEvent, params: IPC.Agent.RunParams): Promise<void> {
     // Run enhanced agent
     for await (const message of this.agents['claude-code'].run(
-      runOptions,
+      params,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (request: { toolName: string; input: Record<string, any>; threadId: string }) => {
         return agentRequestPermissionOverIPC(event, request)
-      },
-      systemPrompt,
-      pathToClaudeCode,
-      env
+      }
     )) {
-      asyncGeneratorOverIPCSender(event, id, message)
+      asyncGeneratorOverIPCSender(event, params.id, message)
     }
 
-    asyncGeneratorOverIPCCloser(event, id)
+    asyncGeneratorOverIPCCloser(event, params.id)
   }
 }

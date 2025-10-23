@@ -1,28 +1,30 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { IPC_CHANNELS } from '@jupiter/shared/ipc'
 import { agent } from './agent'
 
 // Custom APIs for renderer
 const api = {
   projects: {
-    selectFolder: () => electronAPI.ipcRenderer.invoke('projects:selectFolder')
+    selectFolder: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.PROJECTS.SELECT_FOLDER)
   },
   auth: {
-    openLogin: () => electronAPI.ipcRenderer.invoke('auth:open-login'),
+    openLogin: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTH.OPEN_LOGIN),
     onTokenReceived: (callback: (ticket: string) => void) => {
-      console.log('token listener added')
-      electronAPI.ipcRenderer.on('auth:ticket-received', (_, ticket) => callback(ticket))
-      return () => electronAPI.ipcRenderer.removeAllListeners('auth:token-received')
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.AUTH.TICKET_RECEIVED, (_, ticket) => callback(ticket))
+      return () => electronAPI.ipcRenderer.removeAllListeners(IPC_CHANNELS.AUTH.TICKET_RECEIVED)
     }
   },
   autoUpdater: {
-    checkForUpdates: () => electronAPI.ipcRenderer.invoke('auto-updater:check-for-updates'),
-    quitAndInstall: () => electronAPI.ipcRenderer.invoke('auto-updater:quit-and-install'),
-    getUpdateInfo: () => electronAPI.ipcRenderer.invoke('auto-updater:get-update-info')
+    checkForUpdates: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.CHECK),
+    quitAndInstall: () =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.QUIT_AND_INSTALL),
+    getUpdateInfo: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.GET_INFO)
   },
   agent: agent,
   claudeCode: {
-    discoverInstallations: () => electronAPI.ipcRenderer.invoke('claude-code:discoverInstallations')
+    discoverInstallations: () =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_CODE.DISCOVER_INSTALLATIONS)
   }
 }
 
