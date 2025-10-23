@@ -14,7 +14,7 @@ import { nanoid } from "nanoid";
 import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
 import { useSettingsSection } from "@/src/contexts/settings-context";
 
-type PermissionState = Record<string, Permission>;
+type PermissionState = Record<string, Permission[]>;
 type GenerationState = string[];
 
 type TaskRuntimeState = {
@@ -135,37 +135,63 @@ export const TaskRuntimeProvider = ({
         return;
       }
 
-      setPermissions((prev) => ({
-        ...prev,
-        [request.threadId]: {
-          ...request,
-          alwaysAllow: () => {
-            alwaysAllowTasks.current.push(request.threadId);
-            window.api.agent.grantPermission(request.id);
-            setPermissions((prev) => {
-              const newPermissions = { ...prev };
-              delete newPermissions[request.threadId];
-              return newPermissions;
-            });
-          },
-          grant: () => {
-            window.api.agent.grantPermission(request.id);
-            setPermissions((prev) => {
-              const newPermissions = { ...prev };
-              delete newPermissions[request.threadId];
-              return newPermissions;
-            });
-          },
-          deny: () => {
-            window.api.agent.denyPermission(request.id);
-            setPermissions((prev) => {
-              const newPermissions = { ...prev };
-              delete newPermissions[request.threadId];
-              return newPermissions;
-            });
-          },
-        },
-      }));
+      setPermissions((prev) => {
+        const existingPermissions = prev[request.threadId] || [];
+        return {
+          ...prev,
+          [request.threadId]: [
+            ...existingPermissions,
+            {
+              ...request,
+              alwaysAllow: () => {
+                alwaysAllowTasks.current.push(request.threadId);
+                // Grant all pending permissions for this thread
+                setPermissions((current) => {
+                  const threadPermissions = current[request.threadId] || [];
+                  threadPermissions.forEach((perm) => {
+                    window.api.agent.grantPermission(perm.id);
+                  });
+                  const newPermissions = { ...current };
+                  delete newPermissions[request.threadId];
+                  return newPermissions;
+                });
+              },
+              grant: () => {
+                window.api.agent.grantPermission(request.id);
+                setPermissions((current) => {
+                  const threadPermissions = current[request.threadId] || [];
+                  const updatedPermissions = threadPermissions.filter(
+                    (perm) => perm.id !== request.id
+                  );
+                  const newPermissions = { ...current };
+                  if (updatedPermissions.length === 0) {
+                    delete newPermissions[request.threadId];
+                  } else {
+                    newPermissions[request.threadId] = updatedPermissions;
+                  }
+                  return newPermissions;
+                });
+              },
+              deny: () => {
+                window.api.agent.denyPermission(request.id);
+                setPermissions((current) => {
+                  const threadPermissions = current[request.threadId] || [];
+                  const updatedPermissions = threadPermissions.filter(
+                    (perm) => perm.id !== request.id
+                  );
+                  const newPermissions = { ...current };
+                  if (updatedPermissions.length === 0) {
+                    delete newPermissions[request.threadId];
+                  } else {
+                    newPermissions[request.threadId] = updatedPermissions;
+                  }
+                  return newPermissions;
+                });
+              },
+            },
+          ],
+        };
+      });
     });
 
     return () => {
@@ -375,11 +401,11 @@ export const useTaskRuntime = () => {
   return context;
 };
 
-export const usePermission = (threadId: string): Permission | undefined => {
+export const usePermission = (threadId: string): Permission[] => {
   const context = useContext(TaskRuntimeContext);
 
   if (context === undefined)
     throw new Error("usePermission must be used within a TaskRuntimeProvider");
 
-  return context.permissions[threadId];
+  return context.permissions[threadId] || [];
 };

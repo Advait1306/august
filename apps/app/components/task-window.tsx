@@ -62,7 +62,8 @@ export default function TaskWindow() {
     selectedTaskId === "new-conversation"
       ? composerState?.project
       : projects.find((project) => project.id === selectedTask.project_id);
-  const pendingPermissions = permissions[selectedTaskId];
+  const pendingPermissions = permissions[selectedTaskId] || [];
+  const currentPermission = pendingPermissions[0];
   const isGenerating = generationState.includes(selectedTaskId);
 
   const setPrompt = useCallback(
@@ -154,16 +155,21 @@ export default function TaskWindow() {
         className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
       >
         <PromptInputBody>
-          {pendingPermissions ? (
+          {currentPermission ? (
             <div className="flex justify-between items-center h-full pr-1 pl-4 py-1">
               <div>
-                Allow <span>{pendingPermissions.toolName}</span> tool?
+                Allow <span>{currentPermission.toolName}</span> tool?
+                {pendingPermissions.length > 1 && (
+                  <span className="text-muted-foreground ml-2">
+                    (1 of {pendingPermissions.length})
+                  </span>
+                )}
               </div>
               <ButtonGroup>
                 <Button
                   variant="outline"
                   onClick={() => {
-                    pendingPermissions.alwaysAllow();
+                    currentPermission.alwaysAllow();
                   }}
                 >
                   Always Allow
@@ -171,7 +177,7 @@ export default function TaskWindow() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    pendingPermissions.grant();
+                    currentPermission.grant();
                   }}
                 >
                   Allow
@@ -179,7 +185,7 @@ export default function TaskWindow() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    pendingPermissions.deny();
+                    currentPermission.deny();
                   }}
                 >
                   Deny
