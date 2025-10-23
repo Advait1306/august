@@ -19,7 +19,9 @@ interface AgentInterface {
       input: Record<string, any>
       threadId: string
     }) => Promise<boolean>,
-    systemPrompt?: string
+    systemPrompt?: string,
+    pathToClaudeCode?: string,
+    env?: Record<string, string>
   ): AsyncGenerator<AssistantModelMessage, void>
 }
 

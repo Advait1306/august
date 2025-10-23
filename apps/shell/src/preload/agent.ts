@@ -46,10 +46,12 @@ export const agent = {
       runConfig: Record<string, unknown>
       threadId: string
     },
-    systemPrompt: string
+    systemPrompt: string,
+    path?: string,
+    env?: Record<string, string>
   ) => {
     return asyncGeneratorOverIPCConsumer(async (id) => {
-      await electronAPI.ipcRenderer.invoke('agent:run', id, options, systemPrompt)
+      await electronAPI.ipcRenderer.invoke('agent:run', id, options, systemPrompt, path, env)
     })
   },
 
@@ -114,7 +116,10 @@ export type agentTypes = {
       messages: ModelMessage[]
       runConfig: Record<string, unknown>
       threadId: string
-    }
+    },
+    systemPrompt?: string,
+    path?: string,
+    env?: Record<string, string>
   ) => AsyncGenerator<AssistantModelMessage, void>
 
   addPermissionHandler: (cb: (request: PermissionRequest) => void) => () => void

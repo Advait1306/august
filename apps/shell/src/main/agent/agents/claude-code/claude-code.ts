@@ -43,7 +43,9 @@ export class ClaudeCodeAgent implements AgentInterface {
       input: Record<string, any>
       threadId: string
     }) => Promise<boolean>,
-    systemPrompt?: string
+    systemPrompt?: string,
+    pathToClaudeCode?: string,
+    env?: Record<string, string>
   ): AsyncGenerator<AssistantModelMessage, void> {
     log.info('ClaudeCodeAgent.run called', {
       threadId: runOptions.threadId,
@@ -105,12 +107,18 @@ export class ClaudeCodeAgent implements AgentInterface {
       const agentInfo = ClaudeCodeAgent.agentInfo
       log.info('Using Claude executable:', agentInfo.path)
 
+      // Merge provided env with agentInfo.env
+      const mergedEnv = { ...agentInfo.env, ...env }
+
       try {
         log.info('Starting query to Claude Code binary', {
           cwd: project.path,
           hasSessionId: !!sessionId,
           hasSystemPrompt: !!systemPrompt
         })
+
+        log.info('Path to Claude Code executable:', pathToClaudeCode)
+        log.info('Environment:', mergedEnv)
 
         for await (const data of query({
           prompt: (async function* () {
@@ -129,8 +137,8 @@ export class ClaudeCodeAgent implements AgentInterface {
             log.info('receivedResult resolved')
           })(),
           options: {
-            pathToClaudeCodeExecutable: agentInfo.path,
-            env: agentInfo.env,
+            pathToClaudeCodeExecutable: pathToClaudeCode,
+            env: mergedEnv,
             resume: sessionId,
             cwd: project.path,
             systemPrompt: { type: 'preset', preset: 'claude_code', append: systemPrompt },

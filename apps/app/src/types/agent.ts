@@ -95,7 +95,9 @@ export type agentTypes = {
       runConfig: Record<string, unknown>;
       threadId: string;
     },
-    systemPrompt: string
+    systemPrompt: string,
+    path?: string,
+    env?: Record<string, string>
   ) => AsyncGenerator<AssistantModelMessage, void>;
 
   addPermissionHandler: (

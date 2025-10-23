@@ -31,9 +31,11 @@ export class AgentAdapterMain {
           runConfig: Record<string, unknown>
           threadId: string
         },
-        systemPrompt: string
+        systemPrompt: string,
+        pathToClaudeCode?: string,
+        env?: Record<string, string>
       ) => {
-        await this.runAgent(event, id, options, systemPrompt)
+        await this.runAgent(event, id, options, systemPrompt, pathToClaudeCode, env)
       }
     )
   }
@@ -58,7 +60,9 @@ export class AgentAdapterMain {
       runConfig: Record<string, unknown>
       threadId: string
     },
-    systemPrompt: string
+    systemPrompt: string,
+    pathToClaudeCode?: string,
+    env?: Record<string, string>
   ): Promise<void> {
     // Run enhanced agent
     for await (const message of this.agents['claude-code'].run(
@@ -67,7 +71,9 @@ export class AgentAdapterMain {
       (request: { toolName: string; input: Record<string, any>; threadId: string }) => {
         return agentRequestPermissionOverIPC(event, request)
       },
-      systemPrompt
+      systemPrompt,
+      pathToClaudeCode,
+      env
     )) {
       asyncGeneratorOverIPCSender(event, id, message)
     }

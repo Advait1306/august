@@ -352,7 +352,14 @@ export const TaskRuntimeProvider = ({
         },
         threadId: taskId,
       },
-      agent.system_prompt
+      agent.system_prompt,
+      claudeCode.selectedInstallation?.path,
+      // TODO: Add auth information and send the request to our servers
+      claudeCode.selectedInstallation?.source === "bundled"
+        ? {
+            ANTHROPIC_API_KEY: "",
+          }
+        : undefined
     )) {
       z.mutate.message.update({
         task_id: taskId,
