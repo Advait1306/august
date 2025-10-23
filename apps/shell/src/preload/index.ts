@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { agent } from './agent'
@@ -7,27 +6,6 @@ import { agent } from './agent'
 const api = {
   projects: {
     selectFolder: () => electronAPI.ipcRenderer.invoke('projects:selectFolder')
-  },
-  chat: {
-    // Thread management
-    getThreads: () => electronAPI.ipcRenderer.invoke('threads:getAll'),
-    createThread: (threadId: string) => electronAPI.ipcRenderer.invoke('threads:create', threadId),
-    updateThread: (id: string, updates: any) =>
-      electronAPI.ipcRenderer.invoke('threads:update', id, updates),
-    deleteThread: (id: string) => electronAPI.ipcRenderer.invoke('threads:delete', id),
-    archiveThread: (id: string) => electronAPI.ipcRenderer.invoke('threads:archive', id),
-
-    // Message management
-    getMessages: (threadId: string) =>
-      electronAPI.ipcRenderer.invoke('messages:getByThread', threadId),
-    saveMessage: (message: any) => electronAPI.ipcRenderer.invoke('messages:save', message),
-    deleteMessage: (id: string) => electronAPI.ipcRenderer.invoke('messages:delete', id),
-
-    // Event listeners for streaming
-    onMessageUpdate: (callback: (message: any) => void) => {
-      electronAPI.ipcRenderer.on('chat:messageUpdate', (_, message) => callback(message))
-      return () => electronAPI.ipcRenderer.removeAllListeners('chat:messageUpdate')
-    }
   },
   auth: {
     openLogin: () => electronAPI.ipcRenderer.invoke('auth:open-login'),

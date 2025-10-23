@@ -1,15 +1,7 @@
 import { ipcMain, dialog } from 'electron'
 import { basename } from 'node:path'
-import { db } from '../db'
-import { projects } from '../db/schema'
-import { eq } from 'drizzle-orm'
 
 export function registerProjectIpcHandlers(): void {
-  // Get all projects
-  ipcMain.handle('projects:getAll', async () => {
-    return await db.select().from(projects)
-  })
-
   // Add project by selecting folder
   ipcMain.handle('projects:selectFolder', async () => {
     const result = await dialog.showOpenDialog({
@@ -30,11 +22,5 @@ export function registerProjectIpcHandlers(): void {
     }
 
     return newProject
-  })
-
-  // Remove project
-  ipcMain.handle('projects:remove', async (_, projectId: string) => {
-    await db.delete(projects).where(eq(projects.id, projectId))
-    return true
   })
 }
