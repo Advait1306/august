@@ -12,6 +12,7 @@ import { useSyncContext } from "@/src/components/sync_engine";
 import { useZero } from "@/src/hooks/useZero";
 import { nanoid } from "nanoid";
 import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
+import { useSettingsSection } from "@/src/contexts/settings-context";
 
 type PermissionState = Record<string, Permission>;
 type GenerationState = string[];
@@ -58,6 +59,8 @@ export const TaskRuntimeProvider = ({
   const projects = useQuery(getProjects(syncData.authData))[0];
   const tasks = useQuery(getTasks(syncData.authData))[0];
 
+  const [claudeCode, updateClaudeCode] = useSettingsSection("claudeCode");
+
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
   >({});
@@ -74,6 +77,40 @@ export const TaskRuntimeProvider = ({
     getMessages(syncData.authData, selectedTask.id ?? ""),
     { enabled: !!selectedTask.id }
   );
+
+  // Ensure Claude Code installation is configured
+  useEffect(() => {
+    const ensureInstallation = async () => {
+      // Check if installation is already set
+      if (claudeCode.selectedInstallation) {
+        return;
+      }
+
+      try {
+        // Discover available installations
+        const installations =
+          await window.api.claudeCode.discoverInstallations();
+
+        if (installations.length === 0) {
+          console.warn("No Claude Code installations found");
+          return;
+        }
+
+        // Prefer bundled installation, otherwise use the first available
+        const bundledInstallation = installations.find(
+          (install) => install.source === "bundled"
+        );
+        const defaultInstallation = bundledInstallation || installations[0];
+
+        // Set the default installation
+        updateClaudeCode({ selectedInstallation: defaultInstallation });
+      } catch (error) {
+        console.error("Failed to discover Claude Code installations:", error);
+      }
+    };
+
+    ensureInstallation();
+  }, [claudeCode.selectedInstallation, updateClaudeCode]);
 
   useEffect(() => {
     // New task is added, select it
