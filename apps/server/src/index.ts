@@ -21,6 +21,18 @@ const mp = mixpanel.init(process.env.MIXPANEL_TOKEN!, {
 });
 
 app.use(cors());
+
+// Middleware to convert x-api-key to authorization header for cc-proxy routes
+app.use((req, res, next) => {
+  if (req.path.startsWith("/cc-proxy")) {
+    const apiKey = req.headers["x-api-key"];
+    if (apiKey && typeof apiKey === "string") {
+      req.headers["authorization"] = `Bearer ${apiKey}`;
+    }
+  }
+  next();
+});
+
 app.use(clerkMiddleware());
 
 import "dotenv/config";
@@ -226,6 +238,131 @@ app.post("/push", async (req, res) => {
 
   await Promise.all(asyncTasks.map((task) => task()));
   return await res.json(result);
+});
+
+app.post("/cc-proxy/v1/messages", async (req, res) => {
+  const { isAuthenticated, userId, orgId } = getAuth(req);
+
+  if (!isAuthenticated) {
+    return res.status(401).json({ error: "User not authenticated" });
+  }
+
+  try {
+    // Forward request to Anthropic API
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": process.env.ANTHROPIC_API_KEY!,
+        "anthropic-version":
+          (req.headers["anthropic-version"] as string) || "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(req.body),
+    });
+
+    // Copy response headers
+    response.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
+
+    res.status(response.status);
+
+    // Handle streaming response
+    if (response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let streamedData = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        streamedData += chunk;
+        res.write(chunk);
+      }
+
+      res.end();
+
+      // Try to parse as a complete message object first (non-SSE format)
+      try {
+        const completeMessage = JSON.parse(streamedData);
+        if (completeMessage.type === "message" && completeMessage.usage) {
+          const usageLog = {
+            userId,
+            orgId: orgId ?? userId,
+            model: completeMessage.model,
+            usage: completeMessage.usage,
+            timestamp: new Date().toISOString(),
+          };
+
+          console.log("=== Anthropic Usage Data (Initial Message) ===");
+          console.log(JSON.stringify(usageLog, null, 2));
+          return;
+        }
+      } catch {
+        // Not a complete JSON message, continue to parse as SSE
+      }
+
+      // Extract model name and usage data from message_start event
+      const messageStartMatch = streamedData.match(
+        /event:\s*message_start\s*\ndata:\s*({.*?})\s*\n/s
+      );
+      if (messageStartMatch) {
+        try {
+          const messageStartData = JSON.parse(messageStartMatch[1]);
+          const model = messageStartData.message?.model;
+          let usage = messageStartData.message?.usage;
+
+          // Extract final usage data from message_delta event (has complete output_tokens)
+          const messageDeltaMatch = streamedData.match(
+            /event:\s*message_delta\s*\ndata:\s*({.*?})\s*\n/s
+          );
+          if (messageDeltaMatch) {
+            const messageDeltaData = JSON.parse(messageDeltaMatch[1]);
+            if (messageDeltaData.usage) {
+              usage = messageDeltaData.usage;
+            }
+          }
+
+          // Create consolidated usage object
+          const usageLog = {
+            userId,
+            orgId: orgId ?? userId,
+            model,
+            usage,
+            timestamp: new Date().toISOString(),
+          };
+
+          console.log("=== Anthropic Usage Data ===");
+          console.log(JSON.stringify(usageLog, null, 2));
+        } catch (e) {
+          console.error("Failed to parse streaming events:", e);
+        }
+      }
+    } else {
+      // NOTE: Dead code, never seems to run
+      const data = await response.json();
+
+      // Create consolidated usage object for non-streaming response
+      if (data.usage) {
+        const usageLog = {
+          userId,
+          orgId: orgId ?? userId,
+          model: data.model,
+          usage: data.usage,
+          timestamp: new Date().toISOString(),
+        };
+
+        console.log("=== Anthropic Usage Data (Non-Streaming) ===");
+        console.log(JSON.stringify(usageLog, null, 2));
+      }
+
+      res.json(data);
+    }
+  } catch (error) {
+    console.error("Error forwarding request to Anthropic:", error);
+    res.status(500).json({ error: "Failed to forward request" });
+  }
 });
 
 app.listen(8080, () => {

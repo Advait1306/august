@@ -13,6 +13,7 @@ import { useZero } from "@/src/hooks/useZero";
 import { nanoid } from "nanoid";
 import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
 import { useSettingsSection } from "@/src/contexts/settings-context";
+import { useAuth } from "@clerk/clerk-react";
 
 type PermissionState = Record<string, Permission[]>;
 type GenerationState = string[];
@@ -53,6 +54,7 @@ export const TaskRuntimeProvider = ({
   children: React.ReactNode;
 }) => {
   const syncData = useSyncContext();
+  const { getToken } = useAuth();
 
   const z = useZero();
   const agents = useQuery(getAgents(syncData.authData))[0];
@@ -358,7 +360,12 @@ export const TaskRuntimeProvider = ({
       env:
         claudeCode.selectedInstallation?.source === "bundled"
           ? {
-              ANTHROPIC_API_KEY: "",
+              ANTHROPIC_BASE_URL: "http://localhost:8080/cc-proxy",
+              ANTHROPIC_API_KEY:
+                (await getToken({
+                  template: "cc-proxy",
+                  skipCache: true,
+                })) ?? "",
             }
           : undefined,
     })) {
