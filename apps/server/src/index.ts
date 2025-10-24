@@ -14,16 +14,22 @@ import {
   ZQLDatabase,
 } from "@rocicorp/zero/server";
 import { schema } from "@jupiter/sync/zero/schema";
+// import DodoPayments from "dodopayments";
+import { deductUsageCost } from "./pricing";
 
 const app = express();
 const mp = mixpanel.init(process.env.MIXPANEL_TOKEN!, {
   host: "api-eu.mixpanel.com",
 });
+// const dodoClient = new DodoPayments({
+//   bearerToken: process.env.DODO_PAYMENTS_API_KEY, // This is the default and can be omitted
+//   environment: "test_mode", // defaults to 'live_mode'
+// });
 
 app.use(cors());
 
 // Middleware to convert x-api-key to authorization header for cc-proxy routes
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   if (req.path.startsWith("/cc-proxy")) {
     const apiKey = req.headers["x-api-key"];
     if (apiKey && typeof apiKey === "string") {
@@ -76,11 +82,32 @@ app.post(
         const userInsert: typeof users.$inferInsert = {
           id: parsedPayload.data.id,
         };
+
+        await db.insert(users).values(userInsert);
+
+        // const customerCreateResponse = await dodoClient.customers.create({
+        //   email: `${parsedPayload.data.id}@user.august.com`,
+        //   name:
+        //     parsedPayload.data.first_name + " " + parsedPayload.data.last_name,
+        // });
+
         const orgInsert: typeof organisations.$inferInsert = {
           id: parsedPayload.data.id,
         };
-        await db.insert(users).values(userInsert);
+
         await db.insert(organisations).values(orgInsert);
+
+        // await dodoClient.customers.wallets.ledgerEntries.create(
+        //   customerCreateResponse.customer_id,
+        //   {
+        //     amount: 500,
+        //     currency: "USD",
+        //     entry_type: "credit",
+        //     reason: "Welcome Credits",
+        //     idempotency_key: `${parsedPayload.data.id}-welcome-credits`,
+        //   }
+        // );
+
         res.sendStatus(200);
         break;
       }
@@ -247,6 +274,28 @@ app.post("/cc-proxy/v1/messages", async (req, res) => {
     return res.status(401).json({ error: "User not authenticated" });
   }
 
+  // Check organisation wallet balance
+  try {
+    const org = await db
+      .select()
+      .from(organisations)
+      .where(eq(organisations.id, orgId ?? userId))
+      .limit(1);
+
+    if (!org || org.length === 0) {
+      return res.status(404).json({ error: "Organisation not found" });
+    }
+
+    if (org[0].wallet < 0) {
+      return res
+        .status(402)
+        .json({ error: "Insufficient balance. Please add credits to continue." });
+    }
+  } catch (error) {
+    console.error("Failed to check wallet balance:", error);
+    return res.status(500).json({ error: "Failed to check wallet balance" });
+  }
+
   try {
     // Forward request to Anthropic API
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -297,6 +346,15 @@ app.post("/cc-proxy/v1/messages", async (req, res) => {
 
           console.log("=== Anthropic Usage Data (Initial Message) ===");
           console.log(JSON.stringify(usageLog, null, 2));
+
+          // Deduct usage cost
+          await deductUsageCost(
+            db,
+            orgId ?? userId,
+            completeMessage.model,
+            completeMessage.usage
+          );
+
           return;
         }
       } catch {
@@ -311,6 +369,7 @@ app.post("/cc-proxy/v1/messages", async (req, res) => {
         try {
           const messageStartData = JSON.parse(messageStartMatch[1]);
           const model = messageStartData.message?.model;
+          const messageId = messageStartData.message?.id;
           let usage = messageStartData.message?.usage;
 
           // Extract final usage data from message_delta event (has complete output_tokens)
@@ -335,6 +394,11 @@ app.post("/cc-proxy/v1/messages", async (req, res) => {
 
           console.log("=== Anthropic Usage Data ===");
           console.log(JSON.stringify(usageLog, null, 2));
+
+          // Deduct usage cost
+          if (model && usage && messageId) {
+            await deductUsageCost(db, orgId ?? userId, model, usage);
+          }
         } catch (e) {
           console.error("Failed to parse streaming events:", e);
         }
@@ -355,6 +419,11 @@ app.post("/cc-proxy/v1/messages", async (req, res) => {
 
         console.log("=== Anthropic Usage Data (Non-Streaming) ===");
         console.log(JSON.stringify(usageLog, null, 2));
+
+        // Deduct usage cost
+        if (data.model && data.usage && data.id) {
+          await deductUsageCost(db, orgId ?? userId, data.model, data.usage);
+        }
       }
 
       res.json(data);

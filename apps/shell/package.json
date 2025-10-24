@@ -32,6 +32,7 @@
     "@jupiter/shared": "*",
     "ai": "^5.0.60",
     "better-sqlite3": "12.4.1",
+    "dodopayments": "^2.2.1",
     "drizzle-orm": "^0.44.5",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.3.9",

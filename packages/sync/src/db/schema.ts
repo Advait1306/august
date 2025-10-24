@@ -1,5 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
+  doublePrecision,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -13,6 +15,21 @@ export const users = pgTable("users", {
 
 export const organisations = pgTable("organisations", {
   id: varchar().primaryKey().notNull(),
+  payment_id: varchar(),
+  wallet: doublePrecision().notNull().default(0.0),
+});
+
+export const usage = pgTable("usage", {
+  organisation_id: varchar()
+    .notNull()
+    .references(() => organisations.id),
+  model: varchar().notNull(),
+  input_tokens: integer().notNull(),
+  output_tokens: integer().notNull(),
+  cache_creation_input_tokens: integer().notNull(),
+  cache_read_input_tokens: integer().notNull(),
+  cost: doublePrecision().notNull().default(0.0),
+  created_at: timestamp().notNull().defaultNow(),
 });
 
 export const baseAgent = pgEnum("base_agent", [
