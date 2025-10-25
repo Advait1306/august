@@ -1,5 +1,11 @@
 import { Permission } from "@jupiter/shared/types";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   getAgents,
   getMessages,
@@ -12,7 +18,10 @@ import { useSyncContext } from "@/src/components/sync_engine";
 import { useZero } from "@/src/hooks/useZero";
 import { nanoid } from "nanoid";
 import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
-import { useSettingsSection } from "@/src/contexts/settings-context";
+import {
+  useSettingsSection,
+  type ClaudeInstallation,
+} from "@/src/contexts/settings-context";
 import { useAuth } from "@clerk/clerk-react";
 
 type PermissionState = Record<string, Permission[]>;
@@ -28,6 +37,7 @@ type TaskRuntimeState = {
   setComposerStates: (states: Record<string, ComposerState>) => void;
   permissions: PermissionState;
   generationState: GenerationState;
+  installations: ClaudeInstallation[];
 };
 
 type ComposerState = {
@@ -46,6 +56,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   setComposerStates: () => {},
   permissions: {},
   generationState: [],
+  installations: [],
 });
 
 export const TaskRuntimeProvider = ({
@@ -69,6 +80,7 @@ export const TaskRuntimeProvider = ({
   const [permissions, setPermissions] = useState<PermissionState>({});
   const alwaysAllowTasks = useRef<string[]>([]);
   const [generationState, setGenerationState] = useState<GenerationState>([]);
+  const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
 
   // We need to wait for the task to be created and then select it
   const [waitForSelect, setWaitForSelect] = useState<string | null>(null);
@@ -80,39 +92,36 @@ export const TaskRuntimeProvider = ({
     { enabled: !!selectedTask.id }
   );
 
-  // Ensure Claude Code installation is configured
+  // Load Claude Code installations on mount
   useEffect(() => {
-    const ensureInstallation = async () => {
-      // Check if installation is already set
-      if (claudeCode.selectedInstallation) {
-        return;
-      }
-
+    const loadInstallations = async () => {
       try {
-        // Discover available installations
-        const installations =
-          await window.api.claudeCode.discoverInstallations();
-
-        if (installations.length === 0) {
-          console.warn("No Claude Code installations found");
-          return;
-        }
-
-        // Prefer bundled installation, otherwise use the first available
-        const bundledInstallation = installations.find(
-          (install) => install.source === "bundled"
-        );
-        const defaultInstallation = bundledInstallation || installations[0];
-
-        // Set the default installation
-        updateClaudeCode({ selectedInstallation: defaultInstallation });
+        const discovered = await window.api.claudeCode.discoverInstallations();
+        setInstallations(discovered);
       } catch (error) {
         console.error("Failed to discover Claude Code installations:", error);
       }
     };
 
-    ensureInstallation();
-  }, [claudeCode.selectedInstallation, updateClaudeCode]);
+    loadInstallations();
+  }, []);
+
+  // Ensure Claude Code installation is configured
+  useEffect(() => {
+    // Check if installation is already set
+    if (claudeCode.selectedInstallation || installations.length === 0) {
+      return;
+    }
+
+    // Prefer bundled installation, otherwise use the first available
+    const bundledInstallation = installations.find(
+      (install) => install.source === "bundled"
+    );
+    const defaultInstallation = bundledInstallation || installations[0];
+
+    // Set the default installation
+    updateClaudeCode({ selectedInstallation: defaultInstallation });
+  }, [installations, claudeCode.selectedInstallation, updateClaudeCode]);
 
   useEffect(() => {
     // New task is added, select it
@@ -400,6 +409,7 @@ export const TaskRuntimeProvider = ({
         setComposerStates,
         permissions,
         generationState,
+        installations,
       }}
     >
       {children}
@@ -422,4 +432,15 @@ export const usePermission = (threadId: string): Permission[] => {
     throw new Error("usePermission must be used within a TaskRuntimeProvider");
 
   return context.permissions[threadId] || [];
+};
+
+export const useClaudeCodeInstallations = (): ClaudeInstallation[] => {
+  const context = useContext(TaskRuntimeContext);
+
+  if (context === undefined)
+    throw new Error(
+      "useClaudeCodeInstallations must be used within a TaskRuntimeProvider"
+    );
+
+  return context.installations;
 };

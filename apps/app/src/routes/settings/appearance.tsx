@@ -1,6 +1,5 @@
 import { ShellOnly } from "@/components/restrictor";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -26,11 +25,6 @@ export const Route = createFileRoute("/settings/appearance")({
 
 function AppearanceSettings() {
   const [theme, setTheme] = useNestedSetting("appearance", "theme");
-  const [fontSize, setFontSize] = useNestedSetting("appearance", "fontSize");
-  const [compactMode, setCompactMode] = useNestedSetting(
-    "appearance",
-    "compactMode"
-  );
 
   return (
     <ShellOnly>
@@ -60,39 +54,6 @@ function AppearanceSettings() {
                 <SelectItem value="system">System</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="fontSize">Font Size</Label>
-              <p className="text-sm text-muted-foreground">
-                Adjust the text size
-              </p>
-            </div>
-            <Select value={fontSize} onValueChange={setFontSize}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select size" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="small">Small</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="large">Large</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="compactMode">Compact Mode</Label>
-              <p className="text-sm text-muted-foreground">
-                Reduce spacing and padding
-              </p>
-            </div>
-            <Switch
-              id="compactMode"
-              checked={compactMode}
-              onCheckedChange={setCompactMode}
-            />
           </div>
         </div>
       </div>

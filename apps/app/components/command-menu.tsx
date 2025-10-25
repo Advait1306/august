@@ -212,7 +212,7 @@ function CommandMenuDialog({
             icon: Settings,
             action: () => {
               navigate({
-                to: "/settings/general",
+                to: "/settings/appearance",
                 search: { from: location.pathname }
               });
             },
@@ -365,7 +365,7 @@ function CommandMenuDialog({
         e.preventDefault();
         const currentPath = window.location.pathname;
         navigate({
-          to: "/settings/general",
+          to: "/settings/appearance",
           search: { from: currentPath }
         });
         return;

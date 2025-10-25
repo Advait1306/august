@@ -4,10 +4,7 @@ import {
   CheckSquare,
   FolderKanban,
   Palette,
-  Settings,
-  Shield,
   Wrench,
-  Beaker,
   ChevronLeft,
 } from "lucide-react";
 
@@ -54,11 +51,6 @@ const data = {
   ],
   settingsNav: [
     {
-      title: "General",
-      url: "/settings/general",
-      icon: Settings,
-    },
-    {
       title: "Appearance",
       url: "/settings/appearance",
       icon: Palette,
@@ -67,16 +59,6 @@ const data = {
       title: "Claude Code",
       url: "/settings/claude-code",
       icon: Wrench,
-    },
-    {
-      title: "Privacy",
-      url: "/settings/privacy",
-      icon: Shield,
-    },
-    {
-      title: "Experimental",
-      url: "/settings/experimental",
-      icon: Beaker,
     },
   ],
   navSecondary: [],
