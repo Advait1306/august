@@ -3,8 +3,10 @@ import {
   AuthData as ZeroAuthData,
   getAgents,
   getMessages,
+  getOrganisation,
   getProjects,
   getTasks,
+  getUsage,
 } from "@jupiter/sync/queries/data";
 import { createMutators } from "@jupiter/sync/mutators/data";
 import { createServerMutators } from "@jupiter/sync/server-mutators/data";
@@ -16,10 +18,14 @@ import { processorType } from "../config/database";
 
 // Validated queries
 const validated = Object.fromEntries(
-  [getTasks, getMessages, getAgents, getProjects].map((q) => [
-    q.queryName,
-    withValidation(q),
-  ])
+  [
+    getTasks,
+    getMessages,
+    getAgents,
+    getProjects,
+    getOrganisation,
+    getUsage,
+  ].map((q) => [q.queryName, withValidation(q)])
 );
 
 export class SyncService {

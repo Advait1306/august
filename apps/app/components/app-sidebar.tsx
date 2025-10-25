@@ -6,6 +6,7 @@ import {
   Palette,
   Wrench,
   ChevronLeft,
+  Wallet,
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -59,6 +60,11 @@ const data = {
       title: "Claude Code",
       url: "/settings/claude-code",
       icon: Wrench,
+    },
+    {
+      title: "Wallet",
+      url: "/settings/wallet",
+      icon: Wallet,
     },
   ],
   navSecondary: [],

@@ -50,3 +50,22 @@ export const getMessages = syncedQueryWithContext(
       });
   }
 );
+
+export const getOrganisation = syncedQueryWithContext(
+  "getOrganisation",
+  z.tuple([]),
+  (context: AuthData) => {
+    return builder.organisations.where("id", context.orgId).one();
+  }
+);
+
+export const getUsage = syncedQueryWithContext(
+  "getUsage",
+  z.tuple([]),
+  (context: AuthData) => {
+    return builder.usage
+      .where("organisation_id", context.orgId)
+      .orderBy("created_at", "desc")
+      .limit(50);
+  }
+);

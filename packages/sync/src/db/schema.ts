@@ -5,6 +5,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  serial,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -20,6 +21,7 @@ export const organisations = pgTable("organisations", {
 });
 
 export const usage = pgTable("usage", {
+  id: serial().primaryKey(),
   organisation_id: varchar()
     .notNull()
     .references(() => organisations.id),
@@ -109,6 +111,7 @@ export const organisationRelations = relations(organisations, ({ many }) => ({
   agents: many(agents),
   projects: many(projects),
   tasks: many(tasks),
+  usage: many(usage),
 }));
 
 // Agent relations
@@ -163,5 +166,13 @@ export const messageRelations = relations(messages, ({ one }) => ({
   task: one(tasks, {
     fields: [messages.task_id],
     references: [tasks.id],
+  }),
+}));
+
+// Usage relations
+export const usageRelations = relations(usage, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [usage.organisation_id],
+    references: [organisations.id],
   }),
 }));

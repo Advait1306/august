@@ -171,6 +171,24 @@ export const schema = {
             "id"
           >,
         },
+        payment_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "organisations",
+            "payment_id"
+          >,
+        },
+        wallet: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "organisations",
+            "wallet"
+          >,
+        },
       },
       primaryKey: ["id"],
     },
@@ -307,6 +325,93 @@ export const schema = {
             ZeroSchema,
             "tasks",
             "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+    },
+    usage: {
+      name: "usage",
+      columns: {
+        id: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "usage",
+            "id"
+          >,
+        },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "usage",
+            "organisation_id"
+          >,
+        },
+        model: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "usage",
+            "model"
+          >,
+        },
+        input_tokens: {
+          type: "number",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "usage",
+            "input_tokens"
+          >,
+        },
+        output_tokens: {
+          type: "number",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "usage",
+            "output_tokens"
+          >,
+        },
+        cache_creation_input_tokens: {
+          type: "number",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "usage",
+            "cache_creation_input_tokens"
+          >,
+        },
+        cache_read_input_tokens: {
+          type: "number",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "usage",
+            "cache_read_input_tokens"
+          >,
+        },
+        cost: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "usage",
+            "cost"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "usage",
+            "created_at"
           >,
         },
       },
@@ -520,6 +625,11 @@ export type Project = Row<Schema["tables"]["projects"]>;
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Task = Row<Schema["tables"]["tasks"]>;
+/**
+ * Represents a row from the "usage" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type Usage = Row<Schema["tables"]["usage"]>;
 /**
  * Represents a row from the "users" table.
  * This type is auto-generated from your Drizzle schema definition.
