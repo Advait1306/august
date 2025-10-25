@@ -62,11 +62,8 @@ function WalletSettings() {
   // Initialize DodoPayments SDK
   useEffect(() => {
     DodoPayments.Initialize({
-      mode: "test", // Use "live" for production
-      onEvent: (event) => {
-        console.log("Checkout event:", event);
-        // You can handle checkout events here (success, cancel, etc.)
-      },
+      mode: import.meta.env.VITE_DODO_PAYMENTS_MODE as "test" | "live",
+      onEvent: () => {},
     });
   }, []);
 
