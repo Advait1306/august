@@ -126,4 +126,52 @@ export class BillingService {
       }
     }
   }
+
+  /**
+   * Add credits to organisation wallet
+   */
+  async addCredits(orgId: string, amountInCents: number): Promise<{
+    success: boolean;
+    newBalance?: number;
+    error?: string;
+  }> {
+    try {
+      // Verify organisation exists
+      const org = await this.db
+        .select()
+        .from(organisations)
+        .where(eq(organisations.id, orgId))
+        .limit(1);
+
+      if (!org || org.length === 0) {
+        return { success: false, error: "Organisation not found" };
+      }
+
+      // Add credits to wallet
+      await this.db
+        .update(organisations)
+        .set({
+          wallet: sql`${organisations.wallet} + ${amountInCents}`,
+        })
+        .where(eq(organisations.id, orgId));
+
+      // Fetch updated balance
+      const updatedOrg = await this.db
+        .select()
+        .from(organisations)
+        .where(eq(organisations.id, orgId))
+        .limit(1);
+
+      const newBalance = updatedOrg[0]?.wallet ?? 0;
+
+      console.log(
+        `Added ${amountInCents}¢ to org ${orgId} wallet. New balance: ${newBalance}¢`
+      );
+
+      return { success: true, newBalance };
+    } catch (error) {
+      console.error("Failed to add credits:", error);
+      return { success: false, error: "Failed to add credits" };
+    }
+  }
 }

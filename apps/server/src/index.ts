@@ -63,6 +63,13 @@ app.use(
   createClerkController(clerkService)
 );
 
+// DodoPayments webhook needs raw body parser
+app.use(
+  "/api/webhooks/dodo",
+  bodyParser.raw({ type: "application/json" }),
+  createBillingController(clerkClient, db, dodoClient, billingService)
+);
+
 // Other routes use JSON body parser
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
@@ -71,7 +78,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 app.use(createClerkController(clerkService));
 app.use(createSyncController(syncService));
 app.use(createProxyController(proxyService, billingService));
-app.use(createBillingController(clerkClient, db, dodoClient));
+app.use(createBillingController(clerkClient, db, dodoClient, billingService));
 
 app.listen(8080, () => {
   console.log("Server is running on port 8080");
