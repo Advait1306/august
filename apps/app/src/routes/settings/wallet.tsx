@@ -42,9 +42,9 @@ function WalletSettings() {
   const [showAmountDialog, setShowAmountDialog] = useState(false);
   const [amount, setAmount] = useState("");
 
-  const formatCost = (cents: number | null) => {
+  const formatCost = (cents: number | null, fixed: number = 2) => {
     if (cents === null) return "N/A";
-    return `$${(cents / 100).toFixed(4)}`;
+    return `$${(cents / 100).toFixed(fixed)}`;
   };
 
   const formatDate = (timestamp: number | null) => {
@@ -158,7 +158,7 @@ function WalletSettings() {
                     onClick={handleOpenDialog}
                     disabled={isLoadingCheckout}
                   >
-                    {isLoadingCheckout ? "Loading..." : "Add Credits"}
+                    {isLoadingCheckout ? "Loading..." : "Add Balance"}
                   </Button>
                 </div>
               )}
@@ -226,8 +226,8 @@ function WalletSettings() {
                           <td className="p-2 text-right font-mono text-xs">
                             {formatNumber(record.cache_read_input_tokens)}
                           </td>
-                          <td className="p-2 text-right font-semibold">
-                            {formatCost(record.cost)}
+                          <td className="p-2 text-right font-mono text-xs">
+                            {formatCost(record.cost, 4)}
                           </td>
                         </tr>
                       ))}
@@ -243,7 +243,7 @@ function WalletSettings() {
         <Dialog open={showAmountDialog} onOpenChange={setShowAmountDialog}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Credits</DialogTitle>
+              <DialogTitle>Add Balance</DialogTitle>
               <DialogDescription>
                 Enter the amount you want to add to your wallet.
               </DialogDescription>
@@ -269,7 +269,9 @@ function WalletSettings() {
               >
                 Cancel
               </Button>
-              <Button onClick={handleConfirmAmount}>Continue to Checkout</Button>
+              <Button onClick={handleConfirmAmount}>
+                Continue to Checkout
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

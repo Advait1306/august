@@ -12,6 +12,7 @@ import {
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
+import { NavWallet } from "@/components/nav-wallet";
 import {
   Sidebar,
   SidebarContent,
@@ -99,7 +100,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             Back
           </Button>
         ) : (
-          <OrganizationSwitcher />
+          <>
+            {" "}
+            <OrganizationSwitcher />
+            <NavWallet />
+          </>
         )}
       </SidebarHeader>
       <SidebarContent>
