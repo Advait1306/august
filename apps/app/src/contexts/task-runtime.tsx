@@ -356,11 +356,10 @@ export const TaskRuntimeProvider = ({
       },
       systemPrompt: agent.system_prompt,
       path: claudeCode.selectedInstallation?.path,
-      // TODO: Add auth information and send the request to our servers
       env:
         claudeCode.selectedInstallation?.source === "bundled"
           ? {
-              ANTHROPIC_BASE_URL: "http://localhost:8080/cc-proxy",
+              ANTHROPIC_BASE_URL: `${import.meta.env.VITE_SERVER_URL}/cc-proxy`,
               ANTHROPIC_API_KEY:
                 (await getToken({
                   template: "cc-proxy",
