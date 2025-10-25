@@ -4,8 +4,9 @@ dotenv.config();
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { clerkMiddleware } from "@clerk/express";
+import { clerkMiddleware, createClerkClient } from "@clerk/express";
 import mixpanel from "mixpanel";
+import DodoPayments from "dodopayments";
 
 // Config
 import { db, processor } from "./config/database";
@@ -23,12 +24,25 @@ import { ProxyService } from "./services/proxy.service";
 import { createClerkController } from "./controllers/clerk.controller";
 import { createSyncController } from "./controllers/sync.controller";
 import { createProxyController } from "./controllers/proxy.controller";
+import { createBillingController } from "./controllers/billing.controller";
 
 const app = express();
 
 // Initialize Mixpanel
 const mp = mixpanel.init(process.env.MIXPANEL_TOKEN!, {
   host: "api-eu.mixpanel.com",
+});
+
+const clerkClient = createClerkClient({
+  secretKey: process.env.CLERK_SECRET_KEY!,
+});
+
+// Initialize DodoPayments client
+const dodoClient = new DodoPayments({
+  bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
+  environment: process.env.DODO_PAYMENTS_ENVIRONMENT! as
+    | "live_mode"
+    | "test_mode",
 });
 
 // Middleware setup
@@ -57,6 +71,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 app.use(createClerkController(clerkService));
 app.use(createSyncController(syncService));
 app.use(createProxyController(proxyService, billingService));
+app.use(createBillingController(clerkClient, db, dodoClient));
 
 app.listen(8080, () => {
   console.log("Server is running on port 8080");

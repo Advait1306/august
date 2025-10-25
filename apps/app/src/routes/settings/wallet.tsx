@@ -5,6 +5,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getOrganisation, getUsage } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { useSyncContext } from "@/src/components/sync_engine";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@clerk/clerk-react";
+import { DodoPayments } from "dodopayments-checkout";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type SettingsSearch = {
   from?: string;
@@ -21,8 +35,12 @@ export const Route = createFileRoute("/settings/wallet")({
 
 function WalletSettings() {
   const syncData = useSyncContext();
+  const { getToken } = useAuth();
   const [organisation] = useQuery(getOrganisation(syncData.authData));
   const [usage] = useQuery(getUsage(syncData.authData));
+  const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+  const [showAmountDialog, setShowAmountDialog] = useState(false);
+  const [amount, setAmount] = useState("");
 
   const formatCost = (cents: number | null) => {
     if (cents === null) return "N/A";
@@ -40,6 +58,76 @@ function WalletSettings() {
 
   const loading = !organisation;
   const balance = organisation?.wallet ?? null;
+
+  // Initialize DodoPayments SDK
+  useEffect(() => {
+    DodoPayments.Initialize({
+      mode: "test", // Use "live" for production
+      onEvent: (event) => {
+        console.log("Checkout event:", event);
+        // You can handle checkout events here (success, cancel, etc.)
+      },
+    });
+  }, []);
+
+  const handleOpenDialog = () => {
+    setShowAmountDialog(true);
+  };
+
+  const handleConfirmAmount = async () => {
+    const amountValue = parseFloat(amount);
+
+    if (isNaN(amountValue) || amountValue <= 0) {
+      alert("Please enter a valid amount greater than 0");
+      return;
+    }
+
+    // Convert dollars to cents
+    const amountInCents = Math.round(amountValue * 100);
+
+    setShowAmountDialog(false);
+    setIsLoadingCheckout(true);
+
+    try {
+      // Get Clerk token for authentication
+      const token = await getToken();
+
+      // Get current URL for return URL
+      const returnUrl = window.location.href;
+
+      // Call backend API to create checkout session
+      const response = await fetch(
+        `${import.meta.env.VITE_SERVER_URL}/api/checkout/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ amount: amountInCents, returnUrl }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to create checkout session");
+      }
+
+      const data = await response.json();
+
+      // Open DodoPayments checkout
+      DodoPayments.Checkout.open({
+        checkoutUrl: data.checkoutUrl,
+      });
+
+      // Reset amount field
+      setAmount("");
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      alert("Failed to create checkout session. Please try again.");
+    } finally {
+      setIsLoadingCheckout(false);
+    }
+  };
 
   return (
     <ShellOnly>
@@ -60,8 +148,18 @@ function WalletSettings() {
               {loading ? (
                 <Skeleton className="h-10 w-32" />
               ) : (
-                <div className="text-3xl font-bold">
-                  {balance !== null ? formatCost(balance) : "N/A"}
+                <div className="flex items-center gap-4">
+                  <div className="text-3xl font-bold">
+                    {balance !== null ? formatCost(balance) : "N/A"}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenDialog}
+                    disabled={isLoadingCheckout}
+                  >
+                    {isLoadingCheckout ? "Loading..." : "Add Credits"}
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -140,6 +238,41 @@ function WalletSettings() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Amount Dialog */}
+        <Dialog open={showAmountDialog} onOpenChange={setShowAmountDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Credits</DialogTitle>
+              <DialogDescription>
+                Enter the amount you want to add to your wallet.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="amount">Amount (USD)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="Enter amount (e.g., 50.00)"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowAmountDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmAmount}>Continue to Checkout</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </ShellOnly>
   );
