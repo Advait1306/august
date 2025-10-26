@@ -28,23 +28,6 @@ export function createClerkController(clerkService: ClerkService): Router {
         await clerkService.createUser(parsedPayload.data.id);
         await clerkService.createOrganisation(parsedPayload.data.id);
 
-        // Commented out DodoPay integration
-        // const customerCreateResponse = await dodoClient.customers.create({
-        //   email: `${parsedPayload.data.id}@user.august.com`,
-        //   name:
-        //     parsedPayload.data.first_name + " " + parsedPayload.data.last_name,
-        // });
-        // await dodoClient.customers.wallets.ledgerEntries.create(
-        //   customerCreateResponse.customer_id,
-        //   {
-        //     amount: 500,
-        //     currency: "USD",
-        //     entry_type: "credit",
-        //     reason: "Welcome Credits",
-        //     idempotency_key: `${parsedPayload.data.id}-welcome-credits`,
-        //   }
-        // );
-
         res.sendStatus(200);
         break;
       }

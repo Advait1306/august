@@ -20,8 +20,11 @@ export class ClerkService {
    * Create a new organisation in the database
    */
   async createOrganisation(orgId: string) {
+    const isPersonalOrg = orgId.startsWith("user");
+
     const orgInsert: typeof organisations.$inferInsert = {
       id: orgId,
+      wallet: isPersonalOrg ? 500 : 0,
     };
 
     await this.db.insert(organisations).values(orgInsert);
