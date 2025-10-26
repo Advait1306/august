@@ -24,6 +24,8 @@ export function SiteHeader() {
           return "Privacy";
         case "experimental":
           return "Experimental";
+        case "wallet":
+          return "Wallet";
         default:
           return "Settings";
       }
