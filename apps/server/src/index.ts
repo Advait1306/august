@@ -57,17 +57,10 @@ const syncService = new SyncService(processor, mp);
 const proxyService = new ProxyService(billingService);
 
 // Clerk webhook needs raw body parser
-app.use(
-  "/clerk",
-  bodyParser.raw({ type: "application/json" }),
-  createClerkController(clerkService)
-);
+app.use("/clerk", bodyParser.raw({ type: "application/json" }));
 
 // DodoPayments webhook needs raw body parser
-app.use(
-  "/api/webhooks/dodo",
-  bodyParser.raw({ type: "application/json" }),
-);
+app.use("/api/webhooks/dodo", bodyParser.raw({ type: "application/json" }));
 
 // Other routes use JSON body parser
 app.use(bodyParser.json({ limit: "50mb" }));
