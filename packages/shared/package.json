@@ -1,7 +1,6 @@
 {
   "name": "@jupiter/shared",
   "version": "1.0.0",
-  "type": "module",
   "private": true,
   "dependencies": {
     "electron": "^38.0.0",
@@ -28,6 +27,10 @@
     "./types": {
       "types": "./src/types.ts",
       "default": "./dist/types.js"
+    },
+    "./ipc": {
+      "types": "./src/ipc/index.ts",
+      "default": "./dist/ipc/index.js"
     }
   }
 }

@@ -1,5 +1,11 @@
 import { Permission } from "@jupiter/shared/types";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   getAgents,
   getMessages,
@@ -12,8 +18,13 @@ import { useSyncContext } from "@/src/components/sync_engine";
 import { useZero } from "@/src/hooks/useZero";
 import { nanoid } from "nanoid";
 import { AssistantModelMessage, ModelMessage, UserModelMessage } from "ai";
+import {
+  useSettingsSection,
+  type ClaudeInstallation,
+} from "@/src/contexts/settings-context";
+import { useAuth } from "@clerk/clerk-react";
 
-type PermissionState = Record<string, Permission>;
+type PermissionState = Record<string, Permission[]>;
 type GenerationState = string[];
 
 type TaskRuntimeState = {
@@ -26,6 +37,7 @@ type TaskRuntimeState = {
   setComposerStates: (states: Record<string, ComposerState>) => void;
   permissions: PermissionState;
   generationState: GenerationState;
+  installations: ClaudeInstallation[];
 };
 
 type ComposerState = {
@@ -44,6 +56,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   setComposerStates: () => {},
   permissions: {},
   generationState: [],
+  installations: [],
 });
 
 export const TaskRuntimeProvider = ({
@@ -52,11 +65,14 @@ export const TaskRuntimeProvider = ({
   children: React.ReactNode;
 }) => {
   const syncData = useSyncContext();
+  const { getToken } = useAuth();
 
   const z = useZero();
   const agents = useQuery(getAgents(syncData.authData))[0];
   const projects = useQuery(getProjects(syncData.authData))[0];
   const tasks = useQuery(getTasks(syncData.authData))[0];
+
+  const [claudeCode, updateClaudeCode] = useSettingsSection("claudeCode");
 
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
@@ -64,6 +80,7 @@ export const TaskRuntimeProvider = ({
   const [permissions, setPermissions] = useState<PermissionState>({});
   const alwaysAllowTasks = useRef<string[]>([]);
   const [generationState, setGenerationState] = useState<GenerationState>([]);
+  const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
 
   // We need to wait for the task to be created and then select it
   const [waitForSelect, setWaitForSelect] = useState<string | null>(null);
@@ -74,6 +91,37 @@ export const TaskRuntimeProvider = ({
     getMessages(syncData.authData, selectedTask.id ?? ""),
     { enabled: !!selectedTask.id }
   );
+
+  // Load Claude Code installations on mount
+  useEffect(() => {
+    const loadInstallations = async () => {
+      try {
+        const discovered = await window.api.claudeCode.discoverInstallations();
+        setInstallations(discovered);
+      } catch (error) {
+        console.error("Failed to discover Claude Code installations:", error);
+      }
+    };
+
+    loadInstallations();
+  }, []);
+
+  // Ensure Claude Code installation is configured
+  useEffect(() => {
+    // Check if installation is already set
+    if (claudeCode.selectedInstallation || installations.length === 0) {
+      return;
+    }
+
+    // Prefer bundled installation, otherwise use the first available
+    const bundledInstallation = installations.find(
+      (install) => install.source === "bundled"
+    );
+    const defaultInstallation = bundledInstallation || installations[0];
+
+    // Set the default installation
+    updateClaudeCode({ selectedInstallation: defaultInstallation });
+  }, [installations, claudeCode.selectedInstallation, updateClaudeCode]);
 
   useEffect(() => {
     // New task is added, select it
@@ -98,37 +146,63 @@ export const TaskRuntimeProvider = ({
         return;
       }
 
-      setPermissions((prev) => ({
-        ...prev,
-        [request.threadId]: {
-          ...request,
-          alwaysAllow: () => {
-            alwaysAllowTasks.current.push(request.threadId);
-            window.api.agent.grantPermission(request.id);
-            setPermissions((prev) => {
-              const newPermissions = { ...prev };
-              delete newPermissions[request.threadId];
-              return newPermissions;
-            });
-          },
-          grant: () => {
-            window.api.agent.grantPermission(request.id);
-            setPermissions((prev) => {
-              const newPermissions = { ...prev };
-              delete newPermissions[request.threadId];
-              return newPermissions;
-            });
-          },
-          deny: () => {
-            window.api.agent.denyPermission(request.id);
-            setPermissions((prev) => {
-              const newPermissions = { ...prev };
-              delete newPermissions[request.threadId];
-              return newPermissions;
-            });
-          },
-        },
-      }));
+      setPermissions((prev) => {
+        const existingPermissions = prev[request.threadId] || [];
+        return {
+          ...prev,
+          [request.threadId]: [
+            ...existingPermissions,
+            {
+              ...request,
+              alwaysAllow: () => {
+                alwaysAllowTasks.current.push(request.threadId);
+                // Grant all pending permissions for this thread
+                setPermissions((current) => {
+                  const threadPermissions = current[request.threadId] || [];
+                  threadPermissions.forEach((perm) => {
+                    window.api.agent.grantPermission(perm.id);
+                  });
+                  const newPermissions = { ...current };
+                  delete newPermissions[request.threadId];
+                  return newPermissions;
+                });
+              },
+              grant: () => {
+                window.api.agent.grantPermission(request.id);
+                setPermissions((current) => {
+                  const threadPermissions = current[request.threadId] || [];
+                  const updatedPermissions = threadPermissions.filter(
+                    (perm) => perm.id !== request.id
+                  );
+                  const newPermissions = { ...current };
+                  if (updatedPermissions.length === 0) {
+                    delete newPermissions[request.threadId];
+                  } else {
+                    newPermissions[request.threadId] = updatedPermissions;
+                  }
+                  return newPermissions;
+                });
+              },
+              deny: () => {
+                window.api.agent.denyPermission(request.id);
+                setPermissions((current) => {
+                  const threadPermissions = current[request.threadId] || [];
+                  const updatedPermissions = threadPermissions.filter(
+                    (perm) => perm.id !== request.id
+                  );
+                  const newPermissions = { ...current };
+                  if (updatedPermissions.length === 0) {
+                    delete newPermissions[request.threadId];
+                  } else {
+                    newPermissions[request.threadId] = updatedPermissions;
+                  }
+                  return newPermissions;
+                });
+              },
+            },
+          ],
+        };
+      });
     });
 
     return () => {
@@ -281,16 +355,28 @@ export const TaskRuntimeProvider = ({
 
     // TODO: Message receiving can happen in an async manner,
     // which would allow the listener to survive a reload.
-    for await (const reply of window.api.agent.run(
-      {
+    for await (const reply of window.api.agent.run({
+      options: {
         messages: chatMessages,
         runConfig: {
           project,
         },
         threadId: taskId,
       },
-      agent.system_prompt
-    )) {
+      systemPrompt: agent.system_prompt,
+      path: claudeCode.selectedInstallation?.path,
+      env:
+        claudeCode.selectedInstallation?.source === "bundled"
+          ? {
+              ANTHROPIC_BASE_URL: `${import.meta.env.VITE_SERVER_URL}/cc-proxy`,
+              ANTHROPIC_API_KEY:
+                (await getToken({
+                  template: "cc-proxy",
+                  skipCache: true,
+                })) ?? "",
+            }
+          : undefined,
+    })) {
       z.mutate.message.update({
         task_id: taskId,
         message_id: replyId,
@@ -323,6 +409,7 @@ export const TaskRuntimeProvider = ({
         setComposerStates,
         permissions,
         generationState,
+        installations,
       }}
     >
       {children}
@@ -338,11 +425,22 @@ export const useTaskRuntime = () => {
   return context;
 };
 
-export const usePermission = (threadId: string): Permission | undefined => {
+export const usePermission = (threadId: string): Permission[] => {
   const context = useContext(TaskRuntimeContext);
 
   if (context === undefined)
     throw new Error("usePermission must be used within a TaskRuntimeProvider");
 
-  return context.permissions[threadId];
+  return context.permissions[threadId] || [];
+};
+
+export const useClaudeCodeInstallations = (): ClaudeInstallation[] => {
+  const context = useContext(TaskRuntimeContext);
+
+  if (context === undefined)
+    throw new Error(
+      "useClaudeCodeInstallations must be used within a TaskRuntimeProvider"
+    );
+
+  return context.installations;
 };

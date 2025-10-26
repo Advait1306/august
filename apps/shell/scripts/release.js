@@ -125,7 +125,7 @@ async function main() {
       }
     }
 
-    log(` Release ${version} completed successfully!`)
+    log(`Release ${version} completed successfully!`)
     log('The app should be available for auto-update shortly.')
   } catch (err) {
     error(`Release failed: ${err.message}`)

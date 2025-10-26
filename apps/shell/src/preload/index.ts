@@ -1,48 +1,31 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { IPC_CHANNELS } from '@jupiter/shared/ipc'
 import { agent } from './agent'
 
 // Custom APIs for renderer
 const api = {
   projects: {
-    selectFolder: () => electronAPI.ipcRenderer.invoke('projects:selectFolder')
-  },
-  chat: {
-    // Thread management
-    getThreads: () => electronAPI.ipcRenderer.invoke('threads:getAll'),
-    createThread: (threadId: string) => electronAPI.ipcRenderer.invoke('threads:create', threadId),
-    updateThread: (id: string, updates: any) =>
-      electronAPI.ipcRenderer.invoke('threads:update', id, updates),
-    deleteThread: (id: string) => electronAPI.ipcRenderer.invoke('threads:delete', id),
-    archiveThread: (id: string) => electronAPI.ipcRenderer.invoke('threads:archive', id),
-
-    // Message management
-    getMessages: (threadId: string) =>
-      electronAPI.ipcRenderer.invoke('messages:getByThread', threadId),
-    saveMessage: (message: any) => electronAPI.ipcRenderer.invoke('messages:save', message),
-    deleteMessage: (id: string) => electronAPI.ipcRenderer.invoke('messages:delete', id),
-
-    // Event listeners for streaming
-    onMessageUpdate: (callback: (message: any) => void) => {
-      electronAPI.ipcRenderer.on('chat:messageUpdate', (_, message) => callback(message))
-      return () => electronAPI.ipcRenderer.removeAllListeners('chat:messageUpdate')
-    }
+    selectFolder: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.PROJECTS.SELECT_FOLDER)
   },
   auth: {
-    openLogin: () => electronAPI.ipcRenderer.invoke('auth:open-login'),
+    openLogin: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTH.OPEN_LOGIN),
     onTokenReceived: (callback: (ticket: string) => void) => {
-      console.log('token listener added')
-      electronAPI.ipcRenderer.on('auth:ticket-received', (_, ticket) => callback(ticket))
-      return () => electronAPI.ipcRenderer.removeAllListeners('auth:token-received')
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.AUTH.TICKET_RECEIVED, (_, ticket) => callback(ticket))
+      return () => electronAPI.ipcRenderer.removeAllListeners(IPC_CHANNELS.AUTH.TICKET_RECEIVED)
     }
   },
   autoUpdater: {
-    checkForUpdates: () => electronAPI.ipcRenderer.invoke('auto-updater:check-for-updates'),
-    quitAndInstall: () => electronAPI.ipcRenderer.invoke('auto-updater:quit-and-install'),
-    getUpdateInfo: () => electronAPI.ipcRenderer.invoke('auto-updater:get-update-info')
+    checkForUpdates: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.CHECK),
+    quitAndInstall: () =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.QUIT_AND_INSTALL),
+    getUpdateInfo: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.GET_INFO)
   },
-  agent: agent
+  agent: agent,
+  claudeCode: {
+    discoverInstallations: () =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_CODE.DISCOVER_INSTALLATIONS)
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

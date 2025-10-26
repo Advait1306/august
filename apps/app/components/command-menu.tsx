@@ -24,7 +24,7 @@ import {
   Archive,
   Trash2,
 } from "lucide-react";
-import { useTheme } from "@/src/contexts/theme-context";
+import { useNestedSetting } from "@/src/contexts/settings-context";
 
 import {
   CommandDialog,
@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/command";
 import { MCPIcon } from "@/components/icons/MCPIcon";
 import { Kbd, KbdKey } from "@/components/ui/kibo-ui/kbd";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useLocation } from "@tanstack/react-router";
 
 type CommandMenuItem = {
   id: string;
@@ -146,7 +146,8 @@ function CommandMenuDialog({
   setIsResetRequired: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const navigate = useNavigate();
-  const { setTheme } = useTheme();
+  const location = useLocation();
+  const [, setTheme] = useNestedSetting("appearance", "theme");
   const [keySequence, setKeySequence] = useState<string[]>([]);
   const keySequenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastKeyTimeRef = useRef<number>(0);
@@ -209,7 +210,12 @@ function CommandMenuDialog({
             id: "settings",
             title: "Settings",
             icon: Settings,
-            action: () => console.log("Settings clicked"),
+            action: () => {
+              navigate({
+                to: "/settings/appearance",
+                search: { from: location.pathname }
+              });
+            },
           },
           {
             id: "profile",
@@ -354,6 +360,17 @@ function CommandMenuDialog({
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      // Handle settings shortcut (Cmd+,)
+      if (e.key === "," && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const currentPath = window.location.pathname;
+        navigate({
+          to: "/settings/appearance",
+          search: { from: currentPath }
+        });
+        return;
+      }
+
       // Handle command menu toggle
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();

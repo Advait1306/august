@@ -1,9 +1,18 @@
 import * as React from "react";
-import { Bot, CheckSquare, FolderKanban } from "lucide-react";
+import {
+  Bot,
+  CheckSquare,
+  FolderKanban,
+  Palette,
+  Wrench,
+  ChevronLeft,
+  Wallet,
+} from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
+import { NavWallet } from "@/components/nav-wallet";
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +20,8 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { OrganizationSwitcher } from "@clerk/clerk-react";
+import { useLocation, useNavigate } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 
 const data = {
   user: {
@@ -40,26 +51,71 @@ const data = {
     //   icon: MCPIcon,
     // },
   ],
+  settingsNav: [
+    {
+      title: "Appearance",
+      url: "/settings/appearance",
+      icon: Palette,
+    },
+    {
+      title: "Claude Code",
+      url: "/settings/claude-code",
+      icon: Wrench,
+    },
+    {
+      title: "Wallet",
+      url: "/settings/wallet",
+      icon: Wallet,
+    },
+  ],
   navSecondary: [],
   projects: [],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isSettingsPage = location.pathname.startsWith("/settings");
+  const fromParam = isSettingsPage ? (location.search as any)?.from : undefined;
+
+  const handleBack = () => {
+    const backTo = fromParam || "/tasks";
+    navigate({ to: backTo as any });
+  };
+
   return (
     <Sidebar
       className="top-(--header-height) h-[calc(100svh-var(--header-height))]!"
       {...props}
     >
       <SidebarHeader>
-        <OrganizationSwitcher />
+        {isSettingsPage ? (
+          <Button
+            variant="ghost"
+            className="w-full justify-start m-0 h-7"
+            onClick={handleBack}
+            hotkey="Escape"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </Button>
+        ) : (
+          <>
+            {" "}
+            <OrganizationSwitcher />
+            <NavWallet />
+          </>
+        )}
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={isSettingsPage ? data.settingsNav : data.navMain} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser />
-      </SidebarFooter>
+      {!isSettingsPage && (
+        <SidebarFooter>
+          <NavUser />
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }
