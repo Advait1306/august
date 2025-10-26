@@ -8,7 +8,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "dev": "nodemon --watch 'src/**/*.ts' --exec tsx src/index.ts",
-    "build": "tsc",
+    "build": "tsc && tsc-esm-fix --target=dist",
     "start": "npm run build && node dist/index.js",
     "lint": "eslint ."
   },
@@ -45,6 +45,7 @@
     "jiti": "^2.6.0",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
+    "tsc-esm-fix": "^3.1.2",
     "tsx": "^4.20.6",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.45.0"
