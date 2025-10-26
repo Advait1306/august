@@ -67,7 +67,6 @@ app.use(
 app.use(
   "/api/webhooks/dodo",
   bodyParser.raw({ type: "application/json" }),
-  createBillingController(clerkClient, db, dodoClient, billingService)
 );
 
 // Other routes use JSON body parser
