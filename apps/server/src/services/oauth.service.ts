@@ -400,6 +400,7 @@ export class OAuthService {
   /**
    * Gets decrypted access token for an MCP connection
    * This is used internally by the server to make API calls on behalf of the user
+   * Automatically refreshes the token if it's expired
    */
   async getAccessToken(params: {
     mcpId: string;
@@ -424,7 +425,39 @@ export class OAuthService {
       return null;
     }
 
-    // TODO: Check if token is expired and refresh if needed
+    // Check if token is expired and refresh if needed
+    if (connection.expires_at && new Date() >= connection.expires_at) {
+      console.log("[OAuth] Token expired, attempting refresh");
+      const refreshSuccess = await this.refreshToken({
+        mcpId,
+        userId,
+        organisationId,
+      });
+
+      if (!refreshSuccess) {
+        console.error("[OAuth] Token refresh failed");
+        return null;
+      }
+
+      // Fetch the updated connection after refresh
+      const [refreshedConnection] = await this.db
+        .select()
+        .from(oauthConnections)
+        .where(
+          and(
+            eq(oauthConnections.mcp_id, mcpId),
+            eq(oauthConnections.user_id, userId),
+            eq(oauthConnections.organisation_id, organisationId)
+          )
+        )
+        .limit(1);
+
+      if (!refreshedConnection) {
+        return null;
+      }
+
+      return decrypt(refreshedConnection.access_token);
+    }
 
     return decrypt(connection.access_token);
   }

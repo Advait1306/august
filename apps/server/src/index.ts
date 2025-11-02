@@ -19,6 +19,7 @@ import { ClerkService } from "./services/clerk.service";
 import { BillingService } from "./services/billing.service";
 import { SyncService } from "./services/sync.service";
 import { ProxyService } from "./services/proxy.service";
+import { OAuthService } from "./services/oauth.service";
 
 // Controllers
 import { createClerkController } from "./controllers/clerk.controller";
@@ -54,8 +55,9 @@ app.use(clerkMiddleware());
 // Initialize services
 const clerkService = new ClerkService(db);
 const billingService = new BillingService(db);
+const oauthService = new OAuthService(db);
 const syncService = new SyncService(processor, mp);
-const proxyService = new ProxyService(billingService);
+const proxyService = new ProxyService(billingService, oauthService);
 
 // Clerk webhook needs raw body parser
 app.use("/clerk", bodyParser.raw({ type: "application/json" }));
@@ -70,7 +72,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 // Mount controllers
 app.use(createClerkController(clerkService));
 app.use(createSyncController(syncService));
-app.use(createProxyController(proxyService, billingService));
+app.use(createProxyController(proxyService, billingService, oauthService, db));
 app.use(createBillingController(clerkClient, db, dodoClient, billingService));
 app.use(createOAuthController(db));
 

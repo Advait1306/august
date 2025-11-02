@@ -1,13 +1,8 @@
 import { Permission } from "@jupiter/shared/types";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   getAgents,
+  getMCPs,
   getMessages,
   getProjects,
   getTasks,
@@ -71,6 +66,7 @@ export const TaskRuntimeProvider = ({
   const agents = useQuery(getAgents(syncData.authData))[0];
   const projects = useQuery(getProjects(syncData.authData))[0];
   const tasks = useQuery(getTasks(syncData.authData))[0];
+  const userMcps = useQuery(getMCPs(syncData.authData))[0];
 
   const [claudeCode, updateClaudeCode] = useSettingsSection("claudeCode");
 
@@ -353,6 +349,15 @@ export const TaskRuntimeProvider = ({
 
     await result.client;
 
+    const token = await getToken({
+      template: "cc-proxy",
+      skipCache: true,
+    });
+
+    if (!token) {
+      throw new Error("Failed to get token");
+    }
+
     // TODO: Message receiving can happen in an async manner,
     // which would allow the listener to survive a reload.
     for await (const reply of window.api.agent.run({
@@ -365,15 +370,27 @@ export const TaskRuntimeProvider = ({
       },
       systemPrompt: agent.system_prompt,
       path: claudeCode.selectedInstallation?.path,
+      mcpServers: userMcps.reduce(
+        (acc, mcp) => {
+          acc[mcp.name] = {
+            type: "http",
+            url: `${import.meta.env.VITE_SERVER_URL}/proxy/mcp/${mcp.id}/`,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          };
+          return acc;
+        },
+        {} as Record<
+          string,
+          { type: "http"; url: string; headers: Record<string, string> }
+        >
+      ),
       env:
         claudeCode.selectedInstallation?.source === "bundled"
           ? {
               ANTHROPIC_BASE_URL: `${import.meta.env.VITE_SERVER_URL}/cc-proxy`,
-              ANTHROPIC_API_KEY:
-                (await getToken({
-                  template: "cc-proxy",
-                  skipCache: true,
-                })) ?? "",
+              ANTHROPIC_API_KEY: token,
             }
           : undefined,
     })) {

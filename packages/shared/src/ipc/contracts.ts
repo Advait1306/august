@@ -17,6 +17,14 @@ export namespace IPC {
       systemPrompt: string;
       path?: string;
       env?: Record<string, string>;
+      mcpServers?: Record<
+        string,
+        {
+          type: "http";
+          url: string;
+          headers: Record<string, string>;
+        }
+      >;
     }
 
     // Full run parameters (with id for IPC)

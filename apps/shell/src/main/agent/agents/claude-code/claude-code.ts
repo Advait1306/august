@@ -110,10 +110,10 @@ export class ClaudeCodeAgent implements AgentInterface {
 
         log.info('Path to Claude Code executable:', params.path)
         log.info('Environment:', mergedEnv)
+        log.info('MCP servers:', params.mcpServers)
 
         for await (const data of query({
           prompt: (async function* () {
-            log.info('Yielding user prompt to Claude Code')
             yield {
               type: 'user' as const,
               message: {
@@ -128,11 +128,12 @@ export class ClaudeCodeAgent implements AgentInterface {
             log.info('receivedResult resolved')
           })(),
           options: {
+            mcpServers: params.mcpServers,
             pathToClaudeCodeExecutable: params.path,
             env: mergedEnv,
             resume: sessionId,
             cwd: project.path,
-            systemPrompt: { type: 'preset', preset: 'claude_code', append: params.systemPrompt },
+            // systemPrompt: { type: 'preset', preset: 'claude_code', append: params.systemPrompt },
             canUseTool: async (toolName, input) => {
               log.debug('Permission requested for tool:', toolName)
               if (
