@@ -25,6 +25,9 @@ const api = {
   claudeCode: {
     discoverInstallations: () =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_CODE.DISCOVER_INSTALLATIONS)
+  },
+  browser: {
+    openUrl: (url: string) => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.BROWSER.OPEN_URL, url)
   }
 }
 

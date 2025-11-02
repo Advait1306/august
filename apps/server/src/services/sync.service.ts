@@ -2,6 +2,8 @@ import { ReadonlyJSONValue, withValidation } from "@rocicorp/zero";
 import {
   AuthData as ZeroAuthData,
   getAgents,
+  getMCPStore,
+  getMCPs,
   getMessages,
   getOrganisation,
   getProjects,
@@ -25,6 +27,8 @@ const validated = Object.fromEntries(
     getProjects,
     getOrganisation,
     getUsage,
+    getMCPStore,
+    getMCPs,
   ].map((q) => [q.queryName, withValidation(q)])
 );
 

@@ -34,6 +34,86 @@ export const usage = pgTable("usage", {
   created_at: timestamp().notNull().defaultNow(),
 });
 
+// MCP Store - Global catalog of pre-configured integrations
+export const mcpStore = pgTable("mcp_store", {
+  id: varchar().primaryKey().notNull(),
+  slug: varchar().unique().notNull(),
+  name: varchar().notNull(),
+  description: varchar(),
+  logo_url: varchar(),
+  category: varchar(),
+  mcp_server_url: varchar().notNull(),
+  default_scopes: varchar(),
+  is_active: integer().notNull().default(1), // Using integer for boolean (0 or 1)
+  sort_order: integer(),
+  metadata: jsonb(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+// MCPs - Per-user, per-org MCP instances
+export const mcps = pgTable("mcps", {
+  id: varchar().primaryKey().notNull(),
+  organisation_id: varchar()
+    .notNull()
+    .references(() => organisations.id),
+  author_id: varchar()
+    .notNull()
+    .references(() => users.id),
+  mcp_store_id: varchar().references(() => mcpStore.id),
+  name: varchar().notNull(),
+  custom_mcp_url: varchar(),
+  custom_description: varchar(),
+  mcp_server_url: varchar().notNull(),
+  oauth_client_id: varchar(),
+  oauth_client_secret: varchar(), // Encrypted
+  oauth_metadata: jsonb(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+// OAuth Connections - Links users to their MCPs via OAuth
+export const oauthConnections = pgTable("oauth_connections", {
+  id: varchar().primaryKey().notNull(),
+  user_id: varchar()
+    .notNull()
+    .references(() => users.id),
+  organisation_id: varchar()
+    .notNull()
+    .references(() => organisations.id),
+  mcp_id: varchar()
+    .notNull()
+    .references(() => mcps.id),
+  access_token: varchar().notNull(), // Encrypted
+  refresh_token: varchar(), // Encrypted
+  token_type: varchar().notNull(),
+  expires_at: timestamp(),
+  scope: varchar(),
+  provider_user_id: varchar(),
+  provider_metadata: jsonb(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+// OAuth States - Temporary storage for CSRF protection
+export const oauthStates = pgTable("oauth_states", {
+  id: varchar().primaryKey().notNull(),
+  state: varchar().unique().notNull(),
+  user_id: varchar()
+    .notNull()
+    .references(() => users.id),
+  organisation_id: varchar()
+    .notNull()
+    .references(() => organisations.id),
+  mcp_id: varchar()
+    .notNull()
+    .references(() => mcps.id),
+  redirect_uri: varchar(),
+  code_verifier: varchar(), // For PKCE
+  created_at: timestamp().notNull().defaultNow(),
+  expires_at: timestamp().notNull(),
+});
+
 export const baseAgent = pgEnum("base_agent", [
   "claude-code",
   "codex",
@@ -104,6 +184,9 @@ export const userkRelations = relations(users, ({ many }) => ({
   tasks: many(tasks),
   agents: many(agents),
   projects: many(projects),
+  mcps: many(mcps),
+  oauthConnections: many(oauthConnections),
+  oauthStates: many(oauthStates),
 }));
 
 // Organisation relations
@@ -112,6 +195,9 @@ export const organisationRelations = relations(organisations, ({ many }) => ({
   projects: many(projects),
   tasks: many(tasks),
   usage: many(usage),
+  mcps: many(mcps),
+  oauthConnections: many(oauthConnections),
+  oauthStates: many(oauthStates),
 }));
 
 // Agent relations
@@ -174,5 +260,63 @@ export const usageRelations = relations(usage, ({ one }) => ({
   organisation: one(organisations, {
     fields: [usage.organisation_id],
     references: [organisations.id],
+  }),
+}));
+
+// MCP Store relations
+export const mcpStoreRelations = relations(mcpStore, ({ many }) => ({
+  mcps: many(mcps),
+}));
+
+// MCPs relations
+export const mcpsRelations = relations(mcps, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [mcps.organisation_id],
+    references: [organisations.id],
+  }),
+  user: one(users, {
+    fields: [mcps.author_id],
+    references: [users.id],
+  }),
+  mcpStore: one(mcpStore, {
+    fields: [mcps.mcp_store_id],
+    references: [mcpStore.id],
+  }),
+  oauthConnections: many(oauthConnections),
+  oauthStates: many(oauthStates),
+}));
+
+// OAuth Connections relations
+export const oauthConnectionsRelations = relations(
+  oauthConnections,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [oauthConnections.user_id],
+      references: [users.id],
+    }),
+    organisation: one(organisations, {
+      fields: [oauthConnections.organisation_id],
+      references: [organisations.id],
+    }),
+    mcp: one(mcps, {
+      fields: [oauthConnections.mcp_id],
+      references: [mcps.id],
+    }),
+  }),
+);
+
+// OAuth States relations
+export const oauthStatesRelations = relations(oauthStates, ({ one }) => ({
+  user: one(users, {
+    fields: [oauthStates.user_id],
+    references: [users.id],
+  }),
+  organisation: one(organisations, {
+    fields: [oauthStates.organisation_id],
+    references: [organisations.id],
+  }),
+  mcp: one(mcps, {
+    fields: [oauthStates.mcp_id],
+    references: [mcps.id],
   }),
 }));

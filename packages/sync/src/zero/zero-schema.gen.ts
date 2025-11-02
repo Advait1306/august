@@ -90,6 +90,253 @@ export const schema = {
       },
       primaryKey: ["id"],
     },
+    mcpStore: {
+      name: "mcpStore",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "id"
+          >,
+        },
+        slug: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "slug"
+          >,
+        },
+        name: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "name"
+          >,
+        },
+        description: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "description"
+          >,
+        },
+        logo_url: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "logo_url"
+          >,
+        },
+        category: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "category"
+          >,
+        },
+        mcp_server_url: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "mcp_server_url"
+          >,
+        },
+        default_scopes: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "default_scopes"
+          >,
+        },
+        is_active: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "is_active"
+          >,
+        },
+        sort_order: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "sort_order"
+          >,
+        },
+        metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "metadata"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "mcp_store",
+    },
+    mcps: {
+      name: "mcps",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "id"
+          >,
+        },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "organisation_id"
+          >,
+        },
+        author_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "author_id"
+          >,
+        },
+        mcp_store_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "mcp_store_id"
+          >,
+        },
+        name: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "name"
+          >,
+        },
+        custom_mcp_url: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "custom_mcp_url"
+          >,
+        },
+        custom_description: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "custom_description"
+          >,
+        },
+        mcp_server_url: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "mcp_server_url"
+          >,
+        },
+        oauth_client_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "oauth_client_id"
+          >,
+        },
+        oauth_client_secret: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "oauth_client_secret"
+          >,
+        },
+        oauth_metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "oauth_metadata"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+    },
     messages: {
       name: "messages",
       columns: {
@@ -158,6 +405,218 @@ export const schema = {
         },
       },
       primaryKey: ["id"],
+    },
+    oauthConnections: {
+      name: "oauthConnections",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "id"
+          >,
+        },
+        user_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "user_id"
+          >,
+        },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "organisation_id"
+          >,
+        },
+        mcp_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "mcp_id"
+          >,
+        },
+        access_token: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "access_token"
+          >,
+        },
+        refresh_token: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "refresh_token"
+          >,
+        },
+        token_type: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "token_type"
+          >,
+        },
+        expires_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "expires_at"
+          >,
+        },
+        scope: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "scope"
+          >,
+        },
+        provider_user_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "provider_user_id"
+          >,
+        },
+        provider_metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "provider_metadata"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthConnections",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "oauth_connections",
+    },
+    oauthStates: {
+      name: "oauthStates",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "id"
+          >,
+        },
+        state: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "state"
+          >,
+        },
+        user_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "user_id"
+          >,
+        },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "organisation_id"
+          >,
+        },
+        mcp_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "mcp_id"
+          >,
+        },
+        redirect_uri: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "redirect_uri"
+          >,
+        },
+        code_verifier: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "code_verifier"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "created_at"
+          >,
+        },
+        expires_at: {
+          type: "number",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "expires_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "oauth_states",
     },
     organisations: {
       name: "organisations",
@@ -460,12 +919,116 @@ export const schema = {
         },
       ],
     },
+    mcpStore: {
+      mcps: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_store_id"],
+          destSchema: "mcps",
+          cardinality: "many",
+        },
+      ],
+    },
+    mcps: {
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+      user: [
+        {
+          sourceField: ["author_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+      mcpStore: [
+        {
+          sourceField: ["mcp_store_id"],
+          destField: ["id"],
+          destSchema: "mcpStore",
+          cardinality: "one",
+        },
+      ],
+      oauthConnections: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_id"],
+          destSchema: "oauthConnections",
+          cardinality: "many",
+        },
+      ],
+      oauthStates: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_id"],
+          destSchema: "oauthStates",
+          cardinality: "many",
+        },
+      ],
+    },
     messages: {
       task: [
         {
           sourceField: ["task_id"],
           destField: ["id"],
           destSchema: "tasks",
+          cardinality: "one",
+        },
+      ],
+    },
+    oauthConnections: {
+      user: [
+        {
+          sourceField: ["user_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+      mcp: [
+        {
+          sourceField: ["mcp_id"],
+          destField: ["id"],
+          destSchema: "mcps",
+          cardinality: "one",
+        },
+      ],
+    },
+    oauthStates: {
+      user: [
+        {
+          sourceField: ["user_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+      mcp: [
+        {
+          sourceField: ["mcp_id"],
+          destField: ["id"],
+          destSchema: "mcps",
           cardinality: "one",
         },
       ],
@@ -492,6 +1055,38 @@ export const schema = {
           sourceField: ["id"],
           destField: ["organisation_id"],
           destSchema: "tasks",
+          cardinality: "many",
+        },
+      ],
+      usage: [
+        {
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "usage",
+          cardinality: "many",
+        },
+      ],
+      mcps: [
+        {
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "mcps",
+          cardinality: "many",
+        },
+      ],
+      oauthConnections: [
+        {
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "oauthConnections",
+          cardinality: "many",
+        },
+      ],
+      oauthStates: [
+        {
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "oauthStates",
           cardinality: "many",
         },
       ],
@@ -564,6 +1159,16 @@ export const schema = {
         },
       ],
     },
+    usage: {
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+    },
     users: {
       tasks: [
         {
@@ -589,6 +1194,30 @@ export const schema = {
           cardinality: "many",
         },
       ],
+      mcps: [
+        {
+          sourceField: ["id"],
+          destField: ["author_id"],
+          destSchema: "mcps",
+          cardinality: "many",
+        },
+      ],
+      oauthConnections: [
+        {
+          sourceField: ["id"],
+          destField: ["user_id"],
+          destSchema: "oauthConnections",
+          cardinality: "many",
+        },
+      ],
+      oauthStates: [
+        {
+          sourceField: ["id"],
+          destField: ["user_id"],
+          destSchema: "oauthStates",
+          cardinality: "many",
+        },
+      ],
     },
   },
   enableLegacyQueries: true,
@@ -606,10 +1235,30 @@ export type Schema = typeof schema;
  */
 export type Agent = Row<Schema["tables"]["agents"]>;
 /**
+ * Represents a row from the "mcpStore" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type McpStore = Row<Schema["tables"]["mcpStore"]>;
+/**
+ * Represents a row from the "mcps" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type Mcp = Row<Schema["tables"]["mcps"]>;
+/**
  * Represents a row from the "messages" table.
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Message = Row<Schema["tables"]["messages"]>;
+/**
+ * Represents a row from the "oauthConnections" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type OauthConnection = Row<Schema["tables"]["oauthConnections"]>;
+/**
+ * Represents a row from the "oauthStates" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type OauthState = Row<Schema["tables"]["oauthStates"]>;
 /**
  * Represents a row from the "organisations" table.
  * This type is auto-generated from your Drizzle schema definition.
