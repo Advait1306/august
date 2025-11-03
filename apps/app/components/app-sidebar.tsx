@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   Wallet,
 } from "lucide-react";
+import { MCPIcon } from "@/components/icons/MCPIcon";
 
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
@@ -45,11 +46,11 @@ const data = {
       url: "/agents",
       icon: Bot,
     },
-    // {
-    //   title: "MCP",
-    //   url: "/mcp",
-    //   icon: MCPIcon,
-    // },
+    {
+      title: "MCP",
+      url: "/mcp",
+      icon: MCPIcon,
+    },
   ],
   settingsNav: [
     {

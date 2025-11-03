@@ -28,6 +28,9 @@ declare global {
       claudeCode: {
         discoverInstallations: () => Promise<ClaudeInstallation[]>;
       };
+      browser: {
+        openUrl: (url: string) => Promise<boolean>;
+      };
     };
   }
 }

@@ -19,4 +19,7 @@ export const IPC_CHANNELS = {
   CLAUDE_CODE: {
     DISCOVER_INSTALLATIONS: 'claude-code:discoverInstallations',
   },
+  BROWSER: {
+    OPEN_URL: 'browser:open-url',
+  },
 } as const;

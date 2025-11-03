@@ -200,6 +200,14 @@ export function createMutators(authData: AuthData) {
         });
       },
     },
+    mcps: {
+      delete: async (
+        tx: Transaction<Schema>,
+        { mcp_id }: { mcp_id: string }
+      ) => {
+        await tx.mutate.mcps.delete({ id: mcp_id });
+      },
+    },
   } as const;
 }
 
