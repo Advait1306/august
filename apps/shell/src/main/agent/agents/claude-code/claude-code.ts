@@ -133,7 +133,7 @@ export class ClaudeCodeAgent implements AgentInterface {
             env: mergedEnv,
             resume: sessionId,
             cwd: project.path,
-            // systemPrompt: { type: 'preset', preset: 'claude_code', append: params.systemPrompt },
+            systemPrompt: { type: 'preset', preset: 'claude_code', append: params.systemPrompt },
             canUseTool: async (toolName, input) => {
               log.debug('Permission requested for tool:', toolName)
               if (
