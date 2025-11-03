@@ -201,37 +201,6 @@ export function createMutators(authData: AuthData) {
       },
     },
     mcps: {
-      create: async (
-        tx: Transaction<Schema>,
-        {
-          id,
-          mcp_store_id,
-          name,
-          mcp_server_url,
-          custom_mcp_url,
-          custom_description,
-        }: {
-          id: string;
-          mcp_store_id?: string | null;
-          name: string;
-          mcp_server_url: string;
-          custom_mcp_url?: string | null;
-          custom_description?: string | null;
-        }
-      ) => {
-        await tx.mutate.mcps.insert({
-          id,
-          mcp_store_id: mcp_store_id ?? null,
-          name,
-          mcp_server_url,
-          custom_mcp_url: custom_mcp_url ?? null,
-          custom_description: custom_description ?? null,
-          author_id: authData.userId,
-          organisation_id: authData.orgId,
-          created_at: Date.now(),
-          updated_at: Date.now(),
-        });
-      },
       delete: async (
         tx: Transaction<Schema>,
         { mcp_id }: { mcp_id: string }

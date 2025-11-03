@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   mcps,
@@ -30,7 +30,11 @@ function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
 }
 
 export class OAuthService {
-  constructor(private db: NodePgDatabase) {}
+  private serverUrl: string;
+
+  constructor(private db: NodePgDatabase) {
+    this.serverUrl = process.env.SERVER_URL || "http://localhost:8080";
+  }
 
   /**
    * Discovers OAuth metadata from MCP server
@@ -89,9 +93,8 @@ export class OAuthService {
     customMcpName?: string;
     userId: string;
     organisationId: string;
-    redirectUri?: string;
   }): Promise<{ authorizationUrl: string }> {
-    const { mcpStoreId, customMcpUrl, customMcpName, userId, organisationId, redirectUri } = params;
+    const { mcpStoreId, customMcpUrl, customMcpName, userId, organisationId } = params;
 
     console.log("[OAuth Flow] Starting OAuth flow:", {
       hasTemplateMcp: !!mcpStoreId,
@@ -147,8 +150,8 @@ export class OAuthService {
     const state = generateState();
     const { codeVerifier, codeChallenge } = generatePKCE();
 
-    // Use callback URL from request or default to server callback endpoint
-    const callbackUri = redirectUri || "http://localhost:8080/api/oauth/callback";
+    // Generate callback URL from server URL
+    const callbackUri = `${this.serverUrl}/api/oauth/callback`;
 
     // Perform OAuth client registration to get client_id
     // We need this before generating the authorization URL
@@ -299,7 +302,7 @@ export class OAuthService {
         code,
         client_id: storedMetadata.client_id,
         code_verifier: stateRecord.code_verifier || "",
-        redirect_uri: stateRecord.redirect_uri || "http://localhost:8080/api/oauth/callback",
+        redirect_uri: stateRecord.redirect_uri,
       };
 
       // Only add client_secret if it exists (public clients don't have secrets)
@@ -428,7 +431,6 @@ export class OAuthService {
         token_type: tokenData.token_type,
         expires_at: expiresAt,
         scope: tokenData.scope || null,
-        provider_user_id: null,
         provider_metadata: tokenData,
         created_at: new Date(),
         updated_at: new Date(),
@@ -462,24 +464,17 @@ export class OAuthService {
    * Gets decrypted access token for an MCP connection
    * This is used internally by the server to make API calls on behalf of the user
    * Automatically refreshes the token if it's expired
+   * Note: Caller should verify MCP ownership before calling this method
    */
   async getAccessToken(params: {
     mcpId: string;
-    userId: string;
-    organisationId: string;
   }): Promise<string | null> {
-    const { mcpId, userId, organisationId } = params;
+    const { mcpId } = params;
 
     const [connection] = await this.db
       .select()
       .from(oauthConnections)
-      .where(
-        and(
-          eq(oauthConnections.mcp_id, mcpId),
-          eq(oauthConnections.user_id, userId),
-          eq(oauthConnections.organisation_id, organisationId)
-        )
-      )
+      .where(eq(oauthConnections.mcp_id, mcpId))
       .limit(1);
 
     if (!connection) {
@@ -491,8 +486,6 @@ export class OAuthService {
       console.log("[OAuth] Token expired, attempting refresh");
       const refreshSuccess = await this.refreshToken({
         mcpId,
-        userId,
-        organisationId,
       });
 
       if (!refreshSuccess) {
@@ -504,13 +497,7 @@ export class OAuthService {
       const [refreshedConnection] = await this.db
         .select()
         .from(oauthConnections)
-        .where(
-          and(
-            eq(oauthConnections.mcp_id, mcpId),
-            eq(oauthConnections.user_id, userId),
-            eq(oauthConnections.organisation_id, organisationId)
-          )
-        )
+        .where(eq(oauthConnections.mcp_id, mcpId))
         .limit(1);
 
       if (!refreshedConnection) {
@@ -528,21 +515,13 @@ export class OAuthService {
    */
   async refreshToken(params: {
     mcpId: string;
-    userId: string;
-    organisationId: string;
   }): Promise<boolean> {
-    const { mcpId, userId, organisationId } = params;
+    const { mcpId } = params;
 
     const [connection] = await this.db
       .select()
       .from(oauthConnections)
-      .where(
-        and(
-          eq(oauthConnections.mcp_id, mcpId),
-          eq(oauthConnections.user_id, userId),
-          eq(oauthConnections.organisation_id, organisationId)
-        )
-      )
+      .where(eq(oauthConnections.mcp_id, mcpId))
       .limit(1);
 
     if (!connection || !connection.refresh_token) {
@@ -621,148 +600,100 @@ export class OAuthService {
   }
 
   /**
-   * Performs MCP dynamic client registration
-   * This should be called when a user creates a new MCP instance
+   * Revokes OAuth tokens for an MCP connection
+   * Should be called when a user disconnects or deletes an MCP
    */
-  async registerOAuthClient(params: {
+  async revokeToken(params: {
     mcpId: string;
-    mcpServerUrl: string;
-  }): Promise<boolean> {
-    const { mcpId, mcpServerUrl } = params;
-
-    console.log("[OAuth Registration] Starting registration for MCP:", {
-      mcpId,
-      mcpServerUrl,
-    });
+  }): Promise<void> {
+    const { mcpId } = params;
 
     try {
-      // Step 1: Discover OAuth metadata from MCP server
-      const discoveryUrl = new URL(
-        "/.well-known/oauth-authorization-server",
-        mcpServerUrl
-      );
-      console.log(
-        "[OAuth Registration] Discovery URL:",
-        discoveryUrl.toString()
-      );
+      // Get the OAuth connection
+      const [connection] = await this.db
+        .select()
+        .from(oauthConnections)
+        .where(eq(oauthConnections.mcp_id, mcpId))
+        .limit(1);
 
-      const discoveryResponse = await fetch(discoveryUrl.toString());
-      console.log(
-        "[OAuth Registration] Discovery response status:",
-        discoveryResponse.status
-      );
-
-      if (!discoveryResponse.ok) {
-        const errorText = await discoveryResponse.text();
-        console.error("[OAuth Registration] OAuth discovery failed:", {
-          status: discoveryResponse.status,
-          statusText: discoveryResponse.statusText,
-          body: errorText,
-        });
-        return false;
+      if (!connection) {
+        console.log("[OAuth Revoke] No connection found for MCP:", mcpId);
+        return;
       }
 
-      const metadata = (await discoveryResponse.json()) as {
-        authorization_endpoint: string;
-        token_endpoint: string;
-        registration_endpoint?: string;
-        [key: string]: unknown;
+      // Get the MCP details for OAuth metadata
+      const [mcp] = await this.db
+        .select()
+        .from(mcps)
+        .where(eq(mcps.id, mcpId))
+        .limit(1);
+
+      if (!mcp || !mcp.oauth_metadata) {
+        console.log("[OAuth Revoke] No MCP or OAuth metadata found for:", mcpId);
+        return;
+      }
+
+      const metadata = mcp.oauth_metadata as {
+        revocation_endpoint?: string;
+        token_endpoint?: string;
       };
-      console.log("[OAuth Registration] Metadata received:", metadata);
 
-      // Step 2: Register client dynamically (if registration endpoint is available)
-      let clientId: string;
-      let clientSecret: string;
+      // Try to revoke the token with the provider if revocation endpoint exists
+      if (metadata.revocation_endpoint) {
+        console.log("[OAuth Revoke] Attempting to revoke token at provider");
 
-      if (metadata.registration_endpoint) {
-        console.log(
-          "[OAuth Registration] Registration endpoint found:",
-          metadata.registration_endpoint
-        );
+        const decryptedAccessToken = decrypt(connection.access_token);
+        const decryptedSecret = mcp.oauth_client_secret
+          ? decrypt(mcp.oauth_client_secret)
+          : null;
 
-        const registrationPayload = {
-          client_name: "August",
-          redirect_uris: ["http://localhost:8080/api/oauth/callback"],
-          grant_types: ["authorization_code", "refresh_token"],
-          response_types: ["code"],
-          token_endpoint_auth_method: "none", // Public client (no client secret)
-          application_type: "native",
+        const revokeParams: Record<string, string> = {
+          token: decryptedAccessToken,
+          token_type_hint: "access_token",
         };
-        console.log(
-          "[OAuth Registration] Registration payload:",
-          registrationPayload
-        );
 
-        const registrationResponse = await fetch(
-          metadata.registration_endpoint,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(registrationPayload),
-          }
-        );
-
-        console.log(
-          "[OAuth Registration] Registration response status:",
-          registrationResponse.status
-        );
-
-        if (!registrationResponse.ok) {
-          const errorText = await registrationResponse.text();
-          console.error("[OAuth Registration] Client registration failed:", {
-            status: registrationResponse.status,
-            statusText: registrationResponse.statusText,
-            body: errorText,
-          });
-          return false;
+        if (mcp.oauth_client_id) {
+          revokeParams.client_id = mcp.oauth_client_id;
         }
 
-        const registrationData = (await registrationResponse.json()) as {
-          client_id: string;
-          client_secret?: string;
-        };
-        console.log("[OAuth Registration] Registration successful:", {
-          client_id: registrationData.client_id,
-          has_client_secret: !!registrationData.client_secret,
+        if (decryptedSecret) {
+          revokeParams.client_secret = decryptedSecret;
+        }
+
+        const revokeResponse = await fetch(metadata.revocation_endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams(revokeParams),
         });
 
-        clientId = registrationData.client_id;
-        clientSecret = registrationData.client_secret || ""; // May not have a secret for public clients
+        if (!revokeResponse.ok) {
+          console.warn("[OAuth Revoke] Token revocation failed at provider:", {
+            status: revokeResponse.status,
+            statusText: revokeResponse.statusText,
+          });
+          // Continue to delete the connection even if revocation fails
+        } else {
+          console.log("[OAuth Revoke] Token revoked successfully at provider");
+        }
       } else {
-        // If no registration endpoint, the MCP provider should have given us credentials
-        console.error(
-          "[OAuth Registration] No registration endpoint available in metadata"
-        );
-        return false;
+        console.log("[OAuth Revoke] No revocation endpoint available, skipping provider revocation");
       }
 
-      // Step 3: Update MCP record with OAuth credentials
-      console.log(
-        "[OAuth Registration] Updating MCP record with OAuth credentials"
-      );
+      // Delete the OAuth connection from our database
       await this.db
-        .update(mcps)
-        .set({
-          oauth_client_id: clientId,
-          oauth_client_secret: clientSecret ? encrypt(clientSecret) : null,
-          oauth_metadata: metadata,
-          updated_at: new Date(),
-        })
-        .where(eq(mcps.id, mcpId));
+        .delete(oauthConnections)
+        .where(eq(oauthConnections.mcp_id, mcpId));
 
-      console.log("[OAuth Registration] Registration completed successfully");
-      return true;
+      console.log("[OAuth Revoke] OAuth connection deleted for MCP:", mcpId);
     } catch (error) {
-      console.error(
-        "[OAuth Registration] Error during OAuth client registration:",
-        {
-          error: error instanceof Error ? error.message : error,
-          stack: error instanceof Error ? error.stack : undefined,
-        }
-      );
-      return false;
+      console.error("[OAuth Revoke] Error revoking token:", {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      // Don't throw - we want to continue with deletion even if revocation fails
     }
   }
+
 }

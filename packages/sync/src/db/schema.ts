@@ -109,7 +109,7 @@ export const oauthStates = pgTable("oauth_states", {
   custom_mcp_url: varchar(), // For custom MCP server URL
   custom_mcp_name: varchar(), // For custom MCP name
   oauth_metadata: jsonb(), // Store discovered OAuth metadata
-  redirect_uri: varchar(),
+  redirect_uri: varchar().notNull(),
   code_verifier: varchar(), // For PKCE
   created_at: timestamp().notNull().defaultNow(),
   expires_at: timestamp().notNull(),

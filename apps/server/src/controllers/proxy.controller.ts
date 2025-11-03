@@ -107,8 +107,6 @@ export function createProxyController(
         // Get the OAuth access token (will auto-refresh if expired)
         const accessToken = await oauthService.getAccessToken({
           mcpId,
-          userId,
-          organisationId,
         });
 
         if (!accessToken) {

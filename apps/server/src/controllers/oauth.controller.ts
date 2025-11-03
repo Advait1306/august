@@ -21,11 +21,10 @@ export function createOAuthController(db: NodePgDatabase): Router {
         return;
       }
 
-      const { mcp_store_id, custom_mcp_url, custom_mcp_name, redirect_uri } = req.body as {
+      const { mcp_store_id, custom_mcp_url, custom_mcp_name } = req.body as {
         mcp_store_id?: string;
         custom_mcp_url?: string;
         custom_mcp_name?: string;
-        redirect_uri?: string;
       };
 
       // Validate: must provide either template or custom MCP
@@ -52,7 +51,6 @@ export function createOAuthController(db: NodePgDatabase): Router {
         customMcpName: custom_mcp_name,
         userId: userId,
         organisationId: orgId ?? userId,
-        redirectUri: redirect_uri,
       });
 
       res.json(result);

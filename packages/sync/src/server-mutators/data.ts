@@ -11,11 +11,16 @@ type AuthData = {
 
 type AsyncTask = Array<() => Promise<void>>;
 
+type OAuthService = {
+  revokeToken: (params: { mcpId: string }) => Promise<void>;
+};
+
 export function createServerMutators(
   clientMutators: CustomMutatorDefs,
   authData: AuthData,
   asyncTasks: AsyncTask,
-  mixpanel: mixpanel.Mixpanel
+  mixpanel: mixpanel.Mixpanel,
+  oauthService?: OAuthService
 ) {
   // Analytics configuration
   const analyticsConfig = {
@@ -103,6 +108,36 @@ export function createServerMutators(
   // Override specific mutators that need custom server-side logic
   return {
     ...wrappedMutators,
+    mcps: {
+      delete: async (
+        tx: Transaction<Schema>,
+        { mcp_id }: { mcp_id: string }
+      ) => {
+        // Check if MCP belongs to user
+        const mcp = tx.query.mcps
+          .where("id", mcp_id)
+          .where("author_id", authData.userId)
+          .one();
+
+        if (!mcp) {
+          throw new Error("MCP not found or access denied");
+        }
+
+        // Revoke OAuth tokens with the provider (async)
+        if (oauthService) {
+          asyncTasks.push(async () => {
+            try {
+              await oauthService.revokeToken({ mcpId: mcp_id });
+            } catch (error) {
+              console.error("[Server Mutator] Error revoking OAuth token:", error);
+            }
+          });
+        }
+
+        // Delete the MCP from the database
+        await tx.mutate.mcps.delete({ id: mcp_id });
+      },
+    },
     message: {
       create: async (
         tx: Transaction<Schema>,
