@@ -19,14 +19,13 @@ export const useApi = (): AxiosInstance => {
     });
 
     // Request interceptor to add auth token
-    const interceptorId = instance.interceptors.request.use(
+    instance.interceptors.request.use(
       async (config) => {
         try {
           const token = await getToken();
-          console.log("Token retrieved:", token ? "✓" : "✗");
+
           if (token) {
             config.headers.Authorization = `Bearer ${token}`;
-            console.log("Authorization header set");
           } else {
             console.warn("No token available");
           }

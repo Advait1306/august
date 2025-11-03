@@ -74,9 +74,7 @@ export const getMCPStore = syncedQueryWithContext(
   "getMCPStore",
   z.tuple([]),
   () => {
-    return builder.mcpStore
-      .where("is_active", 1)
-      .orderBy("sort_order", "asc");
+    return builder.mcpStore.where("is_active", 1).orderBy("sort_order", "asc");
   }
 );
 

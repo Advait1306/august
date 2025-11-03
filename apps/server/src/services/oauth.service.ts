@@ -33,149 +33,207 @@ export class OAuthService {
   constructor(private db: NodePgDatabase) {}
 
   /**
+   * Discovers OAuth metadata from MCP server
+   * @private
+   */
+  private async discoverOAuthMetadata(mcpServerUrl: string): Promise<{
+    authorization_endpoint: string;
+    token_endpoint: string;
+    registration_endpoint?: string;
+    [key: string]: unknown;
+  }> {
+    const discoveryUrl = new URL(
+      "/.well-known/oauth-authorization-server",
+      mcpServerUrl
+    );
+
+    console.log("[OAuth Discovery] Discovery URL:", discoveryUrl.toString());
+
+    const discoveryResponse = await fetch(discoveryUrl.toString());
+
+    console.log(
+      "[OAuth Discovery] Response status:",
+      discoveryResponse.status
+    );
+
+    if (!discoveryResponse.ok) {
+      const errorText = await discoveryResponse.text();
+      console.error("[OAuth Discovery] Failed:", {
+        status: discoveryResponse.status,
+        statusText: discoveryResponse.statusText,
+        body: errorText,
+      });
+      throw new Error(`OAuth discovery failed: ${discoveryResponse.statusText}`);
+    }
+
+    const metadata = (await discoveryResponse.json()) as {
+      authorization_endpoint: string;
+      token_endpoint: string;
+      registration_endpoint?: string;
+      [key: string]: unknown;
+    };
+
+    console.log("[OAuth Discovery] Metadata received:", metadata);
+
+    return metadata;
+  }
+
+  /**
    * Initiates OAuth flow by creating state and generating authorization URL
-   * Handles registration automatically if needed
+   * Accepts either a template MCP or custom MCP details
+   * MCP will be created later during the callback
    */
   async initiateOAuthFlow(params: {
-    mcpId: string;
-    mcpServerUrl: string;
+    mcpStoreId?: string;
+    customMcpUrl?: string;
+    customMcpName?: string;
     userId: string;
     organisationId: string;
     redirectUri?: string;
   }): Promise<{ authorizationUrl: string }> {
-    const { mcpId, mcpServerUrl, userId, organisationId, redirectUri } = params;
+    const { mcpStoreId, customMcpUrl, customMcpName, userId, organisationId, redirectUri } = params;
 
-    // Fetch the MCP configuration with store info
-    const [mcp] = await this.db
-      .select({
-        mcp: mcps,
-        store: mcpStore,
-      })
-      .from(mcps)
-      .leftJoin(mcpStore, eq(mcps.mcp_store_id, mcpStore.id))
-      .where(
-        and(
-          eq(mcps.id, mcpId),
-          eq(mcps.author_id, userId),
-          eq(mcps.organisation_id, organisationId)
-        )
-      )
-      .limit(1);
+    console.log("[OAuth Flow] Starting OAuth flow:", {
+      hasTemplateMcp: !!mcpStoreId,
+      hasCustomMcp: !!(customMcpUrl && customMcpName),
+      userId,
+      organisationId,
+    });
 
-    if (!mcp || !mcp.mcp) {
-      throw new Error("MCP not found or access denied");
-    }
+    // Determine MCP server URL and name
+    let mcpServerUrl: string;
+    let mcpName: string;
+    let defaultScopes: string | null = null;
 
-    const mcpData = mcp.mcp;
-
-    // If OAuth client is not registered, register it first
-    if (!mcpData.oauth_client_id || !mcpData.oauth_metadata) {
-      console.log("[OAuth Flow] MCP not registered, starting registration:", {
-        mcpId,
-        mcpServerUrl,
-      });
-
-      const registrationSuccess = await this.registerOAuthClient({
-        mcpId,
-        mcpServerUrl,
-      });
-
-      if (!registrationSuccess) {
-        console.error("[OAuth Flow] Registration failed");
-        throw new Error("Failed to register OAuth client with MCP server");
-      }
-
-      console.log(
-        "[OAuth Flow] Registration successful, fetching updated MCP data"
-      );
-
-      // Fetch the MCP again to get updated OAuth credentials
-      const [updatedMcp] = await this.db
-        .select({
-          mcp: mcps,
-          store: mcpStore,
-        })
-        .from(mcps)
-        .leftJoin(mcpStore, eq(mcps.mcp_store_id, mcpStore.id))
-        .where(eq(mcps.id, mcpId))
+    if (mcpStoreId) {
+      // Template MCP - fetch from store
+      console.log("[OAuth Flow] Fetching template MCP from store:", mcpStoreId);
+      const [store] = await this.db
+        .select()
+        .from(mcpStore)
+        .where(eq(mcpStore.id, mcpStoreId))
         .limit(1);
 
-      if (
-        !updatedMcp ||
-        !updatedMcp.mcp ||
-        !updatedMcp.mcp.oauth_client_id ||
-        !updatedMcp.mcp.oauth_metadata
-      ) {
-        console.error("[OAuth Flow] Failed to retrieve updated MCP data:", {
-          hasUpdatedMcp: !!updatedMcp,
-          hasMcp: !!updatedMcp?.mcp,
-          hasClientId: !!updatedMcp?.mcp?.oauth_client_id,
-          hasMetadata: !!updatedMcp?.mcp?.oauth_metadata,
-        });
-        throw new Error(
-          "Failed to retrieve OAuth credentials after registration"
-        );
+      if (!store) {
+        throw new Error("Template MCP not found in store");
       }
 
-      console.log("[OAuth Flow] Updated MCP data retrieved successfully");
+      mcpServerUrl = store.mcp_server_url;
+      mcpName = store.name;
+      defaultScopes = store.default_scopes;
 
-      // Update local references
-      mcp.mcp = updatedMcp.mcp;
-      mcp.store = updatedMcp.store;
+      console.log("[OAuth Flow] Template MCP found:", {
+        name: mcpName,
+        url: mcpServerUrl,
+      });
+    } else if (customMcpUrl && customMcpName) {
+      // Custom MCP
+      mcpServerUrl = customMcpUrl;
+      mcpName = customMcpName;
+
+      console.log("[OAuth Flow] Using custom MCP:", {
+        name: mcpName,
+        url: mcpServerUrl,
+      });
     } else {
-      console.log(
-        "[OAuth Flow] MCP already registered, proceeding with authorization"
-      );
+      throw new Error("Must provide either mcpStoreId or custom MCP details");
     }
 
-    // At this point, OAuth credentials are guaranteed to exist
-    const finalMcpData = mcp.mcp;
-    if (!finalMcpData.oauth_client_id || !finalMcpData.oauth_metadata) {
-      throw new Error("OAuth credentials are missing after registration");
-    }
+    // Discover OAuth metadata from MCP server
+    console.log("[OAuth Flow] Discovering OAuth metadata");
+    const metadata = await this.discoverOAuthMetadata(mcpServerUrl);
 
     // Generate state and PKCE
     const state = generateState();
     const { codeVerifier, codeChallenge } = generatePKCE();
 
-    // Build authorization URL
-    const metadata = finalMcpData.oauth_metadata as {
-      authorization_endpoint: string;
-      scope?: string;
+    // Use callback URL from request or default to server callback endpoint
+    const callbackUri = redirectUri || "http://localhost:8080/api/oauth/callback";
+
+    // Perform OAuth client registration to get client_id
+    // We need this before generating the authorization URL
+    console.log("[OAuth Flow] Registering OAuth client");
+
+    if (!metadata.registration_endpoint) {
+      throw new Error("OAuth provider does not support dynamic client registration");
+    }
+
+    const registrationPayload = {
+      client_name: "August",
+      redirect_uris: [callbackUri],
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
+      token_endpoint_auth_method: "none",
+      application_type: "native",
     };
 
-    // Use callback URL from request or default to server callback endpoint
-    const callbackUri =
-      redirectUri || `http://localhost:8080/api/oauth/callback/${mcpId}`;
+    const registrationResponse = await fetch(metadata.registration_endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(registrationPayload),
+    });
+
+    if (!registrationResponse.ok) {
+      const errorText = await registrationResponse.text();
+      console.error("[OAuth Flow] Client registration failed:", {
+        status: registrationResponse.status,
+        body: errorText,
+      });
+      throw new Error(`OAuth client registration failed: ${registrationResponse.statusText}`);
+    }
+
+    const registrationData = (await registrationResponse.json()) as {
+      client_id: string;
+      client_secret?: string;
+      [key: string]: unknown;
+    };
+
+    console.log("[OAuth Flow] OAuth client registered successfully:", {
+      client_id: registrationData.client_id,
+      has_secret: !!registrationData.client_secret,
+    });
 
     // Store state in database (expires in 10 minutes)
+    // Include registration data so we can create the MCP later
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
+    const stateData = {
+      ...metadata,
+      client_id: registrationData.client_id,
+      client_secret: registrationData.client_secret,
+      registration_data: registrationData,
+    };
+
+    console.log("[OAuth Flow] Storing OAuth state");
     await this.db.insert(oauthStates).values({
       id: crypto.randomUUID(),
       state,
       user_id: userId,
       organisation_id: organisationId,
-      mcp_id: mcpId,
+      mcp_store_id: mcpStoreId || null,
+      custom_mcp_url: customMcpUrl || null,
+      custom_mcp_name: customMcpName || null,
+      oauth_metadata: stateData,
       redirect_uri: callbackUri,
       code_verifier: codeVerifier,
       created_at: new Date(),
       expires_at: expiresAt,
     });
 
-    // Build authorization URL with all required OAuth parameters
+    // Build authorization URL with client_id
     const authUrl = new URL(metadata.authorization_endpoint);
-    authUrl.searchParams.set("client_id", finalMcpData.oauth_client_id);
+    authUrl.searchParams.set("client_id", registrationData.client_id);
     authUrl.searchParams.set("redirect_uri", callbackUri);
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("state", state);
     authUrl.searchParams.set("code_challenge", codeChallenge);
     authUrl.searchParams.set("code_challenge_method", "S256");
 
-    // Add scopes - use from metadata, or default scopes from MCP store
-    const scopes = metadata.scope || mcp.store?.default_scopes;
-    if (scopes) {
-      authUrl.searchParams.set("scope", scopes);
+    // Add scopes if available
+    if (defaultScopes) {
+      authUrl.searchParams.set("scope", defaultScopes);
     }
 
     const finalAuthUrl = authUrl.toString();
@@ -188,25 +246,24 @@ export class OAuthService {
 
   /**
    * Handles OAuth callback by exchanging code for tokens
+   * Creates the MCP and OAuth connection
    */
   async handleOAuthCallback(params: {
-    mcpId: string;
     code: string;
     state: string;
   }): Promise<{ success: boolean; redirectUri?: string; error?: string }> {
-    const { mcpId, code, state } = params;
+    const { code, state } = params;
 
     console.log("[OAuth Callback] Received callback:", {
-      mcpId,
       code: code.substring(0, 10) + "...",
       state: state.substring(0, 10) + "...",
     });
 
-    // Validate state
+    // Validate state (no mcpId needed!)
     const [stateRecord] = await this.db
       .select()
       .from(oauthStates)
-      .where(and(eq(oauthStates.mcp_id, mcpId), eq(oauthStates.state, state)))
+      .where(eq(oauthStates.state, state))
       .limit(1);
 
     if (!stateRecord) {
@@ -225,56 +282,39 @@ export class OAuthService {
       return { success: false, error: "State expired" };
     }
 
-    // Fetch MCP configuration
-    const [mcp] = await this.db
-      .select()
-      .from(mcps)
-      .where(eq(mcps.id, mcpId))
-      .limit(1);
-
-    if (!mcp) {
-      console.error("[OAuth Callback] MCP not found");
-      return { success: false, error: "MCP not found" };
-    }
-
-    if (!mcp.oauth_client_id || !mcp.oauth_metadata) {
-      console.error("[OAuth Callback] OAuth not configured for this MCP");
-      return { success: false, error: "OAuth not configured for this MCP" };
-    }
-
-    console.log("[OAuth Callback] MCP found, starting token exchange");
-
     try {
-      // Exchange authorization code for access token
-      const metadata = mcp.oauth_metadata as { token_endpoint: string };
-      const decryptedSecret = mcp.oauth_client_secret
-        ? decrypt(mcp.oauth_client_secret)
-        : null;
+      // Extract stored OAuth metadata (includes client_id and client_secret from registration)
+      const storedMetadata = stateRecord.oauth_metadata as {
+        authorization_endpoint: string;
+        token_endpoint: string;
+        client_id: string;
+        client_secret?: string;
+        [key: string]: unknown;
+      };
 
+      // STEP 1: Exchange authorization code for access token FIRST
+      console.log("[OAuth Callback] Starting token exchange");
       const tokenParams: Record<string, string> = {
         grant_type: "authorization_code",
         code,
-        client_id: mcp.oauth_client_id,
+        client_id: storedMetadata.client_id,
         code_verifier: stateRecord.code_verifier || "",
-        redirect_uri:
-          stateRecord.redirect_uri ||
-          `http://localhost:8080/api/oauth/callback/${mcpId}`,
+        redirect_uri: stateRecord.redirect_uri || "http://localhost:8080/api/oauth/callback",
       };
 
       // Only add client_secret if it exists (public clients don't have secrets)
-      if (decryptedSecret) {
-        tokenParams.client_secret = decryptedSecret;
+      if (storedMetadata.client_secret) {
+        tokenParams.client_secret = storedMetadata.client_secret;
       }
 
       console.log("[OAuth Callback] Token exchange request:", {
-        endpoint: metadata.token_endpoint,
-        client_id: mcp.oauth_client_id,
-        grant_type: "authorization_code",
+        endpoint: storedMetadata.token_endpoint,
+        client_id: storedMetadata.client_id,
         has_code_verifier: !!stateRecord.code_verifier,
         redirect_uri: tokenParams.redirect_uri,
       });
 
-      const tokenResponse = await fetch(metadata.token_endpoint, {
+      const tokenResponse = await fetch(storedMetadata.token_endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
@@ -294,6 +334,7 @@ export class OAuthService {
           statusText: tokenResponse.statusText,
           body: errorText,
         });
+
         return {
           success: false,
           error: `Token exchange failed: ${tokenResponse.statusText}`,
@@ -321,64 +362,84 @@ export class OAuthService {
         ? new Date(Date.now() + tokenData.expires_in * 1000)
         : null;
 
-      // Check if connection already exists
-      const [existingConnection] = await this.db
-        .select()
-        .from(oauthConnections)
-        .where(
-          and(
-            eq(oauthConnections.mcp_id, mcpId),
-            eq(oauthConnections.user_id, stateRecord.user_id),
-            eq(oauthConnections.organisation_id, stateRecord.organisation_id)
-          )
-        )
-        .limit(1);
+      // STEP 2: Token exchange successful! Now determine MCP details and create it
+      let mcpServerUrl: string;
+      let mcpName: string;
 
-      if (existingConnection) {
-        console.log("[OAuth Callback] Updating existing connection");
-        // Update existing connection
-        await this.db
-          .update(oauthConnections)
-          .set({
-            access_token: encrypt(tokenData.access_token),
-            refresh_token: tokenData.refresh_token
-              ? encrypt(tokenData.refresh_token)
-              : null,
-            token_type: tokenData.token_type,
-            expires_at: expiresAt,
-            scope: tokenData.scope || null,
-            provider_metadata: tokenData,
-            updated_at: new Date(),
-          })
-          .where(eq(oauthConnections.id, existingConnection.id));
+      if (stateRecord.mcp_store_id) {
+        // Template MCP - fetch from store
+        console.log("[OAuth Callback] Fetching template MCP details from store");
+        const [store] = await this.db
+          .select()
+          .from(mcpStore)
+          .where(eq(mcpStore.id, stateRecord.mcp_store_id))
+          .limit(1);
+
+        if (!store) {
+          throw new Error("Template MCP not found in store");
+        }
+
+        mcpServerUrl = store.mcp_server_url;
+        mcpName = store.name;
+      } else if (stateRecord.custom_mcp_url && stateRecord.custom_mcp_name) {
+        // Custom MCP
+        mcpServerUrl = stateRecord.custom_mcp_url;
+        mcpName = stateRecord.custom_mcp_name;
       } else {
-        console.log("[OAuth Callback] Creating new connection");
-        // Create new connection
-        await this.db.insert(oauthConnections).values({
-          id: crypto.randomUUID(),
-          user_id: stateRecord.user_id,
-          organisation_id: stateRecord.organisation_id,
-          mcp_id: mcpId,
-          access_token: encrypt(tokenData.access_token),
-          refresh_token: tokenData.refresh_token
-            ? encrypt(tokenData.refresh_token)
-            : null,
-          token_type: tokenData.token_type,
-          expires_at: expiresAt,
-          scope: tokenData.scope || null,
-          provider_user_id: null,
-          provider_metadata: tokenData,
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
+        throw new Error("Invalid state: missing MCP information");
       }
+
+      console.log("[OAuth Callback] Creating MCP:", {
+        name: mcpName,
+        url: mcpServerUrl,
+      });
+
+      // Create the MCP record
+      const newMcpId = crypto.randomUUID();
+      await this.db.insert(mcps).values({
+        id: newMcpId,
+        organisation_id: stateRecord.organisation_id,
+        author_id: stateRecord.user_id,
+        mcp_store_id: stateRecord.mcp_store_id || null,
+        name: mcpName,
+        custom_mcp_url: stateRecord.mcp_store_id ? null : mcpServerUrl,
+        custom_description: null,
+        mcp_server_url: mcpServerUrl,
+        oauth_client_id: storedMetadata.client_id,
+        oauth_client_secret: storedMetadata.client_secret ? encrypt(storedMetadata.client_secret) : null,
+        oauth_metadata: storedMetadata,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      console.log("[OAuth Callback] MCP created successfully:", newMcpId);
+
+      // STEP 3: Create OAuth connection
+      console.log("[OAuth Callback] Creating OAuth connection");
+      await this.db.insert(oauthConnections).values({
+        id: crypto.randomUUID(),
+        user_id: stateRecord.user_id,
+        organisation_id: stateRecord.organisation_id,
+        mcp_id: newMcpId,
+        access_token: encrypt(tokenData.access_token),
+        refresh_token: tokenData.refresh_token
+          ? encrypt(tokenData.refresh_token)
+          : null,
+        token_type: tokenData.token_type,
+        expires_at: expiresAt,
+        scope: tokenData.scope || null,
+        provider_user_id: null,
+        provider_metadata: tokenData,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
 
       // Delete used state
       await this.db
         .delete(oauthStates)
         .where(eq(oauthStates.id, stateRecord.id));
 
-      console.log("[OAuth Callback] OAuth connection saved successfully");
+      console.log("[OAuth Callback] OAuth flow completed successfully");
 
       return {
         success: true,
@@ -621,7 +682,7 @@ export class OAuthService {
 
         const registrationPayload = {
           client_name: "August",
-          redirect_uris: [`http://localhost:8080/api/oauth/callback/${mcpId}`],
+          redirect_uris: ["http://localhost:8080/api/oauth/callback"],
           grant_types: ["authorization_code", "refresh_token"],
           response_types: ["code"],
           token_endpoint_auth_method: "none", // Public client (no client secret)

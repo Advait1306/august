@@ -105,9 +105,10 @@ export const oauthStates = pgTable("oauth_states", {
   organisation_id: varchar()
     .notNull()
     .references(() => organisations.id),
-  mcp_id: varchar()
-    .notNull()
-    .references(() => mcps.id),
+  mcp_store_id: varchar().references(() => mcpStore.id), // For template MCPs
+  custom_mcp_url: varchar(), // For custom MCP server URL
+  custom_mcp_name: varchar(), // For custom MCP name
+  oauth_metadata: jsonb(), // Store discovered OAuth metadata
   redirect_uri: varchar(),
   code_verifier: varchar(), // For PKCE
   created_at: timestamp().notNull().defaultNow(),
@@ -266,6 +267,7 @@ export const usageRelations = relations(usage, ({ one }) => ({
 // MCP Store relations
 export const mcpStoreRelations = relations(mcpStore, ({ many }) => ({
   mcps: many(mcps),
+  oauthStates: many(oauthStates),
 }));
 
 // MCPs relations
@@ -283,7 +285,6 @@ export const mcpsRelations = relations(mcps, ({ one, many }) => ({
     references: [mcpStore.id],
   }),
   oauthConnections: many(oauthConnections),
-  oauthStates: many(oauthStates),
 }));
 
 // OAuth Connections relations
@@ -315,8 +316,8 @@ export const oauthStatesRelations = relations(oauthStates, ({ one }) => ({
     fields: [oauthStates.organisation_id],
     references: [organisations.id],
   }),
-  mcp: one(mcps, {
-    fields: [oauthStates.mcp_id],
-    references: [mcps.id],
+  mcpStore: one(mcpStore, {
+    fields: [oauthStates.mcp_store_id],
+    references: [mcpStore.id],
   }),
 }));

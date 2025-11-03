@@ -569,13 +569,40 @@ export const schema = {
             "organisation_id"
           >,
         },
-        mcp_id: {
+        mcp_store_id: {
           type: "string",
-          optional: false,
+          optional: true,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "oauthStates",
-            "mcp_id"
+            "mcp_store_id"
+          >,
+        },
+        custom_mcp_url: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "custom_mcp_url"
+          >,
+        },
+        custom_mcp_name: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "custom_mcp_name"
+          >,
+        },
+        oauth_metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "oauth_metadata"
           >,
         },
         redirect_uri: {
@@ -928,6 +955,14 @@ export const schema = {
           cardinality: "many",
         },
       ],
+      oauthStates: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_store_id"],
+          destSchema: "oauthStates",
+          cardinality: "many",
+        },
+      ],
     },
     mcps: {
       organisation: [
@@ -959,14 +994,6 @@ export const schema = {
           sourceField: ["id"],
           destField: ["mcp_id"],
           destSchema: "oauthConnections",
-          cardinality: "many",
-        },
-      ],
-      oauthStates: [
-        {
-          sourceField: ["id"],
-          destField: ["mcp_id"],
-          destSchema: "oauthStates",
           cardinality: "many",
         },
       ],
@@ -1024,11 +1051,11 @@ export const schema = {
           cardinality: "one",
         },
       ],
-      mcp: [
+      mcpStore: [
         {
-          sourceField: ["mcp_id"],
+          sourceField: ["mcp_store_id"],
           destField: ["id"],
-          destSchema: "mcps",
+          destSchema: "mcpStore",
           cardinality: "one",
         },
       ],

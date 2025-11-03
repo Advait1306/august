@@ -1,4 +1,4 @@
-import { Permission } from "@jupiter/shared/types";
+import { IPC, Permission } from "@jupiter/shared/types";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   getAgents,
@@ -358,8 +358,6 @@ export const TaskRuntimeProvider = ({
       throw new Error("Failed to get token");
     }
 
-    // TODO: Message receiving can happen in an async manner,
-    // which would allow the listener to survive a reload.
     for await (const reply of window.api.agent.run({
       options: {
         messages: chatMessages,
@@ -381,10 +379,7 @@ export const TaskRuntimeProvider = ({
           };
           return acc;
         },
-        {} as Record<
-          string,
-          { type: "http"; url: string; headers: Record<string, string> }
-        >
+        {} as NonNullable<IPC.Agent.RunRequest["mcpServers"]>
       ),
       env:
         claudeCode.selectedInstallation?.source === "bundled"

@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink, Check, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useApi } from "@/src/lib/api";
-import { useZero } from "@/src/hooks/useZero";
-import { nanoid } from "nanoid";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -21,7 +19,6 @@ function MCP() {
   const mcpStore = useQuery(getMCPStore(syncContext.authData))[0];
   const userMcps = useQuery(getMCPs(syncContext.authData))[0];
   const api = useApi();
-  const z = useZero();
   const [connectingId, setConnectingId] = useState<string | null>(null);
 
   // Create a map of connected MCP store IDs for quick lookup
@@ -33,37 +30,17 @@ function MCP() {
     try {
       setConnectingId(mcpStoreId);
 
-      // Find the MCP store item
-      const mcpStoreItem = mcpStore.find((item) => item.id === mcpStoreId);
-      if (!mcpStoreItem) {
-        toast.error("Integration not found");
-        return;
-      }
-
-      // Create MCP instance in database via Zero
-      const mcpId = nanoid();
-      const createResult = z.mutate.mcps.create({
-        id: mcpId,
-        mcp_store_id: mcpStoreId,
-        name: mcpStoreItem.name,
-        mcp_server_url: mcpStoreItem.mcp_server_url,
-      });
-
-      // Wait for the mutation to sync to server
-      await createResult.server;
-
-      // Initiate OAuth flow (registration happens automatically)
+      // Initiate OAuth flow (MCP will be created after successful OAuth callback)
       const authorizeResponse = await api.post("/api/oauth/authorize", {
-        mcp_id: mcpId,
-        mcp_server_url: mcpStoreItem.mcp_server_url,
+        mcp_store_id: mcpStoreId,
       });
-
-      console.log("Authorize response:", authorizeResponse.data);
 
       const { authorizationUrl } = authorizeResponse.data;
 
       // Open OAuth URL in user's default browser
       window.api.browser.openUrl(authorizationUrl);
+
+      toast.success("Opening authorization page...");
     } catch (error) {
       console.error("Error connecting to MCP:", error);
       if (error instanceof Error) {

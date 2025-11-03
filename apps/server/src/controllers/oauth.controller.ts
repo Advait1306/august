@@ -10,7 +10,7 @@ export function createOAuthController(db: NodePgDatabase): Router {
   /**
    * POST /api/oauth/authorize
    * Initiates OAuth flow for an MCP integration
-   * Handles registration automatically if needed
+   * Accepts either a template MCP (mcp_store_id) or custom MCP (custom_mcp_url + custom_mcp_name)
    */
   router.post("/api/oauth/authorize", async (req: Request, res: Response) => {
     try {
@@ -21,20 +21,35 @@ export function createOAuthController(db: NodePgDatabase): Router {
         return;
       }
 
-      const { mcp_id, mcp_server_url, redirect_uri } = req.body as {
-        mcp_id?: string;
-        mcp_server_url?: string;
+      const { mcp_store_id, custom_mcp_url, custom_mcp_name, redirect_uri } = req.body as {
+        mcp_store_id?: string;
+        custom_mcp_url?: string;
+        custom_mcp_name?: string;
         redirect_uri?: string;
       };
 
-      if (!mcp_id || !mcp_server_url) {
-        res.status(400).json({ error: "mcp_id and mcp_server_url are required" });
+      // Validate: must provide either template or custom MCP
+      const hasTemplateMcp = !!mcp_store_id;
+      const hasCustomMcp = !!custom_mcp_url && !!custom_mcp_name;
+
+      if (!hasTemplateMcp && !hasCustomMcp) {
+        res.status(400).json({
+          error: "Must provide either mcp_store_id OR both custom_mcp_url and custom_mcp_name"
+        });
+        return;
+      }
+
+      if (hasTemplateMcp && hasCustomMcp) {
+        res.status(400).json({
+          error: "Cannot provide both mcp_store_id and custom MCP details"
+        });
         return;
       }
 
       const result = await oauthService.initiateOAuthFlow({
-        mcpId: mcp_id,
-        mcpServerUrl: mcp_server_url,
+        mcpStoreId: mcp_store_id,
+        customMcpUrl: custom_mcp_url,
+        customMcpName: custom_mcp_name,
         userId: userId,
         organisationId: orgId ?? userId,
         redirectUri: redirect_uri,
@@ -50,14 +65,14 @@ export function createOAuthController(db: NodePgDatabase): Router {
   });
 
   /**
-   * GET /api/oauth/callback/:mcp_id
+   * GET /api/oauth/callback
    * Handles OAuth callback from the provider
+   * Creates the MCP and OAuth connection after successful authorization
    */
   router.get(
-    "/api/oauth/callback/:mcp_id",
+    "/api/oauth/callback",
     async (req: Request, res: Response) => {
       try {
-        const { mcp_id } = req.params;
         const { code, state } = req.query as { code?: string; state?: string };
 
         if (!code || !state) {
@@ -66,7 +81,6 @@ export function createOAuthController(db: NodePgDatabase): Router {
         }
 
         const result = await oauthService.handleOAuthCallback({
-          mcpId: mcp_id,
           code,
           state,
         });
