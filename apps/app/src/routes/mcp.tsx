@@ -4,11 +4,22 @@ import { useSyncContext } from "../components/sync_engine";
 import { useQuery } from "@rocicorp/zero/react";
 import { getMCPStore, getMCPs } from "@jupiter/sync/queries/data";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Check, Loader2 } from "lucide-react";
+import { ExternalLink, Check, Loader2, Plus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useApi } from "@/src/lib/api";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/mcp")({
   component: MCP,
@@ -20,6 +31,10 @@ function MCP() {
   const userMcps = useQuery(getMCPs(syncContext.authData))[0];
   const api = useApi();
   const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [customMcpName, setCustomMcpName] = useState("");
+  const [customMcpUrl, setCustomMcpUrl] = useState("");
+  const [isConnectingCustom, setIsConnectingCustom] = useState(false);
 
   // Create a map of connected MCP store IDs for quick lookup
   const connectedMcpStoreIds = new Set(
@@ -53,6 +68,53 @@ function MCP() {
     }
   };
 
+  const handleConnectCustom = async () => {
+    // Validate inputs
+    if (!customMcpName.trim() || !customMcpUrl.trim()) {
+      toast.error("Please provide both name and URL");
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(customMcpUrl);
+    } catch {
+      toast.error("Please provide a valid URL");
+      return;
+    }
+
+    try {
+      setIsConnectingCustom(true);
+
+      // Initiate OAuth flow with custom MCP (MCP will be created after successful OAuth callback)
+      const authorizeResponse = await api.post("/api/oauth/authorize", {
+        custom_mcp_name: customMcpName.trim(),
+        custom_mcp_url: customMcpUrl.trim(),
+      });
+
+      const { authorizationUrl } = authorizeResponse.data;
+
+      // Close modal and reset form
+      setIsCustomModalOpen(false);
+      setCustomMcpName("");
+      setCustomMcpUrl("");
+
+      // Open OAuth URL in user's default browser
+      window.api.browser.openUrl(authorizationUrl);
+
+      toast.success("Opening authorization page...");
+    } catch (error) {
+      console.error("Error connecting to custom MCP:", error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to connect to custom integration");
+      }
+    } finally {
+      setIsConnectingCustom(false);
+    }
+  };
+
   return (
     <ShellOnly>
       <div className="flex flex-col">
@@ -69,7 +131,75 @@ function MCP() {
 
         {/* MCP Store */}
         <div className="p-4">
-          <h2 className="text-xl font-semibold mb-4">Available Integrations</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Available Integrations</h2>
+
+            <Dialog open={isCustomModalOpen} onOpenChange={setIsCustomModalOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Custom
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add Custom MCP Integration</DialogTitle>
+                  <DialogDescription>
+                    Connect to a custom Model Context Protocol server by providing its details.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="mcp-name">Integration Name</Label>
+                    <Input
+                      id="mcp-name"
+                      placeholder="e.g., My Custom MCP"
+                      value={customMcpName}
+                      onChange={(e) => setCustomMcpName(e.target.value)}
+                      disabled={isConnectingCustom}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="mcp-url">Server URL</Label>
+                    <Input
+                      id="mcp-url"
+                      placeholder="https://example.com/mcp"
+                      value={customMcpUrl}
+                      onChange={(e) => setCustomMcpUrl(e.target.value)}
+                      disabled={isConnectingCustom}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The base URL of your MCP server
+                    </p>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCustomModalOpen(false)}
+                    disabled={isConnectingCustom}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConnectCustom}
+                    disabled={isConnectingCustom}
+                  >
+                    {isConnectingCustom ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      "Connect"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
 
           {mcpStore.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
