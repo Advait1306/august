@@ -4,7 +4,7 @@ import { useSyncContext } from "../components/sync_engine";
 import { useQuery } from "@rocicorp/zero/react";
 import { getMCPStore, getMCPs } from "@jupiter/sync/queries/data";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Check, Loader2, Plus } from "lucide-react";
+import { Check, Loader2, Plus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useApi } from "@/src/lib/api";
 import { useState } from "react";
@@ -134,7 +134,10 @@ function MCP() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">Available Integrations</h2>
 
-            <Dialog open={isCustomModalOpen} onOpenChange={setIsCustomModalOpen}>
+            <Dialog
+              open={isCustomModalOpen}
+              onOpenChange={setIsCustomModalOpen}
+            >
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Plus className="h-4 w-4 mr-2" />
@@ -145,7 +148,8 @@ function MCP() {
                 <DialogHeader>
                   <DialogTitle>Add Custom MCP Integration</DialogTitle>
                   <DialogDescription>
-                    Connect to a custom Model Context Protocol server by providing its details.
+                    Connect to a custom Model Context Protocol server by
+                    providing its details.
                   </DialogDescription>
                 </DialogHeader>
 
@@ -274,17 +278,6 @@ function MCP() {
                           )}
                         </Button>
                       )}
-                      {item.mcp_server_url && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            window.open(item.mcp_server_url, "_blank")
-                          }
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      )}
                     </div>
                   </div>
                 );
@@ -323,22 +316,6 @@ function MCP() {
                           ? "Store Integration"
                           : "Custom Integration"}
                       </p>
-                      {mcp.custom_description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {mcp.custom_description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          window.open(mcp.mcp_server_url, "_blank")
-                        }
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
                 </div>
