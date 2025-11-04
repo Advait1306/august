@@ -10,6 +10,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+export const integrationType = pgEnum("integration_type", ["oauth", "composio"]);
+
 export const users = pgTable("users", {
   id: varchar().primaryKey().notNull(),
 });
@@ -34,7 +36,7 @@ export const usage = pgTable("usage", {
   created_at: timestamp().notNull().defaultNow(),
 });
 
-// MCP Store - Global catalog of pre-configured integrations
+// MCP Store - Global catalog of pre-configured integrations (public-facing only)
 export const mcpStore = pgTable("mcp_store", {
   id: varchar().primaryKey().notNull(),
   slug: varchar().unique().notNull(),
@@ -42,10 +44,36 @@ export const mcpStore = pgTable("mcp_store", {
   description: varchar(),
   logo_url: varchar(),
   category: varchar(),
-  mcp_server_url: varchar().notNull(),
-  default_scopes: varchar(),
+  integration_type: integrationType().notNull(),
   is_active: integer().notNull().default(1), // Using integer for boolean (0 or 1)
   sort_order: integer(),
+  metadata: jsonb(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+// OAuth Integration Details - Server-side only (NEVER sent to client)
+export const mcpOauthIntegrationDetails = pgTable("mcp_oauth_integration_details", {
+  id: varchar().primaryKey().notNull(),
+  mcp_store_id: varchar()
+    .unique()
+    .notNull()
+    .references(() => mcpStore.id),
+  mcp_server_url: varchar().notNull(),
+  default_scopes: varchar(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+// Composio Integration Details - Server-side only (NEVER sent to client)
+export const mcpComposioIntegrationDetails = pgTable("mcp_composio_integration_details", {
+  id: varchar().primaryKey().notNull(),
+  mcp_store_id: varchar()
+    .unique()
+    .notNull()
+    .references(() => mcpStore.id),
+  auth_config_id: varchar().notNull(),
+  mcp_config_id: varchar().notNull(),
   metadata: jsonb(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
@@ -60,37 +88,42 @@ export const mcps = pgTable("mcps", {
   author_id: varchar()
     .notNull()
     .references(() => users.id),
-  mcp_store_id: varchar().references(() => mcpStore.id),
   name: varchar().notNull(),
-  custom_mcp_url: varchar(),
-  custom_description: varchar(),
-  mcp_server_url: varchar().notNull(),
-  oauth_client_id: varchar(),
-  oauth_client_secret: varchar(), // Encrypted
-  oauth_metadata: jsonb(),
+  mcp_store_id: varchar().references(() => mcpStore.id), // null for custom MCPs
+  integration_type: integrationType().notNull(),
+  custom_mcp_server_url: varchar(), // Only for custom MCPs (when mcp_store_id is null)
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
 });
 
-// OAuth Connections - Links users to their MCPs via OAuth
-export const oauthConnections = pgTable("oauth_connections", {
+// OAuth Connections - Per-user OAuth connections
+export const mcpOauthConnections = pgTable("mcp_oauth_connections", {
   id: varchar().primaryKey().notNull(),
-  user_id: varchar()
-    .notNull()
-    .references(() => users.id),
-  organisation_id: varchar()
-    .notNull()
-    .references(() => organisations.id),
   mcp_id: varchar()
     .notNull()
     .references(() => mcps.id),
+  // OAuth client credentials
+  oauth_client_id: varchar(),
+  oauth_client_secret: varchar(), // Encrypted
+  // OAuth tokens
   access_token: varchar().notNull(), // Encrypted
   refresh_token: varchar(), // Encrypted
   token_type: varchar().notNull(),
   expires_at: timestamp(),
   scope: varchar(),
-  provider_user_id: varchar(),
   provider_metadata: jsonb(),
+  oauth_metadata: jsonb(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+// Composio Connections - Per-user Composio connections
+export const mcpComposioConnections = pgTable("mcp_composio_connections", {
+  id: varchar().primaryKey().notNull(),
+  mcp_id: varchar()
+    .notNull()
+    .references(() => mcps.id),
+  connection_url: varchar().notNull(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
 });
@@ -181,12 +214,11 @@ export const messages = pgTable("messages", {
 });
 
 // User relations
-export const userkRelations = relations(users, ({ many }) => ({
+export const userRelations = relations(users, ({ many }) => ({
   tasks: many(tasks),
   agents: many(agents),
   projects: many(projects),
   mcps: many(mcps),
-  oauthConnections: many(oauthConnections),
   oauthStates: many(oauthStates),
 }));
 
@@ -197,7 +229,6 @@ export const organisationRelations = relations(organisations, ({ many }) => ({
   tasks: many(tasks),
   usage: many(usage),
   mcps: many(mcps),
-  oauthConnections: many(oauthConnections),
   oauthStates: many(oauthStates),
 }));
 
@@ -265,10 +296,34 @@ export const usageRelations = relations(usage, ({ one }) => ({
 }));
 
 // MCP Store relations
-export const mcpStoreRelations = relations(mcpStore, ({ many }) => ({
+export const mcpStoreRelations = relations(mcpStore, ({ one, many }) => ({
+  oauthDetails: one(mcpOauthIntegrationDetails),
+  composioDetails: one(mcpComposioIntegrationDetails),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
 }));
+
+// OAuth Integration Details relations
+export const mcpOauthIntegrationDetailsRelations = relations(
+  mcpOauthIntegrationDetails,
+  ({ one }) => ({
+    mcpStore: one(mcpStore, {
+      fields: [mcpOauthIntegrationDetails.mcp_store_id],
+      references: [mcpStore.id],
+    }),
+  })
+);
+
+// Composio Integration Details relations
+export const mcpComposioIntegrationDetailsRelations = relations(
+  mcpComposioIntegrationDetails,
+  ({ one }) => ({
+    mcpStore: one(mcpStore, {
+      fields: [mcpComposioIntegrationDetails.mcp_store_id],
+      references: [mcpStore.id],
+    }),
+  })
+);
 
 // MCPs relations
 export const mcpsRelations = relations(mcps, ({ one, many }) => ({
@@ -284,26 +339,30 @@ export const mcpsRelations = relations(mcps, ({ one, many }) => ({
     fields: [mcps.mcp_store_id],
     references: [mcpStore.id],
   }),
-  oauthConnections: many(oauthConnections),
+  oauthConnections: many(mcpOauthConnections),
+  composioConnections: many(mcpComposioConnections),
 }));
 
 // OAuth Connections relations
-export const oauthConnectionsRelations = relations(
-  oauthConnections,
+export const mcpOauthConnectionsRelations = relations(
+  mcpOauthConnections,
   ({ one }) => ({
-    user: one(users, {
-      fields: [oauthConnections.user_id],
-      references: [users.id],
-    }),
-    organisation: one(organisations, {
-      fields: [oauthConnections.organisation_id],
-      references: [organisations.id],
-    }),
     mcp: one(mcps, {
-      fields: [oauthConnections.mcp_id],
+      fields: [mcpOauthConnections.mcp_id],
       references: [mcps.id],
     }),
-  }),
+  })
+);
+
+// Composio Connections relations
+export const mcpComposioConnectionsRelations = relations(
+  mcpComposioConnections,
+  ({ one }) => ({
+    mcp: one(mcps, {
+      fields: [mcpComposioConnections.mcp_id],
+      references: [mcps.id],
+    }),
+  })
 );
 
 // OAuth States relations
