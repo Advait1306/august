@@ -5,7 +5,7 @@ import { BillingService } from "../services/billing.service";
 import { OAuthService } from "../services/oauth.service";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { eq, and } from "drizzle-orm";
-import { mcps } from "@jupiter/sync/db/schema";
+import { mcps, mcpOauthIntegrationDetails } from "@jupiter/sync/db/schema";
 
 export function createProxyController(
   proxyService: ProxyService,
@@ -99,9 +99,39 @@ export function createProxyController(
             .json({ error: "MCP not found or access denied" });
         }
 
+        // Determine MCP server URL (either from store or custom)
+        let mcpServerUrl: string;
+
+        if (mcp.mcp_store_id) {
+          // Store MCP - fetch OAuth integration details to get the MCP server URL
+          const [oauthDetails] = await db
+            .select()
+            .from(mcpOauthIntegrationDetails)
+            .where(eq(mcpOauthIntegrationDetails.mcp_store_id, mcp.mcp_store_id))
+            .limit(1);
+
+          if (!oauthDetails) {
+            console.log("[MCP Proxy] OAuth integration details not found for MCP:", { mcpId });
+            return res
+              .status(404)
+              .json({ error: "OAuth integration details not found" });
+          }
+
+          mcpServerUrl = oauthDetails.mcp_server_url;
+        } else if (mcp.custom_mcp_server_url) {
+          // Custom MCP - use the URL from the mcp record
+          mcpServerUrl = mcp.custom_mcp_server_url;
+        } else {
+          console.log("[MCP Proxy] MCP has no server URL:", { mcpId });
+          return res
+            .status(500)
+            .json({ error: "MCP configuration error: no server URL" });
+        }
+
         console.log("[MCP Proxy] MCP found:", {
           mcpId,
-          mcpServerUrl: mcp.mcp_server_url,
+          mcpServerUrl,
+          isCustom: !mcp.mcp_store_id,
         });
 
         // Get the OAuth access token (will auto-refresh if expired)
@@ -117,13 +147,13 @@ export function createProxyController(
         }
 
         console.log("[MCP Proxy] Access token retrieved, forwarding request to:", {
-          targetUrl: mcp.mcp_server_url,
+          targetUrl: mcpServerUrl,
           path,
         });
 
         // Forward the request to the MCP server
         await proxyService.forwardToMCP(
-          mcp.mcp_server_url,
+          mcpServerUrl,
           accessToken,
           req,
           res,

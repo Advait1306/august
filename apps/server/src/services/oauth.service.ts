@@ -4,8 +4,9 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   mcps,
   mcpStore,
+  mcpOauthIntegrationDetails,
+  mcpOauthConnections,
   oauthStates,
-  oauthConnections,
 } from "@jupiter/sync/db/schema";
 import { encrypt, decrypt } from "../utils/encryption";
 
@@ -84,7 +85,7 @@ export class OAuthService {
 
   /**
    * Initiates OAuth flow by creating state and generating authorization URL
-   * Accepts either a template MCP or custom MCP details
+   * Accepts either a store MCP (mcpStoreId) or custom MCP (customMcpUrl + customMcpName)
    * MCP will be created later during the callback
    */
   async initiateOAuthFlow(params: {
@@ -97,20 +98,19 @@ export class OAuthService {
     const { mcpStoreId, customMcpUrl, customMcpName, userId, organisationId } = params;
 
     console.log("[OAuth Flow] Starting OAuth flow:", {
-      hasTemplateMcp: !!mcpStoreId,
+      hasStoreMcp: !!mcpStoreId,
       hasCustomMcp: !!(customMcpUrl && customMcpName),
       userId,
       organisationId,
     });
 
-    // Determine MCP server URL and name
     let mcpServerUrl: string;
     let mcpName: string;
     let defaultScopes: string | null = null;
 
     if (mcpStoreId) {
-      // Template MCP - fetch from store
-      console.log("[OAuth Flow] Fetching template MCP from store:", mcpStoreId);
+      // Store MCP - fetch from store and integration details
+      console.log("[OAuth Flow] Fetching MCP from store:", mcpStoreId);
       const [store] = await this.db
         .select()
         .from(mcpStore)
@@ -118,14 +118,30 @@ export class OAuthService {
         .limit(1);
 
       if (!store) {
-        throw new Error("Template MCP not found in store");
+        throw new Error("MCP not found in store");
       }
 
-      mcpServerUrl = store.mcp_server_url;
-      mcpName = store.name;
-      defaultScopes = store.default_scopes;
+      // Check integration type
+      if (store.integration_type !== "oauth") {
+        throw new Error("MCP is not configured for OAuth integration");
+      }
 
-      console.log("[OAuth Flow] Template MCP found:", {
+      // Fetch OAuth integration details
+      const [oauthDetails] = await this.db
+        .select()
+        .from(mcpOauthIntegrationDetails)
+        .where(eq(mcpOauthIntegrationDetails.mcp_store_id, mcpStoreId))
+        .limit(1);
+
+      if (!oauthDetails) {
+        throw new Error("OAuth integration details not found for this MCP");
+      }
+
+      mcpServerUrl = oauthDetails.mcp_server_url;
+      mcpName = store.name;
+      defaultScopes = oauthDetails.default_scopes;
+
+      console.log("[OAuth Flow] Store MCP found:", {
         name: mcpName,
         url: mcpServerUrl,
       });
@@ -139,7 +155,7 @@ export class OAuthService {
         url: mcpServerUrl,
       });
     } else {
-      throw new Error("Must provide either mcpStoreId or custom MCP details");
+      throw new Error("Must provide either mcpStoreId OR both customMcpUrl and customMcpName");
     }
 
     // Discover OAuth metadata from MCP server
@@ -366,12 +382,13 @@ export class OAuthService {
         : null;
 
       // STEP 2: Token exchange successful! Now determine MCP details and create it
-      let mcpServerUrl: string;
       let mcpName: string;
+      let mcpStoreId: string | null = null;
+      let customMcpServerUrl: string | null = null;
 
       if (stateRecord.mcp_store_id) {
-        // Template MCP - fetch from store
-        console.log("[OAuth Callback] Fetching template MCP details from store");
+        // Store MCP - fetch from store
+        console.log("[OAuth Callback] Fetching MCP details from store");
         const [store] = await this.db
           .select()
           .from(mcpStore)
@@ -379,22 +396,22 @@ export class OAuthService {
           .limit(1);
 
         if (!store) {
-          throw new Error("Template MCP not found in store");
+          throw new Error("MCP not found in store");
         }
 
-        mcpServerUrl = store.mcp_server_url;
         mcpName = store.name;
+        mcpStoreId = stateRecord.mcp_store_id;
       } else if (stateRecord.custom_mcp_url && stateRecord.custom_mcp_name) {
         // Custom MCP
-        mcpServerUrl = stateRecord.custom_mcp_url;
         mcpName = stateRecord.custom_mcp_name;
+        customMcpServerUrl = stateRecord.custom_mcp_url;
       } else {
         throw new Error("Invalid state: missing MCP information");
       }
 
       console.log("[OAuth Callback] Creating MCP:", {
         name: mcpName,
-        url: mcpServerUrl,
+        isCustom: !mcpStoreId,
       });
 
       // Create the MCP record
@@ -403,14 +420,10 @@ export class OAuthService {
         id: newMcpId,
         organisation_id: stateRecord.organisation_id,
         author_id: stateRecord.user_id,
-        mcp_store_id: stateRecord.mcp_store_id || null,
         name: mcpName,
-        custom_mcp_url: stateRecord.mcp_store_id ? null : mcpServerUrl,
-        custom_description: null,
-        mcp_server_url: mcpServerUrl,
-        oauth_client_id: storedMetadata.client_id,
-        oauth_client_secret: storedMetadata.client_secret ? encrypt(storedMetadata.client_secret) : null,
-        oauth_metadata: storedMetadata,
+        mcp_store_id: mcpStoreId,
+        integration_type: "oauth",
+        custom_mcp_server_url: customMcpServerUrl,
         created_at: new Date(),
         updated_at: new Date(),
       });
@@ -419,11 +432,11 @@ export class OAuthService {
 
       // STEP 3: Create OAuth connection
       console.log("[OAuth Callback] Creating OAuth connection");
-      await this.db.insert(oauthConnections).values({
+      await this.db.insert(mcpOauthConnections).values({
         id: crypto.randomUUID(),
-        user_id: stateRecord.user_id,
-        organisation_id: stateRecord.organisation_id,
         mcp_id: newMcpId,
+        oauth_client_id: storedMetadata.client_id,
+        oauth_client_secret: storedMetadata.client_secret ? encrypt(storedMetadata.client_secret) : null,
         access_token: encrypt(tokenData.access_token),
         refresh_token: tokenData.refresh_token
           ? encrypt(tokenData.refresh_token)
@@ -432,6 +445,7 @@ export class OAuthService {
         expires_at: expiresAt,
         scope: tokenData.scope || null,
         provider_metadata: tokenData,
+        oauth_metadata: storedMetadata,
         created_at: new Date(),
         updated_at: new Date(),
       });
@@ -473,8 +487,8 @@ export class OAuthService {
 
     const [connection] = await this.db
       .select()
-      .from(oauthConnections)
-      .where(eq(oauthConnections.mcp_id, mcpId))
+      .from(mcpOauthConnections)
+      .where(eq(mcpOauthConnections.mcp_id, mcpId))
       .limit(1);
 
     if (!connection) {
@@ -496,8 +510,8 @@ export class OAuthService {
       // Fetch the updated connection after refresh
       const [refreshedConnection] = await this.db
         .select()
-        .from(oauthConnections)
-        .where(eq(oauthConnections.mcp_id, mcpId))
+        .from(mcpOauthConnections)
+        .where(eq(mcpOauthConnections.mcp_id, mcpId))
         .limit(1);
 
       if (!refreshedConnection) {
@@ -520,35 +534,25 @@ export class OAuthService {
 
     const [connection] = await this.db
       .select()
-      .from(oauthConnections)
-      .where(eq(oauthConnections.mcp_id, mcpId))
+      .from(mcpOauthConnections)
+      .where(eq(mcpOauthConnections.mcp_id, mcpId))
       .limit(1);
 
-    if (!connection || !connection.refresh_token) {
-      return false;
-    }
-
-    const [mcp] = await this.db
-      .select()
-      .from(mcps)
-      .where(eq(mcps.id, mcpId))
-      .limit(1);
-
-    if (!mcp || !mcp.oauth_client_id || !mcp.oauth_metadata) {
+    if (!connection || !connection.refresh_token || !connection.oauth_client_id || !connection.oauth_metadata) {
       return false;
     }
 
     try {
-      const metadata = mcp.oauth_metadata as { token_endpoint: string };
-      const decryptedSecret = mcp.oauth_client_secret
-        ? decrypt(mcp.oauth_client_secret)
+      const metadata = connection.oauth_metadata as { token_endpoint: string };
+      const decryptedSecret = connection.oauth_client_secret
+        ? decrypt(connection.oauth_client_secret)
         : null;
       const decryptedRefreshToken = decrypt(connection.refresh_token);
 
       const tokenParams: Record<string, string> = {
         grant_type: "refresh_token",
         refresh_token: decryptedRefreshToken,
-        client_id: mcp.oauth_client_id,
+        client_id: connection.oauth_client_id,
       };
 
       // Only add client_secret if it exists (public clients don't have secrets)
@@ -581,7 +585,7 @@ export class OAuthService {
         : null;
 
       await this.db
-        .update(oauthConnections)
+        .update(mcpOauthConnections)
         .set({
           access_token: encrypt(tokenData.access_token),
           refresh_token: tokenData.refresh_token
@@ -590,7 +594,7 @@ export class OAuthService {
           expires_at: expiresAt,
           updated_at: new Date(),
         })
-        .where(eq(oauthConnections.id, connection.id));
+        .where(eq(mcpOauthConnections.id, connection.id));
 
       return true;
     } catch (error) {
@@ -612,8 +616,8 @@ export class OAuthService {
       // Get the OAuth connection
       const [connection] = await this.db
         .select()
-        .from(oauthConnections)
-        .where(eq(oauthConnections.mcp_id, mcpId))
+        .from(mcpOauthConnections)
+        .where(eq(mcpOauthConnections.mcp_id, mcpId))
         .limit(1);
 
       if (!connection) {
@@ -621,19 +625,12 @@ export class OAuthService {
         return;
       }
 
-      // Get the MCP details for OAuth metadata
-      const [mcp] = await this.db
-        .select()
-        .from(mcps)
-        .where(eq(mcps.id, mcpId))
-        .limit(1);
-
-      if (!mcp || !mcp.oauth_metadata) {
-        console.log("[OAuth Revoke] No MCP or OAuth metadata found for:", mcpId);
+      if (!connection.oauth_metadata) {
+        console.log("[OAuth Revoke] No OAuth metadata found for:", mcpId);
         return;
       }
 
-      const metadata = mcp.oauth_metadata as {
+      const metadata = connection.oauth_metadata as {
         revocation_endpoint?: string;
         token_endpoint?: string;
       };
@@ -643,8 +640,8 @@ export class OAuthService {
         console.log("[OAuth Revoke] Attempting to revoke token at provider");
 
         const decryptedAccessToken = decrypt(connection.access_token);
-        const decryptedSecret = mcp.oauth_client_secret
-          ? decrypt(mcp.oauth_client_secret)
+        const decryptedSecret = connection.oauth_client_secret
+          ? decrypt(connection.oauth_client_secret)
           : null;
 
         const revokeParams: Record<string, string> = {
@@ -652,8 +649,8 @@ export class OAuthService {
           token_type_hint: "access_token",
         };
 
-        if (mcp.oauth_client_id) {
-          revokeParams.client_id = mcp.oauth_client_id;
+        if (connection.oauth_client_id) {
+          revokeParams.client_id = connection.oauth_client_id;
         }
 
         if (decryptedSecret) {
@@ -683,8 +680,8 @@ export class OAuthService {
 
       // Delete the OAuth connection from our database
       await this.db
-        .delete(oauthConnections)
-        .where(eq(oauthConnections.mcp_id, mcpId));
+        .delete(mcpOauthConnections)
+        .where(eq(mcpOauthConnections.mcp_id, mcpId));
 
       console.log("[OAuth Revoke] OAuth connection deleted for MCP:", mcpId);
     } catch (error) {
