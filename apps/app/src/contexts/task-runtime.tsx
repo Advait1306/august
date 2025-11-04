@@ -24,9 +24,10 @@ type GenerationState = string[];
 
 type TaskRuntimeState = {
   tasks: Task[];
-  selectedTask: any | "new-conversation";
+  selectedTaskId: string | "new-conversation";
+  selectedTask: Task | "new-conversation" | null;
   messages: any;
-  selectTask: (task: Task | "new-conversation") => void;
+  selectTask: (task: string | "new-conversation") => void;
   sendMessage: (message: string) => void;
   composerStates: Record<string, ComposerState>;
   setComposerStates: (states: Record<string, ComposerState>) => void;
@@ -44,6 +45,7 @@ type ComposerState = {
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
   tasks: [],
   messages: [],
+  selectedTaskId: "new-conversation",
   selectedTask: "new-conversation",
   selectTask: () => {},
   sendMessage: () => {},
@@ -80,12 +82,22 @@ export const TaskRuntimeProvider = ({
 
   // We need to wait for the task to be created and then select it
   const [waitForSelect, setWaitForSelect] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<any | "new-conversation">(
-    "new-conversation"
-  );
+  const [selectedTaskId, setSelectedTaskId] = useState<
+    string | "new-conversation"
+  >("new-conversation");
+
+  // Derive the selected task from the tasks array
+  const selectedTask =
+    selectedTaskId === "new-conversation"
+      ? "new-conversation"
+      : (tasks?.find((task) => task.id === selectedTaskId) ?? null);
+
   const selectedTasksMessages = useQuery(
-    getMessages(syncData.authData, selectedTask.id ?? ""),
-    { enabled: !!selectedTask.id }
+    getMessages(
+      syncData.authData,
+      typeof selectedTask === "object" && selectedTask ? selectedTask.id : ""
+    ),
+    { enabled: typeof selectedTask === "object" && selectedTask !== null }
   );
 
   // Load Claude Code installations on mount
@@ -124,16 +136,19 @@ export const TaskRuntimeProvider = ({
     if (waitForSelect) {
       const task = tasks?.find((task) => task.id === waitForSelect);
       if (task) {
-        setSelectedTask(task);
+        setSelectedTaskId(task.id);
         resetNewConversation();
       }
     }
     // Task is either deleted or org is changed and task is lost
-    else if (!tasks.map((task) => task.id).includes(selectedTask.id)) {
-      setSelectedTask("new-conversation");
+    else if (
+      selectedTaskId !== "new-conversation" &&
+      !tasks.map((task) => task.id).includes(selectedTaskId)
+    ) {
+      setSelectedTaskId("new-conversation");
       resetNewConversation();
     }
-  }, [tasks]);
+  }, [tasks, selectedTaskId, waitForSelect]);
 
   useEffect(() => {
     const removeListener = window.api.agent.addPermissionHandler((request) => {
@@ -206,39 +221,51 @@ export const TaskRuntimeProvider = ({
     };
   }, []);
 
-  const selectTask = (task: Task | "new-conversation") => {
+  const selectTask = (taskId: string | "new-conversation") => {
     setWaitForSelect(null);
-    setSelectedTask(task);
 
-    if (task !== "new-conversation") {
-      // Composer setup
-      let agent = agents.find((agent) => agent.id === task.agent_id);
-      let project = projects.find((project) => project.id === task.project_id);
+    setSelectedTaskId(taskId);
 
-      // TODO (nitpick): If an agent or project name changes once a task is selected,
-      // they don't update automatically in the composer
-      if (project && agent) {
-        // Update composer with the agent and project of selected task
-        setComposerStates((prev) => {
-          return {
-            ...prev,
-            [task.id]: {
-              ...prev[task.id],
-              agent: agent,
-              project: project,
-            },
-          };
-        });
+    if (taskId !== "new-conversation") {
+      // Find the actual task object
+      const task = tasks?.find((t) => t.id === taskId);
+
+      if (task) {
+        // Composer setup
+        let agent = agents.find((agent) => agent.id === task.agent_id);
+        let project = projects.find(
+          (project) => project.id === task.project_id
+        );
+
+        // TODO (nitpick): If an agent or project name changes once a task is selected,
+        // they don't update automatically in the composer
+        if (project && agent) {
+          // Update composer with the agent and project of selected task
+          setComposerStates((prev) => {
+            return {
+              ...prev,
+              [task.id]: {
+                ...prev[task.id],
+                agent: agent,
+                project: project,
+              },
+            };
+          });
+        }
       }
     }
   };
 
   const sendMessage = async (message: string) => {
     // Clear composer prompt
+    const taskIdForComposer =
+      selectedTaskId === "new-conversation"
+        ? "new-conversation"
+        : selectedTaskId;
     setComposerStates((prev) => {
       return {
         ...prev,
-        [selectedTask.id]: { ...prev[selectedTask.id], prompt: "" },
+        [taskIdForComposer]: { ...prev[taskIdForComposer], prompt: "" },
       };
     });
 
@@ -247,7 +274,7 @@ export const TaskRuntimeProvider = ({
     let project: Project;
     let chatMessages: ModelMessage[];
 
-    if (selectedTask === "new-conversation") {
+    if (selectedTaskId === "new-conversation") {
       // Set states
       taskId = nanoid();
       agent = composerStates["new-conversation"]?.agent;
@@ -281,10 +308,14 @@ export const TaskRuntimeProvider = ({
       setWaitForSelect(taskId);
     } else {
       // Set states
-      taskId = selectedTask.id;
-      agent = agents.find((agent) => agent.id === selectedTask.agent_id)!;
+      taskId = selectedTaskId;
+      const currentTask = tasks?.find((t) => t.id === selectedTaskId);
+      if (!currentTask) {
+        throw new Error("Selected task not found");
+      }
+      agent = agents.find((agent) => agent.id === currentTask.agent_id)!;
       project = projects.find(
-        (project) => project.id === selectedTask.project_id
+        (project) => project.id === currentTask.project_id
       )!;
 
       // Create message
@@ -413,6 +444,7 @@ export const TaskRuntimeProvider = ({
     <TaskRuntimeContext.Provider
       value={{
         tasks,
+        selectedTaskId,
         selectedTask,
         selectTask,
         messages: selectedTasksMessages[0]?.messages,

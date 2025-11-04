@@ -41,6 +41,7 @@ export default function TaskWindow() {
 
   // Messages
   const {
+    selectedTaskId,
     selectedTask,
     messages,
     sendMessage,
@@ -51,17 +52,16 @@ export default function TaskWindow() {
   } = useTaskRuntime();
 
   // Derived state and functions for ease of use
-  const selectedTaskId = selectedTask.id ?? "new-conversation";
   const composerState = composerStates[selectedTaskId];
   const prompt = composerState?.prompt ?? "";
   const agent =
     selectedTaskId === "new-conversation"
       ? composerState?.agent
-      : agents.find((agent) => agent.id === selectedTask.agent_id);
+      : agents.find((agent) => selectedTask && typeof selectedTask === "object" ? agent.id === selectedTask.agent_id : false);
   const project =
     selectedTaskId === "new-conversation"
       ? composerState?.project
-      : projects.find((project) => project.id === selectedTask.project_id);
+      : projects.find((project) => selectedTask && typeof selectedTask === "object" ? project.id === selectedTask.project_id : false);
   const pendingPermissions = permissions[selectedTaskId] || [];
   const currentPermission = pendingPermissions[0];
   const isGenerating = generationState.includes(selectedTaskId);
