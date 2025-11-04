@@ -73,8 +73,6 @@ export function createMCPController(db: NodePgDatabase): Router {
 
           res.json({
             authorizationUrl: result.redirectUrl,
-            connectionRequestId: result.connectionRequestId,
-            integrationType: "composio"
           });
           return;
         }
@@ -89,7 +87,7 @@ export function createMCPController(db: NodePgDatabase): Router {
         organisationId: orgId ?? userId,
       });
 
-      res.json({ ...result, integrationType: "oauth" });
+      res.json({ authorizationUrl: result.authorizationUrl });
     } catch (error) {
       console.error("Error in /api/mcp/authorize:", error);
       res.status(500).json({
