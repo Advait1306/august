@@ -37,6 +37,20 @@ export type ToolHeaderProps = {
 };
 
 const getStatusBadge = (status: ToolUIPart["state"]) => {
+  const colors = {
+    "input-streaming": "bg-[#dbd493]",
+    "input-available": "bg-[#93acdb]",
+    "output-available": "bg-[#97db93]",
+    "output-error": "bg-[#db9393]",
+  } as const;
+
+  const textColors = {
+    "input-streaming": "text-white",
+    "input-available": "text-white",
+    "output-available": "text-black",
+    "output-error": "text-white",
+  } as const;
+
   const labels = {
     "input-streaming": "Pending",
     "input-available": "Running",
@@ -46,13 +60,22 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
 
   const icons = {
     "input-streaming": <CircleIcon className="size-4" />,
-    "input-available": <ClockIcon className="size-4 animate-pulse" />,
+    "input-available": (
+      <ClockIcon className="size-4 animate-pulse text-white" />
+    ),
     "output-available": <CheckCircleIcon className="size-4 text-green-600" />,
     "output-error": <XCircleIcon className="size-4 text-red-600" />,
   } as const;
 
   return (
-    <Badge className="gap-1.5 rounded-full text-xs" variant="secondary">
+    <Badge
+      className={cn(
+        "gap-1.5 rounded-full text-xs",
+        colors[status],
+        textColors[status]
+      )}
+      variant="secondary"
+    >
       {icons[status]}
       {labels[status]}
     </Badge>

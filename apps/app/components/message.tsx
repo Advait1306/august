@@ -13,6 +13,7 @@ import {
   ToolResultPart,
   UserModelMessage,
 } from "ai";
+import { Separator } from "./ui/separator";
 
 interface UserMessageProps {
   message: UserModelMessage;
@@ -30,7 +31,7 @@ export const UserMessage = ({ message }: UserMessageProps) => {
           switch (content.type) {
             case "text":
               return (
-                <MessageContent className="rounded-3xl" key={index}>
+                <MessageContent className="rounded-3xl text-sm" key={index}>
                   {content.text}
                 </MessageContent>
               );
@@ -72,7 +73,49 @@ export const AssistantMessage = ({ message }: AssistantMessageProps) => {
   const contents = message.content.map((content, index) => {
     switch (content.type) {
       case "text":
-        return <Response key={index}>{content.text}</Response>;
+        return (
+          <Response
+            key={index}
+            /* TODO: Fix styling here, not everything can be text-sm by default */
+            className="text-sm pb-2 leading-7"
+            components={{
+              h1: ({ children }) => (
+                <h1 className="text-2xl font-bold pb-2">
+                  {children}
+                  <Separator className="mt-2" />
+                </h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-xl font-bold pb-2">
+                  {children}
+                  <Separator className="mt-2" />
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-lg font-bold pb-2">{children}</h3>
+              ),
+              h4: ({ children }) => (
+                <h4 className="text-base font-bold pb-2">{children}</h4>
+              ),
+              h5: ({ children }) => (
+                <h5 className="text-sm font-bold pb-2">{children}</h5>
+              ),
+              h6: ({ children }) => (
+                <h6 className="text-xs font-bold pb-2">{children}</h6>
+              ),
+              p: ({ children }) => <p className="text-sm pb-2">{children}</p>,
+              ul: ({ children }) => (
+                <ul className="list-disc list-inside">{children}</ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="list-decimal list-inside">{children}</ol>
+              ),
+              hr: () => <Separator className="my-2" />,
+            }}
+          >
+            {content.text}
+          </Response>
+        );
       case "tool-call": {
         const result = parts.find(
           (part): part is ToolResultPart =>
@@ -81,7 +124,7 @@ export const AssistantMessage = ({ message }: AssistantMessageProps) => {
         );
 
         return (
-          <Tool key={index}>
+          <Tool key={index} className="rounded-2xl">
             <ToolHeader
               type={`tool-${content.toolName}`}
               state={result ? "output-available" : "input-available"}
