@@ -90,6 +90,76 @@ export const schema = {
       },
       primaryKey: ["id"],
     },
+    composioStates: {
+      name: "composioStates",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "id"
+          >,
+        },
+        connection_request_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "connection_request_id"
+          >,
+        },
+        user_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "user_id"
+          >,
+        },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "organisation_id"
+          >,
+        },
+        mcp_store_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "mcp_store_id"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "created_at"
+          >,
+        },
+        expires_at: {
+          type: "number",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "expires_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "composio_states",
+    },
     mcpComposioConnections: {
       name: "mcpComposioConnections",
       columns: {
@@ -1084,6 +1154,32 @@ export const schema = {
         },
       ],
     },
+    composioStates: {
+      user: [
+        {
+          sourceField: ["user_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+      mcpStore: [
+        {
+          sourceField: ["mcp_store_id"],
+          destField: ["id"],
+          destSchema: "mcpStore",
+          cardinality: "one",
+        },
+      ],
+    },
     mcpComposioConnections: {
       mcp: [
         {
@@ -1154,6 +1250,14 @@ export const schema = {
           sourceField: ["id"],
           destField: ["mcp_store_id"],
           destSchema: "oauthStates",
+          cardinality: "many",
+        },
+      ],
+      composioStates: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_store_id"],
+          destSchema: "composioStates",
           cardinality: "many",
         },
       ],
@@ -1285,6 +1389,14 @@ export const schema = {
           cardinality: "many",
         },
       ],
+      composioStates: [
+        {
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "composioStates",
+          cardinality: "many",
+        },
+      ],
     },
     projects: {
       user: [
@@ -1405,6 +1517,14 @@ export const schema = {
           cardinality: "many",
         },
       ],
+      composioStates: [
+        {
+          sourceField: ["id"],
+          destField: ["user_id"],
+          destSchema: "composioStates",
+          cardinality: "many",
+        },
+      ],
     },
   },
   enableLegacyQueries: true,
@@ -1421,6 +1541,11 @@ export type Schema = typeof schema;
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Agent = Row<Schema["tables"]["agents"]>;
+/**
+ * Represents a row from the "composioStates" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type ComposioState = Row<Schema["tables"]["composioStates"]>;
 /**
  * Represents a row from the "mcpComposioConnections" table.
  * This type is auto-generated from your Drizzle schema definition.

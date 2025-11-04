@@ -167,7 +167,7 @@ export class OAuthService {
     const { codeVerifier, codeChallenge } = generatePKCE();
 
     // Generate callback URL from server URL
-    const callbackUri = `${this.serverUrl}/api/oauth/callback`;
+    const callbackUri = `${this.serverUrl}/api/mcp/callback`;
 
     // Perform OAuth client registration to get client_id
     // We need this before generating the authorization URL

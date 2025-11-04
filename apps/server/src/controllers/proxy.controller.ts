@@ -3,14 +3,16 @@ import { getAuth } from "@clerk/express";
 import { ProxyService } from "../services/proxy.service";
 import { BillingService } from "../services/billing.service";
 import { OAuthService } from "../services/oauth.service";
+import { ComposioService } from "../services/composio.service";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { eq, and } from "drizzle-orm";
-import { mcps, mcpOauthIntegrationDetails } from "@jupiter/sync/db/schema";
+import { mcps, mcpOauthIntegrationDetails, mcpComposioIntegrationDetails } from "@jupiter/sync/db/schema";
 
 export function createProxyController(
   proxyService: ProxyService,
   billingService: BillingService,
   oauthService: OAuthService,
+  composioService: ComposioService,
   db: NodePgDatabase
 ): Router {
   const router = Router();
@@ -99,6 +101,41 @@ export function createProxyController(
             .json({ error: "MCP not found or access denied" });
         }
 
+        console.log("[MCP Proxy] MCP found:", {
+          mcpId,
+          integrationType: mcp.integration_type,
+          isCustom: !mcp.mcp_store_id,
+        });
+
+        // Handle Composio integration type
+        if (mcp.integration_type === "composio") {
+          // For Composio MCPs, get the connection URL from mcp_composio_connections
+          const connectionUrl = await composioService.getConnectionUrl({
+            mcpId,
+          });
+
+          if (!connectionUrl) {
+            console.log("[MCP Proxy] No Composio connection URL found for MCP:", { mcpId });
+            return res.status(404).json({
+              error: "Composio connection not found",
+            });
+          }
+
+          console.log("[MCP Proxy] Composio connection URL retrieved, forwarding request");
+
+          // Forward the request to the Composio MCP server (no auth headers needed)
+          await proxyService.forwardToComposioMCP(
+            connectionUrl,
+            req,
+            res,
+            path
+          );
+
+          console.log("[MCP Proxy] Request forwarded successfully to Composio MCP");
+          return;
+        }
+
+        // Handle OAuth integration type (existing logic)
         // Determine MCP server URL (either from store or custom)
         let mcpServerUrl: string;
 
@@ -128,10 +165,8 @@ export function createProxyController(
             .json({ error: "MCP configuration error: no server URL" });
         }
 
-        console.log("[MCP Proxy] MCP found:", {
-          mcpId,
+        console.log("[MCP Proxy] OAuth MCP server URL:", {
           mcpServerUrl,
-          isCustom: !mcp.mcp_store_id,
         });
 
         // Get the OAuth access token (will auto-refresh if expired)

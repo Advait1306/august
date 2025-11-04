@@ -20,13 +20,14 @@ import { BillingService } from "./services/billing.service";
 import { SyncService } from "./services/sync.service";
 import { ProxyService } from "./services/proxy.service";
 import { OAuthService } from "./services/oauth.service";
+import { ComposioService } from "./services/composio.service";
 
 // Controllers
 import { createClerkController } from "./controllers/clerk.controller";
 import { createSyncController } from "./controllers/sync.controller";
 import { createProxyController } from "./controllers/proxy.controller";
 import { createBillingController } from "./controllers/billing.controller";
-import { createOAuthController } from "./controllers/oauth.controller";
+import { createMCPController } from "./controllers/mcp.controller";
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use(clerkMiddleware());
 const clerkService = new ClerkService(db);
 const billingService = new BillingService(db);
 const oauthService = new OAuthService(db);
+const composioService = new ComposioService(db);
 const syncService = new SyncService(processor, mp, oauthService);
 const proxyService = new ProxyService(billingService, oauthService);
 
@@ -72,9 +74,9 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 // Mount controllers
 app.use(createClerkController(clerkService));
 app.use(createSyncController(syncService));
-app.use(createProxyController(proxyService, billingService, oauthService, db));
+app.use(createProxyController(proxyService, billingService, oauthService, composioService, db));
 app.use(createBillingController(clerkClient, db, dodoClient, billingService));
-app.use(createOAuthController(db));
+app.use(createMCPController(db));
 
 app.listen(8080, () => {
   console.log("Server is running on port 8080");

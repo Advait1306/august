@@ -46,7 +46,7 @@ function MCP() {
       setConnectingId(mcpStoreId);
 
       // Initiate OAuth flow (MCP will be created after successful OAuth callback)
-      const authorizeResponse = await api.post("/api/oauth/authorize", {
+      const authorizeResponse = await api.post("/api/mcp/authorize", {
         mcp_store_id: mcpStoreId,
       });
 
@@ -87,7 +87,7 @@ function MCP() {
       setIsConnectingCustom(true);
 
       // Initiate OAuth flow with custom MCP (MCP will be created after successful OAuth callback)
-      const authorizeResponse = await api.post("/api/oauth/authorize", {
+      const authorizeResponse = await api.post("/api/mcp/authorize", {
         custom_mcp_name: customMcpName.trim(),
         custom_mcp_url: customMcpUrl.trim(),
       });

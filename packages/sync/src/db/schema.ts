@@ -148,6 +148,23 @@ export const oauthStates = pgTable("oauth_states", {
   expires_at: timestamp().notNull(),
 });
 
+// Composio States - Temporary storage for Composio connection requests
+export const composioStates = pgTable("composio_states", {
+  id: varchar().primaryKey().notNull(),
+  connection_request_id: varchar().unique().notNull(),
+  user_id: varchar()
+    .notNull()
+    .references(() => users.id),
+  organisation_id: varchar()
+    .notNull()
+    .references(() => organisations.id),
+  mcp_store_id: varchar()
+    .notNull()
+    .references(() => mcpStore.id),
+  created_at: timestamp().notNull().defaultNow(),
+  expires_at: timestamp().notNull(),
+});
+
 export const baseAgent = pgEnum("base_agent", [
   "claude-code",
   "codex",
@@ -220,6 +237,7 @@ export const userRelations = relations(users, ({ many }) => ({
   projects: many(projects),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
+  composioStates: many(composioStates),
 }));
 
 // Organisation relations
@@ -230,6 +248,7 @@ export const organisationRelations = relations(organisations, ({ many }) => ({
   usage: many(usage),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
+  composioStates: many(composioStates),
 }));
 
 // Agent relations
@@ -301,6 +320,7 @@ export const mcpStoreRelations = relations(mcpStore, ({ one, many }) => ({
   composioDetails: one(mcpComposioIntegrationDetails),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
+  composioStates: many(composioStates),
 }));
 
 // OAuth Integration Details relations
@@ -377,6 +397,22 @@ export const oauthStatesRelations = relations(oauthStates, ({ one }) => ({
   }),
   mcpStore: one(mcpStore, {
     fields: [oauthStates.mcp_store_id],
+    references: [mcpStore.id],
+  }),
+}));
+
+// Composio States relations
+export const composioStatesRelations = relations(composioStates, ({ one }) => ({
+  user: one(users, {
+    fields: [composioStates.user_id],
+    references: [users.id],
+  }),
+  organisation: one(organisations, {
+    fields: [composioStates.organisation_id],
+    references: [organisations.id],
+  }),
+  mcpStore: one(mcpStore, {
+    fields: [composioStates.mcp_store_id],
     references: [mcpStore.id],
   }),
 }));
