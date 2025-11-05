@@ -197,6 +197,13 @@ export default function TaskWindow() {
               onChange={(e) => setPrompt(e.target.value)}
               disabled={isGenerating}
               value={prompt}
+              mentionOptions={[
+                { label: "Agent", value: "@agent" },
+                { label: "Project", value: "@project" },
+                { label: "Task", value: "@task" },
+                { label: "File", value: "@file" },
+                { label: "User", value: "@user" },
+              ]}
             />
           )}
         </PromptInputBody>

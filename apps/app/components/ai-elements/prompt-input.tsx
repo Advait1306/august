@@ -15,6 +15,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Popover,
+  PopoverContent,
+  PopoverAnchor,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import type { ChatStatus, FileUIPart } from "ai";
 import {
@@ -481,17 +492,123 @@ export const PromptInputBody = ({
   <div className={cn(className, "flex flex-col")} {...props} />
 );
 
-export type PromptInputTextareaProps = ComponentProps<typeof Textarea>;
+export type PromptInputTextareaProps = ComponentProps<typeof Textarea> & {
+  mentionOptions?: Array<{ label: string; value: string }>;
+};
 
 export const PromptInputTextarea = ({
   onChange,
   className,
   placeholder = "What would you like me to do?",
+  mentionOptions = [],
   ...props
 }: PromptInputTextareaProps) => {
   const attachments = usePromptInputAttachments();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [mentionTriggerPos, setMentionTriggerPos] = useState(0);
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
+
+  const getCaretCoordinates = useCallback((element: HTMLTextAreaElement, position: number) => {
+    // Create a mirror div to measure caret position
+    const div = document.createElement('div');
+    const style = window.getComputedStyle(element);
+
+    // Get padding values from textarea
+    const paddingTop = parseFloat(style.paddingTop) || 0;
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+
+    // Copy all text-related styles exactly
+    div.style.position = 'absolute';
+    div.style.visibility = 'hidden';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.wordWrap = 'break-word';
+    div.style.overflowWrap = 'break-word';
+    div.style.font = style.font;
+    div.style.fontSize = style.fontSize;
+    div.style.fontFamily = style.fontFamily;
+    div.style.fontWeight = style.fontWeight;
+    div.style.letterSpacing = style.letterSpacing;
+    div.style.lineHeight = style.lineHeight;
+    div.style.textTransform = style.textTransform;
+    div.style.wordSpacing = style.wordSpacing;
+    // Match the content width (clientWidth minus padding)
+    div.style.width = `${element.clientWidth - paddingLeft - paddingRight}px`;
+    div.style.padding = '0';
+    div.style.border = '0';
+    div.style.boxSizing = 'content-box';
+
+    document.body.appendChild(div);
+
+    const textBeforeCaret = element.value.substring(0, position);
+    div.textContent = textBeforeCaret;
+
+    const span = document.createElement('span');
+    span.textContent = '|';
+    div.appendChild(span);
+
+    // Measure the offset of the span within the div
+    const coordinates = {
+      top: span.offsetTop,
+      left: span.offsetLeft,
+    };
+
+    document.body.removeChild(div);
+
+    return {
+      top: coordinates.top + paddingTop - element.scrollTop,
+      left: coordinates.left + paddingLeft - element.scrollLeft,
+    };
+  }, []);
+
+  // Update anchor position when textarea scrolls
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea || !showMentionMenu) return;
+
+    const updatePosition = () => {
+      const coords = getCaretCoordinates(textarea, mentionTriggerPos + 1);
+      setAnchorPosition({
+        top: coords.top + textarea.offsetTop,
+        left: coords.left + textarea.offsetLeft,
+      });
+    };
+
+    textarea.addEventListener('scroll', updatePosition);
+    return () => textarea.removeEventListener('scroll', updatePosition);
+  }, [showMentionMenu, mentionTriggerPos, getCaretCoordinates]);
 
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
+    if (e.key === "@" && mentionOptions.length > 0) {
+      // Track where @ was typed
+      const cursorPos = e.currentTarget.selectionStart;
+      setMentionTriggerPos(cursorPos);
+
+      // Calculate caret position and show popover
+      setTimeout(() => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const coords = getCaretCoordinates(textarea, cursorPos + 1);
+
+        // Add textarea's offset within its parent container
+        // The coords already account for scroll position
+        setAnchorPosition({
+          top: coords.top + textarea.offsetTop,
+          left: coords.left + textarea.offsetLeft,
+        });
+        setShowMentionMenu(true);
+      }, 0);
+    }
+
+    if (e.key === "Escape" && showMentionMenu) {
+      e.preventDefault();
+      setShowMentionMenu(false);
+      return;
+    }
+
     if (e.key === "Enter") {
       // Don't submit if IME composition is in progress
       if (e.nativeEvent.isComposing) {
@@ -536,24 +653,90 @@ export const PromptInputTextarea = ({
     }
   };
 
+  const handleMentionSelect = (value: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const currentValue = textarea.value;
+    const beforeAt = currentValue.substring(0, mentionTriggerPos);
+    const afterAt = currentValue.substring(mentionTriggerPos + 1);
+
+    const newValue = beforeAt + value + afterAt;
+    textarea.value = newValue;
+
+    // Trigger onChange event
+    const event = new Event("input", { bubbles: true });
+    textarea.dispatchEvent(event);
+
+    // Set cursor position after the inserted mention
+    const newCursorPos = mentionTriggerPos + value.length;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    textarea.focus();
+
+    setShowMentionMenu(false);
+  };
+
   return (
-    <Textarea
-      className={cn(
-        "w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
-        "field-sizing-content bg-transparent dark:bg-transparent",
-        "max-h-48 min-h-16",
-        "focus-visible:ring-0",
-        className
-      )}
-      name="message"
-      onChange={(e) => {
-        onChange?.(e);
-      }}
-      onKeyDown={handleKeyDown}
-      onPaste={handlePaste}
-      placeholder={placeholder}
-      {...props}
-    />
+    <div className="relative">
+      <Textarea
+        ref={textareaRef}
+        className={cn(
+          "w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
+          "field-sizing-content bg-transparent dark:bg-transparent",
+          "max-h-48 min-h-16",
+          "focus-visible:ring-0",
+          className
+        )}
+        name="message"
+        onChange={(e) => {
+          onChange?.(e);
+        }}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        placeholder={placeholder}
+        {...props}
+      />
+
+      <Popover open={showMentionMenu} onOpenChange={setShowMentionMenu}>
+        <PopoverAnchor asChild>
+          <span
+            ref={anchorRef}
+            style={{
+              position: 'absolute',
+              top: `${anchorPosition.top}px`,
+              left: `${anchorPosition.left}px`,
+              width: '1px',
+              height: '1px',
+            }}
+          />
+        </PopoverAnchor>
+        <PopoverContent
+          className="p-0 w-64"
+          align="start"
+          side="bottom"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <Command>
+            <CommandList>
+              <CommandGroup>
+                {mentionOptions.length > 0 ? (
+                  mentionOptions.map((option) => (
+                    <CommandItem
+                      key={option.value}
+                      onSelect={() => handleMentionSelect(option.value)}
+                    >
+                      {option.label}
+                    </CommandItem>
+                  ))
+                ) : (
+                  <CommandItem disabled>No options available</CommandItem>
+                )}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 };
 
