@@ -11,7 +11,7 @@ import {
   PromptInputActionMenuItem,
 } from "@/components/ai-elements/prompt-input";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { AssistantMessage, UserMessage } from "./message";
 import {
   Conversation,
@@ -35,6 +35,8 @@ export default function TaskWindow() {
   const agents = useQuery(getAgents(syncData.authData))[0];
 
   const projects = useQuery(getProjects(syncData.authData))[0];
+
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   // Messages
   const {
@@ -121,14 +123,20 @@ export default function TaskWindow() {
     [setComposerStates, selectedTaskId]
   );
 
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [selectedTaskId, messages]);
+
   return (
     <motion.div className="flex-1 relative" layout>
       {/* Thread */}
-      <Conversation
+      <div
         className="absolute w-full h-full p-8 overflow-auto pb-40 no-scrollbar"
-        key={selectedTaskId}
+        ref={messagesRef}
       >
-        <ConversationContent>
+        <div>
           {selectedTaskId === "new-conversation" ? (
             <ConversationEmptyState
               icon={
@@ -147,10 +155,10 @@ export default function TaskWindow() {
             })
           )}
           {isGenerating && <BlinkingCursor />}
-        </ConversationContent>
+        </div>
 
-        <ConversationScrollButton className="mb-40" />
-      </Conversation>
+        {/* <ConversationScrollButton className="mb-40" /> */}
+      </div>
 
       {/* Composer */}
       <motion.div
