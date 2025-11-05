@@ -26,18 +26,15 @@ import { getAgents, getProjects } from "@jupiter/sync/queries/data";
 import { Agent, Project } from "@jupiter/sync/zero/zero-schema.gen";
 import { BlinkingCursor } from "./blinking-cursor";
 import { useSyncContext } from "@/src/components/sync_engine";
+import { motion } from "motion/react";
 
 export default function TaskWindow() {
   const syncData = useSyncContext();
 
   // Selector items
-  const agents = useQuery(
-    getAgents(syncData.authData)
-  )[0];
+  const agents = useQuery(getAgents(syncData.authData))[0];
 
-  const projects = useQuery(
-    getProjects(syncData.authData)
-  )[0];
+  const projects = useQuery(getProjects(syncData.authData))[0];
 
   // Messages
   const {
@@ -57,11 +54,19 @@ export default function TaskWindow() {
   const agent =
     selectedTaskId === "new-conversation"
       ? composerState?.agent
-      : agents.find((agent) => selectedTask && typeof selectedTask === "object" ? agent.id === selectedTask.agent_id : false);
+      : agents.find((agent) =>
+          selectedTask && typeof selectedTask === "object"
+            ? agent.id === selectedTask.agent_id
+            : false
+        );
   const project =
     selectedTaskId === "new-conversation"
       ? composerState?.project
-      : projects.find((project) => selectedTask && typeof selectedTask === "object" ? project.id === selectedTask.project_id : false);
+      : projects.find((project) =>
+          selectedTask && typeof selectedTask === "object"
+            ? project.id === selectedTask.project_id
+            : false
+        );
   const pendingPermissions = permissions[selectedTaskId] || [];
   const currentPermission = pendingPermissions[0];
   const isGenerating = generationState.includes(selectedTaskId);
@@ -117,7 +122,7 @@ export default function TaskWindow() {
   );
 
   return (
-    <div className="flex-1 relative">
+    <motion.div className="flex-1 relative" layout>
       {/* Thread */}
       <Conversation
         className="absolute w-full h-full p-8 overflow-auto pb-40 no-scrollbar"
@@ -148,110 +153,124 @@ export default function TaskWindow() {
       </Conversation>
 
       {/* Composer */}
-      <PromptInput
-        onSubmit={() => {
-          sendMessage(prompt);
+      <motion.div
+        className="absolute left-1/2 -translate-x-1/2 w-[80%] max-w-3xl bottom-8"
+        animate={{
+          y:
+            selectedTaskId === "new-conversation"
+              ? "calc(-50vh + 50% + 2rem)"
+              : "0%",
         }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
+        transition={{
+          type: "spring",
+          stiffness: 2000,
+          damping: 200,
+        }}
       >
-        <PromptInputBody>
-          {currentPermission ? (
-            <div className="flex justify-between items-center h-full pr-1 pl-4 py-1">
-              <div>
-                Allow <span>{currentPermission.toolName}</span> tool?
-                {pendingPermissions.length > 1 && (
-                  <span className="text-muted-foreground ml-2">
-                    (1 of {pendingPermissions.length})
-                  </span>
-                )}
+        <PromptInput
+          onSubmit={() => {
+            sendMessage(prompt);
+          }}
+        >
+          <PromptInputBody>
+            {currentPermission ? (
+              <div className="flex justify-between items-center h-full pr-1 pl-4 py-1">
+                <div>
+                  Allow <span>{currentPermission.toolName}</span> tool?
+                  {pendingPermissions.length > 1 && (
+                    <span className="text-muted-foreground ml-2">
+                      (1 of {pendingPermissions.length})
+                    </span>
+                  )}
+                </div>
+                <ButtonGroup>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      currentPermission.alwaysAllow();
+                    }}
+                  >
+                    Always Allow
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      currentPermission.grant();
+                    }}
+                  >
+                    Allow
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      currentPermission.deny();
+                    }}
+                  >
+                    Deny
+                  </Button>
+                </ButtonGroup>
               </div>
-              <ButtonGroup>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    currentPermission.alwaysAllow();
-                  }}
+            ) : (
+              <PromptInputTextarea
+                onChange={(e) => setPrompt(e.target.value)}
+                disabled={isGenerating}
+                value={prompt}
+                mentionOptions={[
+                  { label: "Agent", value: "@agent" },
+                  { label: "Project", value: "@project" },
+                  { label: "Task", value: "@task" },
+                  { label: "File", value: "@file" },
+                  { label: "User", value: "@user" },
+                ]}
+              />
+            )}
+          </PromptInputBody>
+          <PromptInputToolbar>
+            <PromptInputTools>
+              <PromptInputActionMenu>
+                <PromptInputActionMenuTrigger
+                  size={"lg"}
+                  disabled={selectedTaskId !== "new-conversation"}
                 >
-                  Always Allow
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    currentPermission.grant();
-                  }}
+                  <span>{agent?.name || "Agent"}</span>
+                </PromptInputActionMenuTrigger>
+                <PromptInputActionMenuContent>
+                  {agents.map((agent) => (
+                    <PromptInputActionMenuItem
+                      key={agent.id}
+                      onClick={() => setAgent(agent)}
+                    >
+                      {agent.name}
+                    </PromptInputActionMenuItem>
+                  ))}
+                </PromptInputActionMenuContent>
+              </PromptInputActionMenu>
+              <PromptInputActionMenu>
+                <PromptInputActionMenuTrigger
+                  size={"lg"}
+                  disabled={selectedTaskId !== "new-conversation"}
                 >
-                  Allow
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    currentPermission.deny();
-                  }}
-                >
-                  Deny
-                </Button>
-              </ButtonGroup>
-            </div>
-          ) : (
-            <PromptInputTextarea
-              onChange={(e) => setPrompt(e.target.value)}
+                  <span>{project?.name || "Project"}</span>
+                </PromptInputActionMenuTrigger>
+                <PromptInputActionMenuContent>
+                  {projects.map((project) => (
+                    <PromptInputActionMenuItem
+                      key={project.id}
+                      onClick={() => setProject(project)}
+                    >
+                      {project.name}
+                    </PromptInputActionMenuItem>
+                  ))}
+                </PromptInputActionMenuContent>
+              </PromptInputActionMenu>
+            </PromptInputTools>
+            <PromptInputSubmit
               disabled={isGenerating}
-              value={prompt}
-              mentionOptions={[
-                { label: "Agent", value: "@agent" },
-                { label: "Project", value: "@project" },
-                { label: "Task", value: "@task" },
-                { label: "File", value: "@file" },
-                { label: "User", value: "@user" },
-              ]}
+              status={isGenerating ? "streaming" : "ready"}
             />
-          )}
-        </PromptInputBody>
-        <PromptInputToolbar>
-          <PromptInputTools>
-            <PromptInputActionMenu>
-              <PromptInputActionMenuTrigger
-                size={"lg"}
-                disabled={selectedTaskId !== "new-conversation"}
-              >
-                <span>{agent?.name || "Agent"}</span>
-              </PromptInputActionMenuTrigger>
-              <PromptInputActionMenuContent>
-                {agents.map((agent) => (
-                  <PromptInputActionMenuItem
-                    key={agent.id}
-                    onClick={() => setAgent(agent)}
-                  >
-                    {agent.name}
-                  </PromptInputActionMenuItem>
-                ))}
-              </PromptInputActionMenuContent>
-            </PromptInputActionMenu>
-            <PromptInputActionMenu>
-              <PromptInputActionMenuTrigger
-                size={"lg"}
-                disabled={selectedTaskId !== "new-conversation"}
-              >
-                <span>{project?.name || "Project"}</span>
-              </PromptInputActionMenuTrigger>
-              <PromptInputActionMenuContent>
-                {projects.map((project) => (
-                  <PromptInputActionMenuItem
-                    key={project.id}
-                    onClick={() => setProject(project)}
-                  >
-                    {project.name}
-                  </PromptInputActionMenuItem>
-                ))}
-              </PromptInputActionMenuContent>
-            </PromptInputActionMenu>
-          </PromptInputTools>
-          <PromptInputSubmit
-            disabled={isGenerating}
-            status={isGenerating ? "streaming" : "ready"}
-          />
-        </PromptInputToolbar>
-      </PromptInput>
-    </div>
+          </PromptInputToolbar>
+        </PromptInput>
+      </motion.div>
+    </motion.div>
   );
 }
