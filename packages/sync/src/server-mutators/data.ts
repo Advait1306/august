@@ -64,7 +64,7 @@ export function createServerMutators(
         getProperties: (args: any) => ({
           task_id: args.task_id,
           project_id: args.project_id,
-          agent_id: args.agent_id,
+          ...(args.agent_id && { agent_id: args.agent_id }),
         }),
       },
     },

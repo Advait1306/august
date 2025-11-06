@@ -47,7 +47,7 @@ const getDefaultCwd = async (): Promise<string> => {
 
 type ComposerState = {
   prompt: string;
-  agent: Agent;
+  agent?: Agent;
   cwd: string;
 };
 
@@ -315,7 +315,7 @@ export const TaskRuntimeProvider = ({
     });
 
     let taskId: string;
-    let agent: Agent;
+    let agent: Agent | undefined;
     let cwd: string;
     let chatMessages: ModelMessage[];
 
@@ -337,7 +337,7 @@ export const TaskRuntimeProvider = ({
       // Create new task
       const result = z.mutate.tasks.create({
         task_id: taskId,
-        agent_id: agent.id,
+        ...(agent && { agent_id: agent.id }),
         message_data: {
           task_id: taskId,
           message_id: messageId,
@@ -357,7 +357,9 @@ export const TaskRuntimeProvider = ({
       if (!currentTask) {
         throw new Error("Selected task not found");
       }
-      agent = agents.find((agent) => agent.id === currentTask.agent_id)!;
+      agent = currentTask.agent_id
+        ? agents.find((agent) => agent.id === currentTask.agent_id)
+        : undefined;
       cwd = composerStates[selectedTaskId]?.cwd || "";
 
       // Create message
@@ -439,7 +441,7 @@ export const TaskRuntimeProvider = ({
         },
         threadId: taskId,
       },
-      systemPrompt: agent.system_prompt,
+      systemPrompt: agent?.system_prompt,
       path: claudeCode.selectedInstallation?.path,
       mcpServers: userMcps.reduce(
         (acc, mcp) => {

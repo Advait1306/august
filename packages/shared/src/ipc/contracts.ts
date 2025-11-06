@@ -14,7 +14,7 @@ export namespace IPC {
     // Run request from caller (no id yet)
     export interface RunRequest {
       options: RunOptions;
-      systemPrompt: string;
+      systemPrompt?: string;
       path?: string;
       env?: Record<string, string>;
       mcpServers?: Record<

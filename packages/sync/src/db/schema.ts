@@ -195,9 +195,7 @@ export const tasks = pgTable("tasks", {
     .notNull()
     .references(() => users.id),
   created_at: timestamp().notNull().defaultNow(),
-  agent_id: varchar()
-    .notNull()
-    .references(() => agents.id),
+  agent_id: varchar().references(() => agents.id),
   updated_at: timestamp().notNull().defaultNow(),
 });
 

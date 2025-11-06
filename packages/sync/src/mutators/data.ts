@@ -66,7 +66,7 @@ export function createMutators(authData: AuthData) {
           message_data,
         }: {
           task_id: string;
-          agent_id: string;
+          agent_id?: string;
           message_data: {
             task_id: string;
             message_id: string;
@@ -90,7 +90,7 @@ export function createMutators(authData: AuthData) {
           id: task_id,
           author_id: authData.userId,
           name,
-          agent_id,
+          ...(agent_id && { agent_id }),
           organisation_id: authData.orgId,
           created_at: Date.now(),
         });

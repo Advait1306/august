@@ -936,7 +936,7 @@ export const schema = {
         },
         agent_id: {
           type: "string",
-          optional: false,
+          optional: true,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "tasks",
