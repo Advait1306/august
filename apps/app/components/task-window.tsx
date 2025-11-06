@@ -321,12 +321,23 @@ export default function TaskWindow() {
                 disabled={isGenerating}
                 value={prompt}
                 mentionOptions={[
-                  { label: "Agent", value: "@agent" },
+                  {
+                    label: "Agent",
+                    value: "@agent",
+                    children: [
+                      { label: "Agent Alpha", value: "@agent-alpha" },
+                      { label: "Agent Beta", value: "@agent-beta" },
+                      { label: "Agent Gamma", value: "@agent-gamma" },
+                    ],
+                  },
                   { label: "Project", value: "@project" },
                   { label: "Task", value: "@task" },
                   { label: "File", value: "@file" },
                   { label: "User", value: "@user" },
                 ]}
+                onMentionSelect={(e) => {
+                  console.log("selected mention:", e);
+                }}
               />
             )}
           </PromptInputBody>
