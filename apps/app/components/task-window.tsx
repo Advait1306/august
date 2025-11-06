@@ -11,14 +11,8 @@ import {
   PromptInputActionMenuItem,
 } from "@/components/ai-elements/prompt-input";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
-import { useCallback, useEffect, useRef } from "react";
-import { AssistantMessage, UserMessage } from "./message";
-import {
-  Conversation,
-  ConversationContent,
-  ConversationEmptyState,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { ConversationEmptyState } from "@/components/ai-elements/conversation";
 import { ButtonGroup } from "./ui/button-group";
 import { Button } from "./ui/button";
 import { useQuery } from "@rocicorp/zero/react";
@@ -27,6 +21,97 @@ import { Agent, Project } from "@jupiter/sync/zero/zero-schema.gen";
 import { BlinkingCursor } from "./blinking-cursor";
 import { useSyncContext } from "@/src/components/sync_engine";
 import { motion } from "motion/react";
+import { VList, VListHandle } from "virtua";
+import {
+  UserMessagePartView,
+  AssistantTextPartView,
+  AssistantToolPartView,
+} from "./message";
+import { AssistantContent, ToolResultPart } from "ai";
+
+// Message part types for virtualization
+type MessagePart =
+  | { type: "user-content"; id: string; content: any; messageIndex: number }
+  | {
+      type: "assistant-text";
+      id: string;
+      text: string;
+      messageIndex: number;
+      partIndex: number;
+    }
+  | {
+      type: "assistant-tool";
+      id: string;
+      toolCall: any;
+      toolResult: ToolResultPart | undefined;
+      messageIndex: number;
+      partIndex: number;
+    };
+
+// Transform messages into flat list of parts for virtualization
+function flattenMessagesToParts(messages: readonly any[]): MessagePart[] {
+  const parts: MessagePart[] = [];
+
+  messages.forEach((message, messageIndex) => {
+    if (message.role === "user") {
+      parts.push({
+        type: "user-content",
+        id: `user-${messageIndex}`,
+        content: message.content,
+        messageIndex,
+      });
+    } else if (message.role === "assistant") {
+      if (typeof message.content === "string") {
+        parts.push({
+          type: "assistant-text",
+          id: `assistant-${messageIndex}-0`,
+          text: message.content,
+          messageIndex,
+          partIndex: 0,
+        });
+      } else {
+        const contentParts = message.content as Exclude<
+          AssistantContent,
+          string
+        >;
+        contentParts.forEach((content: any, partIndex: number) => {
+          switch (content.type) {
+            case "text":
+              parts.push({
+                type: "assistant-text",
+                id: `assistant-${messageIndex}-${partIndex}`,
+                text: content.text,
+                messageIndex,
+                partIndex,
+              });
+              break;
+            case "tool-call": {
+              const result = contentParts.find(
+                (part): part is ToolResultPart =>
+                  part.type === "tool-result" &&
+                  part.toolCallId === content.toolCallId
+              );
+              parts.push({
+                type: "assistant-tool",
+                id: `assistant-${messageIndex}-${partIndex}`,
+                toolCall: content,
+                toolResult: result,
+                messageIndex,
+                partIndex,
+              });
+              break;
+            }
+            case "tool-result":
+              // Skip tool-results as they're handled in tool-call
+              break;
+          }
+        });
+      }
+    }
+  });
+
+  return parts;
+}
 
 export default function TaskWindow() {
   const syncData = useSyncContext();
@@ -36,7 +121,7 @@ export default function TaskWindow() {
 
   const projects = useQuery(getProjects(syncData.authData))[0];
 
-  const messagesRef = useRef<HTMLDivElement>(null);
+  const virtualizerRef = useRef<VListHandle>(null);
 
   // Messages
   const {
@@ -49,6 +134,11 @@ export default function TaskWindow() {
     permissions,
     generationState,
   } = useTaskRuntime();
+
+  // Flatten messages into parts for virtualization
+  const messageParts = useMemo(() => {
+    return messages ? flattenMessagesToParts(messages) : [];
+  }, [messages]);
 
   // Derived state and functions for ease of use
   const composerState = composerStates[selectedTaskId];
@@ -124,40 +214,47 @@ export default function TaskWindow() {
   );
 
   useEffect(() => {
-    if (messagesRef.current) {
-      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    if (virtualizerRef.current) {
+      virtualizerRef.current.scrollToIndex(messageParts.length - 1, {
+        align: "end",
+      });
     }
   }, [selectedTaskId, messages]);
 
   return (
     <motion.div className="flex-1 relative" layout>
       {/* Thread */}
-      <div
-        className="absolute w-full h-full p-8 overflow-auto pb-40 no-scrollbar"
-        ref={messagesRef}
-      >
-        <div>
-          {selectedTaskId === "new-conversation" ? (
-            <ConversationEmptyState
-              icon={
-                <div className="h-[40px] w-[40px] rounded-[20px] bg-primary" />
-              }
-              title="Start a task"
-              description="Share an idea with your artificial helper"
-            />
-          ) : (
-            messages?.map((message: any, index: number) => {
-              if (message.role === "user") {
-                return <UserMessage key={index} message={message} />;
-              } else {
-                return <AssistantMessage key={index} message={message} />;
-              }
-            })
-          )}
-          {isGenerating && <BlinkingCursor />}
-        </div>
-
-        {/* <ConversationScrollButton className="mb-40" /> */}
+      <div className="absolute w-full h-[calc(100%-220px)] px-8 bottom-40">
+        {selectedTaskId === "new-conversation" ? (
+          <ConversationEmptyState
+            icon={
+              <div className="h-[40px] w-[40px] rounded-[20px] bg-primary" />
+            }
+            className="-translate-y-1/5"
+            title="Start a task"
+            description="Share an idea with your artificial helper"
+          />
+        ) : (
+          <VList className="h-full no-scrollbar" ref={virtualizerRef}>
+            {messageParts.map((part) => (
+              <div key={part.id}>
+                {part.type === "user-content" && (
+                  <UserMessagePartView content={part.content} />
+                )}
+                {part.type === "assistant-text" && (
+                  <AssistantTextPartView text={part.text} />
+                )}
+                {part.type === "assistant-tool" && (
+                  <AssistantToolPartView
+                    toolCall={part.toolCall}
+                    toolResult={part.toolResult}
+                  />
+                )}
+              </div>
+            ))}
+            {isGenerating && <BlinkingCursor />}
+          </VList>
+        )}
       </div>
 
       {/* Composer */}
