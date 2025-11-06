@@ -25,7 +25,6 @@ if (window.electron) {
     search: { project: undefined, agent: undefined },
   });
   router.preloadRoute({ to: "/mcp" });
-  router.preloadRoute({ to: "/projects" });
 }
 
 // Render the app

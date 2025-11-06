@@ -6,7 +6,6 @@ import {
   getMCPs,
   getMessages,
   getOrganisation,
-  getProjects,
   getTasks,
   getUsage,
 } from "@jupiter/sync/queries/data";
@@ -25,7 +24,6 @@ const validated = Object.fromEntries(
     getTasks,
     getMessages,
     getAgents,
-    getProjects,
     getOrganisation,
     getUsage,
     getMCPStore,

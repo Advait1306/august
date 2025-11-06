@@ -16,8 +16,8 @@ import { ConversationEmptyState } from "@/components/ai-elements/conversation";
 import { ButtonGroup } from "./ui/button-group";
 import { Button } from "./ui/button";
 import { useQuery } from "@rocicorp/zero/react";
-import { getAgents, getProjects } from "@jupiter/sync/queries/data";
-import { Agent, Project } from "@jupiter/sync/zero/zero-schema.gen";
+import { getAgents } from "@jupiter/sync/queries/data";
+import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
 import { BlinkingCursor } from "./blinking-cursor";
 import { useSyncContext } from "@/src/components/sync_engine";
 import { motion } from "motion/react";
@@ -119,8 +119,6 @@ export default function TaskWindow() {
   // Selector items
   const agents = useQuery(getAgents(syncData.authData))[0];
 
-  const projects = useQuery(getProjects(syncData.authData))[0];
-
   const virtualizerRef = useRef<VListHandle>(null);
 
   // Messages
@@ -151,14 +149,7 @@ export default function TaskWindow() {
             ? agent.id === selectedTask.agent_id
             : false
         );
-  const project =
-    selectedTaskId === "new-conversation"
-      ? composerState?.project
-      : projects.find((project) =>
-          selectedTask && typeof selectedTask === "object"
-            ? project.id === selectedTask.project_id
-            : false
-        );
+  const cwd = composerState?.cwd ?? "";
   const pendingPermissions = permissions[selectedTaskId] || [];
   const currentPermission = pendingPermissions[0];
   const isGenerating = generationState.includes(selectedTaskId);
@@ -197,21 +188,21 @@ export default function TaskWindow() {
   );
 
   // Only allowed for "new-conversation"
-  const setProject = useCallback(
-    (project: Project) => {
+  const selectFolder = useCallback(async () => {
+    const folder = await window.api.projects.selectFolder();
+    if (folder) {
       // @ts-ignore
       setComposerStates((prev) => {
         return {
           ...prev,
           [selectedTaskId]: {
             ...prev[selectedTaskId],
-            project,
+            cwd: folder.path,
           },
         };
       });
-    },
-    [setComposerStates, selectedTaskId]
-  );
+    }
+  }, [setComposerStates, selectedTaskId]);
 
   useEffect(() => {
     if (virtualizerRef.current) {
@@ -361,24 +352,20 @@ export default function TaskWindow() {
                   ))}
                 </PromptInputActionMenuContent>
               </PromptInputActionMenu>
-              <PromptInputActionMenu>
-                <PromptInputActionMenuTrigger
-                  size={"lg"}
-                  disabled={selectedTaskId !== "new-conversation"}
-                >
-                  <span>{project?.name || "Project"}</span>
-                </PromptInputActionMenuTrigger>
-                <PromptInputActionMenuContent>
-                  {projects.map((project) => (
-                    <PromptInputActionMenuItem
-                      key={project.id}
-                      onClick={() => setProject(project)}
-                    >
-                      {project.name}
-                    </PromptInputActionMenuItem>
-                  ))}
-                </PromptInputActionMenuContent>
-              </PromptInputActionMenu>
+              <Button
+                variant="outline"
+                size="lg"
+                disabled={selectedTaskId !== "new-conversation"}
+                onClick={selectFolder}
+                onSubmit={(e) => {
+                  // Avoid the form being submitted
+                  e.stopPropagation();
+                }}
+              >
+                {cwd
+                  ? cwd.match(/[^/\\]+$/)?.[0] || "Select Folder"
+                  : "Select Folder"}
+              </Button>
             </PromptInputTools>
             <PromptInputSubmit
               disabled={isGenerating}

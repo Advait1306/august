@@ -7,16 +7,6 @@ export type AuthData = {
   orgId: string;
 };
 
-export const getProjects = syncedQueryWithContext(
-  "getProjects",
-  z.tuple([]),
-  (context: AuthData) => {
-    return builder.projects
-      .where("author_id", context.userId)
-      .where("organisation_id", context.orgId);
-  }
-);
-
 export const getAgents = syncedQueryWithContext(
   "getAgents",
   z.tuple([]),

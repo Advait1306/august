@@ -185,20 +185,6 @@ export const agents = pgTable("agents", {
     .references(() => users.id),
 });
 
-export const projects = pgTable("projects", {
-  id: varchar().notNull().primaryKey(),
-  name: varchar().notNull(),
-  path: varchar().notNull(),
-  created_at: timestamp().notNull().defaultNow(),
-  organisation_id: varchar()
-    .notNull()
-    .references(() => organisations.id),
-  author_id: varchar()
-    .notNull()
-    .references(() => users.id),
-});
-
-// TODO: Manage deletion of project
 export const tasks = pgTable("tasks", {
   id: varchar().notNull().primaryKey(),
   name: varchar().notNull(),
@@ -212,9 +198,6 @@ export const tasks = pgTable("tasks", {
   agent_id: varchar()
     .notNull()
     .references(() => agents.id),
-  project_id: varchar()
-    .notNull()
-    .references(() => projects.id),
   updated_at: timestamp().notNull().defaultNow(),
 });
 
@@ -234,7 +217,6 @@ export const messages = pgTable("messages", {
 export const userRelations = relations(users, ({ many }) => ({
   tasks: many(tasks),
   agents: many(agents),
-  projects: many(projects),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
   composioStates: many(composioStates),
@@ -243,7 +225,6 @@ export const userRelations = relations(users, ({ many }) => ({
 // Organisation relations
 export const organisationRelations = relations(organisations, ({ many }) => ({
   agents: many(agents),
-  projects: many(projects),
   tasks: many(tasks),
   usage: many(usage),
   mcps: many(mcps),
@@ -264,19 +245,6 @@ export const agentRelations = relations(agents, ({ one, many }) => ({
   }),
 }));
 
-// Project relations
-export const projectRelations = relations(projects, ({ one, many }) => ({
-  user: one(users, {
-    fields: [projects.author_id],
-    references: [users.id],
-  }),
-  tasks: many(tasks),
-  organisation: one(organisations, {
-    fields: [projects.organisation_id],
-    references: [organisations.id],
-  }),
-}));
-
 // Task relations
 export const taskRelations = relations(tasks, ({ one, many }) => ({
   user: one(users, {
@@ -286,10 +254,6 @@ export const taskRelations = relations(tasks, ({ one, many }) => ({
   agent: one(agents, {
     fields: [tasks.agent_id],
     references: [agents.id],
-  }),
-  project: one(projects, {
-    fields: [tasks.project_id],
-    references: [projects.id],
   }),
   messages: many(messages),
   organisation: one(organisations, {

@@ -38,6 +38,15 @@ export namespace IPC {
       name: string;
       path: string;
     } | null;
+
+    export type GetDefaultCwdResponse = string;
+  }
+
+  export namespace Folder {
+    export type SelectFolderResponse = {
+      name: string;
+      path: string;
+    } | null;
   }
 
   export namespace Auth {
