@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/command";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "motion/react";
 
 export type PromptMenuOption = {
   label: string;
@@ -28,6 +29,7 @@ type MenuState = {
   selectedIndex: number;
   currentOptions: PromptMenuOption[];
   optionStack: PromptMenuOption[][];
+  direction: "forward" | "backward";
 };
 
 // Action types
@@ -64,6 +66,7 @@ function menuReducer(state: MenuState, action: MenuAction): MenuState {
         optionStack: [...state.optionStack, state.currentOptions],
         currentOptions: action.payload,
         selectedIndex: 0,
+        direction: "forward",
       };
     case "NAVIGATE_BACK":
       if (state.optionStack.length > 0) {
@@ -73,6 +76,7 @@ function menuReducer(state: MenuState, action: MenuAction): MenuState {
           optionStack: state.optionStack.slice(0, -1),
           currentOptions: previousOptions,
           selectedIndex: 0,
+          direction: "backward",
         };
       }
       return state;
@@ -82,6 +86,7 @@ function menuReducer(state: MenuState, action: MenuAction): MenuState {
         currentOptions: action.payload,
         optionStack: [],
         selectedIndex: 0,
+        direction: "forward",
       };
     default:
       return state;
@@ -137,6 +142,7 @@ export function PromptMenu({
     selectedIndex: 0,
     currentOptions: options,
     optionStack: [],
+    direction: "forward",
   });
 
   // Filter options based on query
@@ -245,7 +251,10 @@ export function PromptMenu({
             if (query) {
               setQuery("");
             }
-            dispatch({ type: "NAVIGATE_INTO", payload: currentOption.children });
+            dispatch({
+              type: "NAVIGATE_INTO",
+              payload: currentOption.children,
+            });
           }
         }
       } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -271,7 +280,7 @@ export function PromptMenu({
 
   return (
     <PopoverContent
-      className="p-0 w-64 mt-4"
+      className="p-0 w-64 mt-4 overflow-hidden relative"
       align="start"
       side="bottom"
       onOpenAutoFocus={(e) => e.preventDefault()}
@@ -286,73 +295,110 @@ export function PromptMenu({
       <Command>
         <CommandList>
           <CommandGroup>
-            {!query && state.optionStack.length > 0 && (
-              <CommandItem
-                onSelect={handleGoBack}
-                onMouseEnter={() =>
-                  dispatch({ type: "SET_SELECTED_INDEX", payload: -1 })
-                }
-                onMouseDown={(e) => e.preventDefault()}
-                className="text-muted-foreground hover:!bg-transparent hover:!text-muted-foreground"
+            <AnimatePresence
+              mode="popLayout"
+              initial={false}
+              custom={state.direction}
+            >
+              <motion.div
+                key={state.optionStack.length}
+                custom={state.direction}
+                variants={{
+                  enter: (direction: "forward" | "backward") => ({
+                    x: direction === "forward" ? "100%" : "-100%",
+                    opacity: 0,
+                  }),
+                  center: {
+                    x: 0,
+                    opacity: 1,
+                  },
+                  exit: (direction: "forward" | "backward") => ({
+                    x: direction === "forward" ? "-100%" : "100%",
+                    opacity: 0,
+                  }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{
+                  duration: 0.2,
+                  ease: "easeInOut",
+                }}
               >
-                ← Back
-              </CommandItem>
-            )}
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((option, index) => {
-                const showPath = query && option.path && option.path.length > 1;
-                const isParent = option.children && option.children.length > 0;
-
-                return (
+                {!query && state.optionStack.length > 0 && (
                   <CommandItem
-                    key={option.value}
-                    ref={index === state.selectedIndex ? selectedItemRef : null}
-                    onSubmit={(e) => e.preventDefault()}
-                    onSelect={() => handleSelect(option, !!query)}
+                    onSelect={handleGoBack}
                     onMouseEnter={() =>
-                      dispatch({
-                        type: "SET_SELECTED_INDEX",
-                        payload: index,
-                      })
+                      dispatch({ type: "SET_SELECTED_INDEX", payload: -1 })
                     }
                     onMouseDown={(e) => e.preventDefault()}
-                    data-selected={index === state.selectedIndex}
-                    className={cn(
-                      index === state.selectedIndex
-                        ? "bg-accent"
-                        : "hover:!bg-transparent hover:!text-inherit"
-                    )}
+                    className="text-muted-foreground hover:!bg-transparent hover:!text-muted-foreground"
                   >
-                    <span className="flex items-center justify-between w-full">
-                      <span className="flex flex-col">
-                        <span>
-                          {showPath ? (
+                    ← Back
+                  </CommandItem>
+                )}
+                {filteredOptions.length > 0 ? (
+                  filteredOptions.map((option, index) => {
+                    const showPath =
+                      query && option.path && option.path.length > 1;
+                    const isParent =
+                      option.children && option.children.length > 0;
+
+                    return (
+                      <CommandItem
+                        key={option.value}
+                        ref={
+                          index === state.selectedIndex ? selectedItemRef : null
+                        }
+                        onSubmit={(e) => e.preventDefault()}
+                        onSelect={() => handleSelect(option, !!query)}
+                        onMouseEnter={() =>
+                          dispatch({
+                            type: "SET_SELECTED_INDEX",
+                            payload: index,
+                          })
+                        }
+                        onMouseDown={(e) => e.preventDefault()}
+                        data-selected={index === state.selectedIndex}
+                        className={cn(
+                          index === state.selectedIndex
+                            ? "bg-accent"
+                            : "hover:!bg-transparent hover:!text-inherit"
+                        )}
+                      >
+                        <span className="flex items-center justify-between w-full">
+                          <span className="flex flex-col">
                             <span>
-                              <span className="text-muted-foreground text-xs">
-                                {option.path.slice(0, -1).join(" > ")} {" > "}
-                              </span>
-                              {option.label}
+                              {showPath ? (
+                                <span>
+                                  <span className="text-muted-foreground text-xs">
+                                    {option.path.slice(0, -1).join(" > ")}{" "}
+                                    {" > "}
+                                  </span>
+                                  {option.label}
+                                </span>
+                              ) : (
+                                option.label
+                              )}
                             </span>
-                          ) : (
-                            option.label
+                            {option.description && !showPath && (
+                              <span className="text-muted-foreground text-xs">
+                                {option.description}
+                              </span>
+                            )}
+                          </span>
+                          {isParent && (
+                            <span className="text-muted-foreground">→</span>
                           )}
                         </span>
-                        {option.description && !showPath && (
-                          <span className="text-muted-foreground text-xs">
-                            {option.description}
-                          </span>
-                        )}
-                      </span>
-                      {isParent && (
-                        <span className="text-muted-foreground">→</span>
-                      )}
-                    </span>
-                  </CommandItem>
-                );
-              })
-            ) : (
-              <CommandItem disabled>No matches found</CommandItem>
-            )}
+                      </CommandItem>
+                    );
+                  })
+                ) : (
+                  <CommandItem disabled>No matches found</CommandItem>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </CommandGroup>
         </CommandList>
       </Command>
