@@ -28,6 +28,7 @@ import {
   useRef,
 } from "react";
 import { createPortal } from "react-dom";
+import { cn } from "@/lib/utils";
 
 export type HotkeyOption = {
   label: string;
@@ -91,8 +92,6 @@ function menuReducer(state: MenuState, action: MenuAction): MenuState {
       return {
         ...state,
         showMenu: false,
-        query: "",
-        selectedIndex: 0,
       };
     case "UPDATE_QUERY":
       return {
@@ -331,6 +330,8 @@ function useKeyboardNavigation(
           e.preventDefault();
           e.stopPropagation();
           handleGoBack();
+        } else if (e.key === " ") {
+          dispatch({ type: "CLOSE_MENU" });
         } else if (e.key === "Backspace" && state.query.length === 0) {
           e.preventDefault();
           e.stopPropagation();
@@ -592,7 +593,11 @@ export function Hotkey({
                 {!state.query && state.optionStack.length > 0 && (
                   <CommandItem
                     onSelect={handleGoBack}
-                    className="text-muted-foreground"
+                    onMouseEnter={() =>
+                      dispatch({ type: "SET_SELECTED_INDEX", payload: -1 })
+                    }
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="text-muted-foreground hover:!bg-transparent hover:!text-muted-foreground"
                   >
                     ← Back
                   </CommandItem>
@@ -613,10 +618,19 @@ export function Hotkey({
                           index === state.selectedIndex ? selectedItemRef : null
                         }
                         onSelect={() => handleSelect(option, !!state.query)}
-                        data-selected={index === state.selectedIndex}
-                        className={
-                          index === state.selectedIndex ? "bg-accent" : ""
+                        onMouseEnter={() =>
+                          dispatch({
+                            type: "SET_SELECTED_INDEX",
+                            payload: index,
+                          })
                         }
+                        onMouseDown={(e) => e.preventDefault()}
+                        data-selected={index === state.selectedIndex}
+                        className={cn(
+                          index === state.selectedIndex
+                            ? "bg-accent"
+                            : "hover:!bg-transparent hover:!text-inherit"
+                        )}
                       >
                         <span className="flex items-center justify-between w-full">
                           <span>
