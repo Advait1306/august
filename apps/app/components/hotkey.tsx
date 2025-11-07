@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 export type HotkeyOption = {
   label: string;
   value: string;
+  description?: string;
   children?: HotkeyOption[];
 };
 
@@ -633,16 +634,23 @@ export function Hotkey({
                         )}
                       >
                         <span className="flex items-center justify-between w-full">
-                          <span>
-                            {showPath ? (
-                              <span>
-                                <span className="text-muted-foreground text-xs">
-                                  {option.path.slice(0, -1).join(" > ")} {" > "}
+                          <span className="flex flex-col">
+                            <span>
+                              {showPath ? (
+                                <span>
+                                  <span className="text-muted-foreground text-xs">
+                                    {option.path.slice(0, -1).join(" > ")} {" > "}
+                                  </span>
+                                  {option.label}
                                 </span>
-                                {option.label}
+                              ) : (
+                                option.label
+                              )}
+                            </span>
+                            {option.description && !showPath && (
+                              <span className="text-muted-foreground text-xs">
+                                {option.description}
                               </span>
-                            ) : (
-                              option.label
                             )}
                           </span>
                           {isParent && (

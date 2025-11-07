@@ -1,17 +1,13 @@
 import {
   PromptInput,
   PromptInputTextarea,
-  PromptInputActionMenu,
-  PromptInputActionMenuContent,
-  PromptInputActionMenuTrigger,
   PromptInputBody,
   PromptInputToolbar,
   PromptInputTools,
   PromptInputSubmit,
-  PromptInputActionMenuItem,
 } from "@/components/ai-elements/prompt-input";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ConversationEmptyState } from "@/components/ai-elements/conversation";
 import { ButtonGroup } from "./ui/button-group";
 import { Button } from "./ui/button";
@@ -20,7 +16,7 @@ import { getAgents } from "@jupiter/sync/queries/data";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
 import { BlinkingCursor } from "./blinking-cursor";
 import { useSyncContext } from "@/src/components/sync_engine";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { VList, VListHandle } from "virtua";
 import {
   UserMessagePartView,
@@ -28,6 +24,8 @@ import {
   AssistantToolPartView,
 } from "./message";
 import { AssistantContent, ToolResultPart } from "ai";
+import { XIcon } from "lucide-react";
+import { Badge } from "./ui/badge";
 
 // Message part types for virtualization
 type MessagePart =
@@ -121,6 +119,10 @@ export default function TaskWindow() {
 
   const virtualizerRef = useRef<VListHandle>(null);
 
+  // Hover states for badges
+  const [isAgentBadgeHovered, setIsAgentBadgeHovered] = useState(false);
+  const [isCwdBadgeHovered, setIsCwdBadgeHovered] = useState(false);
+
   // Messages
   const {
     selectedTaskId,
@@ -131,6 +133,7 @@ export default function TaskWindow() {
     setComposerStates,
     permissions,
     generationState,
+    defaultCwd,
   } = useTaskRuntime();
 
   // Flatten messages into parts for virtualization
@@ -156,7 +159,6 @@ export default function TaskWindow() {
 
   const setPrompt = useCallback(
     (prompt: string) => {
-      // @ts-ignore
       setComposerStates((prev) => {
         return {
           ...prev,
@@ -173,7 +175,6 @@ export default function TaskWindow() {
   // Only allowed for "new-conversation"
   const setAgent = useCallback(
     (agent: Agent) => {
-      // @ts-ignore
       setComposerStates((prev) => {
         return {
           ...prev,
@@ -191,7 +192,6 @@ export default function TaskWindow() {
   const selectFolder = useCallback(async () => {
     const folder = await window.api.projects.selectFolder();
     if (folder) {
-      // @ts-ignore
       setComposerStates((prev) => {
         return {
           ...prev,
@@ -203,6 +203,32 @@ export default function TaskWindow() {
       });
     }
   }, [setComposerStates, selectedTaskId]);
+
+  // Clear agent selection
+  const clearAgent = useCallback(() => {
+    setComposerStates((prev) => {
+      return {
+        ...prev,
+        [selectedTaskId]: {
+          ...prev[selectedTaskId],
+          agent: undefined,
+        },
+      };
+    });
+  }, [setComposerStates, selectedTaskId]);
+
+  // Clear cwd selection (revert to default)
+  const clearCwd = useCallback(() => {
+    setComposerStates((prev) => {
+      return {
+        ...prev,
+        [selectedTaskId]: {
+          ...prev[selectedTaskId],
+          cwd: defaultCwd,
+        },
+      };
+    });
+  }, [setComposerStates, selectedTaskId, defaultCwd]);
 
   useEffect(() => {
     if (virtualizerRef.current) {
@@ -314,58 +340,90 @@ export default function TaskWindow() {
                 mentionOptions={[
                   {
                     label: "Agent",
-                    value: "@agent",
-                    children: [
-                      { label: "Agent Alpha", value: "@agent-alpha" },
-                      { label: "Agent Beta", value: "@agent-beta" },
-                      { label: "Agent Gamma", value: "@agent-gamma" },
-                    ],
+                    value: "agent",
+                    description: "Use specialised agents for a task",
+                    children: agents.map((agent) => ({
+                      label: agent.name,
+                      value: `agent-${agent.id}`,
+                    })),
                   },
-                  { label: "Project", value: "@project" },
-                  { label: "Task", value: "@task" },
-                  { label: "File", value: "@file" },
-                  { label: "User", value: "@user" },
+                  {
+                    label: "Working Folder",
+                    value: "folder",
+                    description: "Select a local folder for a task",
+                  },
                 ]}
                 onMentionSelect={(e) => {
-                  console.log("selected mention:", e);
+                  switch (e) {
+                    case e.match(/^agent\-/)?.input:
+                      console.log(e);
+                      const selectedAgent = agents.find(
+                        (agent) => agent.id === e.replace(/^agent\-/, "")
+                      );
+                      if (selectedAgent) {
+                        setAgent(selectedAgent);
+                      }
+                      break;
+                    case "folder":
+                      selectFolder();
+                      break;
+                  }
                 }}
               />
             )}
           </PromptInputBody>
           <PromptInputToolbar>
             <PromptInputTools>
-              <PromptInputActionMenu>
-                <PromptInputActionMenuTrigger
-                  size={"lg"}
-                  disabled={selectedTaskId !== "new-conversation"}
+              {selectedTaskId === "new-conversation" && agent && (
+                <Badge
+                  variant="outline"
+                  className="flex items-center gap-1 py-2 rounded-md cursor-pointer"
+                  onMouseEnter={() => setIsAgentBadgeHovered(true)}
+                  onMouseLeave={() => setIsAgentBadgeHovered(false)}
+                  onClick={clearAgent}
                 >
+                  <AnimatePresence>
+                    {isAgentBadgeHovered && (
+                      <motion.div
+                        initial={{ width: 0, opacity: 0 }}
+                        animate={{ width: "auto", opacity: 1 }}
+                        exit={{ width: 0, opacity: 0 }}
+                        transition={{ duration: 0.15 }}
+                        layout
+                      >
+                        <XIcon className="w-4 h-4" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   <span>{agent?.name || "Agent"}</span>
-                </PromptInputActionMenuTrigger>
-                <PromptInputActionMenuContent>
-                  {agents.map((agent) => (
-                    <PromptInputActionMenuItem
-                      key={agent.id}
-                      onClick={() => setAgent(agent)}
-                    >
-                      {agent.name}
-                    </PromptInputActionMenuItem>
-                  ))}
-                </PromptInputActionMenuContent>
-              </PromptInputActionMenu>
-              <Button
-                variant="outline"
-                size="lg"
-                disabled={selectedTaskId !== "new-conversation"}
-                onClick={selectFolder}
-                onSubmit={(e) => {
-                  // Avoid the form being submitted
-                  e.stopPropagation();
-                }}
-              >
-                {cwd
-                  ? cwd.match(/[^/\\]+$/)?.[0] || "Select Folder"
-                  : "Select Folder"}
-              </Button>
+                </Badge>
+              )}
+              {selectedTaskId === "new-conversation" &&
+                cwd &&
+                cwd !== defaultCwd && (
+                  <Badge
+                    variant="outline"
+                    className="flex items-center gap-1 py-2 rounded-md cursor-pointer"
+                    onMouseEnter={() => setIsCwdBadgeHovered(true)}
+                    onMouseLeave={() => setIsCwdBadgeHovered(false)}
+                    onClick={clearCwd}
+                  >
+                    <AnimatePresence>
+                      {isCwdBadgeHovered && (
+                        <motion.div
+                          initial={{ width: 0, opacity: 0 }}
+                          animate={{ width: "auto", opacity: 1 }}
+                          exit={{ width: 0, opacity: 0 }}
+                          transition={{ duration: 0.15 }}
+                          layout
+                        >
+                          <XIcon className="w-4 h-4" />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <span>{cwd.match(/[^/\\]+$/)?.[0] || "Folder"}</span>
+                  </Badge>
+                )}
             </PromptInputTools>
             <PromptInputSubmit
               disabled={isGenerating}

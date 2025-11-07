@@ -29,10 +29,15 @@ type TaskRuntimeState = {
   selectTask: (task: string | "new-conversation") => void;
   sendMessage: (message: string) => void;
   composerStates: Record<string, ComposerState>;
-  setComposerStates: (states: Record<string, ComposerState>) => void;
+  setComposerStates: (
+    states:
+      | Record<string, ComposerState>
+      | ((prev: Record<string, ComposerState>) => Record<string, ComposerState>)
+  ) => void;
   permissions: PermissionState;
   generationState: GenerationState;
   installations: ClaudeInstallation[];
+  defaultCwd: string;
 };
 
 // Helper function to get default cwd (will be populated async)
@@ -63,6 +68,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   permissions: {},
   generationState: [],
   installations: [],
+  defaultCwd: "",
 });
 
 export const TaskRuntimeProvider = ({
@@ -93,16 +99,18 @@ export const TaskRuntimeProvider = ({
   const alwaysAllowTasks = useRef<string[]>([]);
   const [generationState, setGenerationState] = useState<GenerationState>([]);
   const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
+  const [defaultCwd, setDefaultCwd] = useState<string>("");
 
   // Load default cwd on mount
   useEffect(() => {
     const loadDefaultCwd = async () => {
-      const defaultCwd = await getDefaultCwd();
+      const cwd = await getDefaultCwd();
+      setDefaultCwd(cwd);
       setComposerStates((prev) => ({
         ...prev,
         "new-conversation": {
           ...prev["new-conversation"],
-          cwd: defaultCwd,
+          cwd: cwd,
         },
       }));
     };
@@ -476,13 +484,12 @@ export const TaskRuntimeProvider = ({
     setGenerationState((prev) => prev.filter((id) => id !== taskId));
   };
 
-  const resetNewConversation = async () => {
-    const defaultCwd = await getDefaultCwd();
+  const resetNewConversation = () => {
     setComposerStates((prev) => {
       const newState = { ...prev };
       newState["new-conversation"] = {
         prompt: "",
-        agent: agents[0],
+        agent: undefined,
         cwd: defaultCwd,
       };
       return newState;
@@ -503,6 +510,7 @@ export const TaskRuntimeProvider = ({
         permissions,
         generationState,
         installations,
+        defaultCwd,
       }}
     >
       {children}
