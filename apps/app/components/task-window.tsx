@@ -26,6 +26,7 @@ import {
 import { AssistantContent, ToolResultPart } from "ai";
 import { XIcon } from "lucide-react";
 import { Badge } from "./ui/badge";
+import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";
 
 // Message part types for virtualization
 type MessagePart =
@@ -238,6 +239,35 @@ export default function TaskWindow() {
     }
   }, [selectedTaskId, messages]);
 
+  // Menu options for @ hotkey
+  const menuOptions = useMemo<PromptMenuOption[]>(() => {
+    return [
+      {
+        label: "Agent",
+        value: "agent",
+        description: "Use specialised agents for a task",
+        children: agents.map((agent) => ({
+          label: agent.name,
+          value: `agent-${agent.id}`,
+          onSelect: () => {
+            const selectedAgent = agents.find((a) => a.id === agent.id);
+            if (selectedAgent) {
+              setAgent(selectedAgent);
+            }
+          },
+        })),
+      },
+      {
+        label: "Working Folder",
+        value: "folder",
+        description: "Select a local folder for a task",
+        onSelect: () => {
+          selectFolder();
+        },
+      },
+    ];
+  }, [agents, setAgent, selectFolder]);
+
   return (
     <motion.div className="flex-1 relative" layout>
       {/* Thread */}
@@ -337,38 +367,15 @@ export default function TaskWindow() {
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isGenerating}
                 value={prompt}
-                mentionOptions={[
-                  {
-                    label: "Agent",
-                    value: "agent",
-                    description: "Use specialised agents for a task",
-                    children: agents.map((agent) => ({
-                      label: agent.name,
-                      value: `agent-${agent.id}`,
-                    })),
-                  },
-                  {
-                    label: "Working Folder",
-                    value: "folder",
-                    description: "Select a local folder for a task",
-                  },
-                ]}
-                onMentionSelect={(e) => {
-                  switch (e) {
-                    case e.match(/^agent\-/)?.input:
-                      console.log(e);
-                      const selectedAgent = agents.find(
-                        (agent) => agent.id === e.replace(/^agent\-/, "")
-                      );
-                      if (selectedAgent) {
-                        setAgent(selectedAgent);
-                      }
-                      break;
-                    case "folder":
-                      selectFolder();
-                      break;
-                  }
-                }}
+                hotkey="@"
+                hotkeyMenu={({ onQuery, removeHotkeyCharacter, onClose }) => (
+                  <PromptMenu
+                    onQuery={onQuery}
+                    removeHotkeyCharacter={removeHotkeyCharacter}
+                    onClose={onClose}
+                    options={menuOptions}
+                  />
+                )}
               />
             )}
           </PromptInputBody>
