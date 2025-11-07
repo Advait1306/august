@@ -24,9 +24,10 @@ import {
   AssistantToolPartView,
 } from "./message";
 import { AssistantContent, ToolResultPart } from "ai";
-import { XIcon } from "lucide-react";
+import { XIcon, PlusIcon } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
 
 // Message part types for virtualization
 type MessagePart =
@@ -374,6 +375,7 @@ export default function TaskWindow() {
                     removeHotkeyCharacter={removeHotkeyCharacter}
                     onClose={onClose}
                     options={menuOptions}
+                    className="mt-4"
                   />
                 )}
               />
@@ -381,6 +383,14 @@ export default function TaskWindow() {
           </PromptInputBody>
           <PromptInputToolbar>
             <PromptInputTools>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <PlusIcon className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PromptMenu options={menuOptions} />
+              </Popover>
               {selectedTaskId === "new-conversation" && agent && (
                 <Badge
                   variant="outline"

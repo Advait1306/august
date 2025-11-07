@@ -5,7 +5,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -22,6 +29,7 @@ export type PromptMenuProps = {
   removeHotkeyCharacter?: () => void; // Called to remove the @ and close menu
   onClose?: () => void; // Called to close the menu without removing @
   options: PromptMenuOption[];
+  className?: string;
 };
 
 // State type for reducer
@@ -86,7 +94,7 @@ function menuReducer(state: MenuState, action: MenuAction): MenuState {
         currentOptions: action.payload,
         optionStack: [],
         selectedIndex: 0,
-        direction: "forward",
+        direction: "backward",
       };
     default:
       return state;
@@ -133,9 +141,12 @@ export function PromptMenu({
   removeHotkeyCharacter,
   onClose,
   options,
+  className,
 }: PromptMenuProps) {
   const selectedItemRef = useRef<HTMLDivElement>(null);
+  const popoverContentRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
+  const isHotkeyMode = !!(onClose || removeHotkeyCharacter || onQuery);
 
   // Use reducer for state management
   const [state, dispatch] = useReducer(menuReducer, {
@@ -145,17 +156,31 @@ export function PromptMenu({
     direction: "forward",
   });
 
+  // Update state when options prop changes
+  useEffect(() => {
+    if (state.optionStack.length === 0) {
+      // Only update if we're at root level
+      dispatch({ type: "RESET_TO_ROOT", payload: options });
+    }
+  }, [options, state.optionStack.length]);
+
   // Filter options based on query
-  const filteredOptions = useCallback(() => {
-    if (!query)
-      return state.currentOptions.map((opt) => ({ ...opt, path: [opt.label] }));
+  const filteredOptions = useMemo(() => {
+    if (!query) {
+      const result = state.currentOptions.map((opt) => ({
+        ...opt,
+        path: [opt.label],
+      }));
+      console.log("filteredOptions (no query):", result, isHotkeyMode);
+      return result;
+    }
 
     const allOptions = flattenOptions(options);
     return allOptions.filter(
       (option) =>
         fuzzyMatch(option.label, query) || fuzzyMatch(option.value, query)
     );
-  }, [state.currentOptions, query, options])();
+  }, [state.currentOptions, query, options]);
 
   // Reset to root when query changes
   useEffect(() => {
@@ -180,8 +205,30 @@ export function PromptMenu({
       option.onSelect?.(option.value);
       removeHotkeyCharacter?.(); // Remove @ character
       onClose?.(); // Close menu
+
+      // In non-hotkey mode, reset to root and close the popover
+      if (!isHotkeyMode) {
+        dispatch({ type: "RESET_TO_ROOT", payload: options });
+        if (popoverContentRef.current) {
+          // Find the popover root and close it
+          const popoverElement = popoverContentRef.current.closest(
+            "[data-radix-popper-content-wrapper]"
+          );
+          if (popoverElement) {
+            // Trigger escape to close
+            const escapeEvent = new KeyboardEvent("keydown", {
+              key: "Escape",
+              code: "Escape",
+              keyCode: 27,
+              bubbles: true,
+              cancelable: true,
+            });
+            popoverElement.dispatchEvent(escapeEvent);
+          }
+        }
+      }
     },
-    [removeHotkeyCharacter, onClose]
+    [removeHotkeyCharacter, onClose, isHotkeyMode, options]
   );
 
   const handleGoBack = useCallback(() => {
@@ -208,8 +255,13 @@ export function PromptMenu({
     onQuery?.(query);
   }, [query, onQuery]);
 
-  // Keyboard handler - capture all keys
+  // Keyboard handler - capture all keys (only when used with hotkey)
   useEffect(() => {
+    // Only enable custom keyboard handling when used with hotkey (has onClose, removeHotkeyCharacter, or onQuery)
+    if (!onClose && !removeHotkeyCharacter && !onQuery) {
+      return;
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
@@ -280,16 +332,28 @@ export function PromptMenu({
 
   return (
     <PopoverContent
-      className="p-0 w-64 mt-4 overflow-hidden relative"
+      ref={popoverContentRef}
+      className={cn("p-0 w-64 overflow-hidden relative", className)}
       align="start"
       side="bottom"
       onOpenAutoFocus={(e) => e.preventDefault()}
       onEscapeKeyDown={(e) => {
-        e.preventDefault();
+        // Only prevent default when using hotkey mode
+        if (onClose || removeHotkeyCharacter || onQuery) {
+          e.preventDefault();
+        }
       }}
       onInteractOutside={(e) => {
-        e.preventDefault();
+        // Only prevent default when using hotkey mode
+        if (onClose || removeHotkeyCharacter || onQuery) {
+          e.preventDefault();
+        }
         onClose?.();
+
+        // Reset to root in non-hotkey mode when popover closes
+        if (!isHotkeyMode) {
+          dispatch({ type: "RESET_TO_ROOT", payload: options });
+        }
       }}
     >
       <Command>
@@ -331,7 +395,12 @@ export function PromptMenu({
                     onMouseEnter={() =>
                       dispatch({ type: "SET_SELECTED_INDEX", payload: -1 })
                     }
-                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseDown={(e) => {
+                      // Only prevent default in hotkey mode
+                      if (isHotkeyMode) {
+                        e.preventDefault();
+                      }
+                    }}
                     className="text-muted-foreground hover:!bg-transparent hover:!text-muted-foreground"
                   >
                     ← Back
@@ -358,7 +427,12 @@ export function PromptMenu({
                             payload: index,
                           })
                         }
-                        onMouseDown={(e) => e.preventDefault()}
+                        onMouseDown={(e) => {
+                          // Only prevent default in hotkey mode
+                          if (isHotkeyMode) {
+                            e.preventDefault();
+                          }
+                        }}
                         data-selected={index === state.selectedIndex}
                         className={cn(
                           index === state.selectedIndex
