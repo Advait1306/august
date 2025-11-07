@@ -160,8 +160,12 @@ export function PromptMenu({
 
   const handleSelect = useCallback(
     (option: PromptMenuOption, fromSearch = false) => {
-      // If option has children and not from search, navigate into it
-      if (option.children && option.children.length > 0 && !fromSearch) {
+      // If option has children, navigate into it
+      if (option.children && option.children.length > 0) {
+        // Clear query when navigating from search
+        if (fromSearch) {
+          setQuery("");
+        }
         dispatch({ type: "NAVIGATE_INTO", payload: option.children });
         return;
       }
@@ -232,6 +236,18 @@ export function PromptMenu({
         if (filteredOptions.length > 0) {
           handleSelect(filteredOptions[state.selectedIndex], !!query);
         }
+      } else if (e.key === "Tab") {
+        // Navigate into submenu if current option has children
+        if (filteredOptions.length > 0) {
+          const currentOption = filteredOptions[state.selectedIndex];
+          if (currentOption.children && currentOption.children.length > 0) {
+            // Clear query when navigating from search
+            if (query) {
+              setQuery("");
+            }
+            dispatch({ type: "NAVIGATE_INTO", payload: currentOption.children });
+          }
+        }
       } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         // Character key - add to query
         setQuery((prev) => prev + e.key);
@@ -285,8 +301,7 @@ export function PromptMenu({
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option, index) => {
                 const showPath = query && option.path && option.path.length > 1;
-                const isParent =
-                  !query && option.children && option.children.length > 0;
+                const isParent = option.children && option.children.length > 0;
 
                 return (
                   <CommandItem

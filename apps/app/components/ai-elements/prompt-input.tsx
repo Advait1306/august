@@ -571,6 +571,11 @@ export type PromptInputTextareaProps = ComponentProps<typeof Textarea> & {
   }) => React.ReactNode;
 };
 
+// NOTE: This component exists in a controlled/uncontrolled hybrid state. It can accept a `value` prop
+// from the parent (controlled), but uses direct DOM manipulation via nativeInputValueSetter for hotkey
+// menu interactions. This can cause issues with cursor positioning or state synchronization in some cases.
+// For now, this serves our purpose as FormData handles submission and the parent can optionally control
+// the value. A full refactor to purely controlled with cursor management would be needed for complex use cases.
 export const PromptInputTextarea = ({
   onChange,
   className,

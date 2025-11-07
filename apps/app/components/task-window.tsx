@@ -367,7 +367,7 @@ export default function TaskWindow() {
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isGenerating}
                 value={prompt}
-                hotkey="@"
+                hotkey="/"
                 hotkeyMenu={({ onQuery, removeHotkeyCharacter, onClose }) => (
                   <PromptMenu
                     onQuery={onQuery}
