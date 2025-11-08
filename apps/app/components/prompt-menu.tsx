@@ -385,8 +385,9 @@ export function PromptMenu({
                 animate="center"
                 exit="exit"
                 transition={{
-                  duration: 0.2,
-                  ease: "easeInOut",
+                  type: "spring",
+                  stiffness: 1000,
+                  damping: 50,
                 }}
               >
                 {!query && state.optionStack.length > 0 && (

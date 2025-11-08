@@ -246,7 +246,6 @@ export default function TaskWindow() {
       {
         label: "Agent",
         value: "agent",
-        description: "Use specialised agents for a task",
         children: agents.map((agent) => ({
           label: agent.name,
           value: `agent-${agent.id}`,
@@ -261,7 +260,6 @@ export default function TaskWindow() {
       {
         label: "Working Folder",
         value: "folder",
-        description: "Select a local folder for a task",
         onSelect: () => {
           selectFolder();
         },
