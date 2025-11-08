@@ -40,6 +40,27 @@ function Tasks() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
 
+      // Skip navigation if typing in input fields or interacting with certain elements
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        const isEditable = target.isContentEditable;
+        // Check for various interactive elements that should prevent shortcuts
+        if (
+          isEditable ||
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.closest('[role="dialog"]') ||
+          target.closest('[role="menu"]') ||
+          target.closest('[role="listbox"]') ||
+          target.closest('[role="combobox"]') ||
+          target.hasAttribute("contenteditable")
+        ) {
+          return;
+        }
+      }
+
       // Prevent default scrolling behavior
       e.preventDefault();
 
@@ -85,9 +106,6 @@ function Tasks() {
       <div className="flex flex-row w-full">
         {/* Task List Sidebar */}
         <div className="flex-1 min-w-[200px] max-w-[300px] bg-[#E8E8E8] border-r border-border dark:bg-[#141414] flex flex-col">
-          <div className="p-4 border-b border-border flex-shrink-0">
-            <h2 className="text-lg font-semibold">Tasks</h2>
-          </div>
           <div className="flex-1 overflow-auto flex flex-col gap-1 p-2">
             <div
               className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground"

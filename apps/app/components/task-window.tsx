@@ -24,7 +24,7 @@ import {
   AssistantToolPartView,
 } from "./message";
 import { AssistantContent, ToolResultPart } from "ai";
-import { XIcon, PlusIcon } from "lucide-react";
+import { XIcon, PlusIcon, FolderIcon, BotIcon } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
@@ -272,8 +272,23 @@ export default function TaskWindow() {
 
   return (
     <motion.div className="flex-1 relative" layout>
+      {/* Header */}
+      {selectedTaskId !== "new-conversation" && (
+        <div className="px-4 py-2 w-full h-[50px] border-b border-border flex items-center justify-between">
+          {agent ? <span className="text-md">{agent?.name}</span> : <div />}
+          {cwd && cwd !== defaultCwd && (
+            <Button variant="ghost" className="rounded" size="sm" disabled>
+              <span className="text-xs flex items-center gap-1">
+                <FolderIcon className="w-4 h-4" />
+                {cwd.match(/[^/\\]+$/)?.[0] || "Folder"}
+              </span>
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Thread */}
-      <div className="absolute w-full h-[calc(100%-220px)] px-8 bottom-40">
+      <div className="absolute w-full h-[calc(100%-200px)] px-8 bottom-40">
         {selectedTaskId === "new-conversation" ? (
           <ConversationEmptyState
             icon={
@@ -325,6 +340,7 @@ export default function TaskWindow() {
           onSubmit={() => {
             sendMessage(prompt);
           }}
+          className="rounded-3xl p-2"
         >
           <PromptInputBody>
             {currentPermission ? (
@@ -369,33 +385,43 @@ export default function TaskWindow() {
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isGenerating}
                 value={prompt}
-                hotkey="/"
-                hotkeyMenu={({ onQuery, removeHotkeyCharacter, onClose }) => (
-                  <PromptMenu
-                    onQuery={onQuery}
-                    removeHotkeyCharacter={removeHotkeyCharacter}
-                    onClose={onClose}
-                    options={menuOptions}
-                    className="mt-4"
-                  />
-                )}
+                hotkey={selectedTaskId === "new-conversation" ? "/" : undefined}
+                hotkeyMenu={
+                  selectedTaskId === "new-conversation"
+                    ? ({ onQuery, removeHotkeyCharacter, onClose }) => (
+                        <PromptMenu
+                          onQuery={onQuery}
+                          removeHotkeyCharacter={removeHotkeyCharacter}
+                          onClose={onClose}
+                          options={menuOptions}
+                          className="mt-4"
+                        />
+                      )
+                    : undefined
+                }
               />
             )}
           </PromptInputBody>
           <PromptInputToolbar>
             <PromptInputTools>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <PlusIcon className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PromptMenu options={menuOptions} />
-              </Popover>
+              {selectedTaskId === "new-conversation" && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-md"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PromptMenu options={menuOptions} />
+                </Popover>
+              )}
               {selectedTaskId === "new-conversation" && agent && (
                 <Badge
                   variant="outline"
-                  className="flex items-center gap-1 py-2 rounded-md cursor-pointer"
+                  className="flex items-center gap-1 py-2 rounded cursor-pointer"
                   onMouseEnter={() => setIsAgentBadgeHovered(true)}
                   onMouseLeave={() => setIsAgentBadgeHovered(false)}
                   onClick={clearAgent}
@@ -406,13 +432,18 @@ export default function TaskWindow() {
                         initial={{ width: 0, opacity: 0 }}
                         animate={{ width: "auto", opacity: 1 }}
                         exit={{ width: 0, opacity: 0 }}
-                        transition={{ duration: 0.15 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 2000,
+                          damping: 200,
+                        }}
                         layout
                       >
                         <XIcon className="w-4 h-4" />
                       </motion.div>
                     )}
                   </AnimatePresence>
+                  <BotIcon className="w-4 h-4" />
                   <span>{agent?.name || "Agent"}</span>
                 </Badge>
               )}
@@ -421,7 +452,7 @@ export default function TaskWindow() {
                 cwd !== defaultCwd && (
                   <Badge
                     variant="outline"
-                    className="flex items-center gap-1 py-2 rounded-md cursor-pointer"
+                    className="flex items-center gap-1 py-2 rounded cursor-pointer"
                     onMouseEnter={() => setIsCwdBadgeHovered(true)}
                     onMouseLeave={() => setIsCwdBadgeHovered(false)}
                     onClick={clearCwd}
@@ -432,18 +463,24 @@ export default function TaskWindow() {
                           initial={{ width: 0, opacity: 0 }}
                           animate={{ width: "auto", opacity: 1 }}
                           exit={{ width: 0, opacity: 0 }}
-                          transition={{ duration: 0.15 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 2000,
+                            damping: 200,
+                          }}
                           layout
                         >
                           <XIcon className="w-4 h-4" />
                         </motion.div>
                       )}
                     </AnimatePresence>
+                    <FolderIcon className="w-4 h-4" />
                     <span>{cwd.match(/[^/\\]+$/)?.[0] || "Folder"}</span>
                   </Badge>
                 )}
             </PromptInputTools>
             <PromptInputSubmit
+              className="rounded-full"
               disabled={isGenerating}
               status={isGenerating ? "streaming" : "ready"}
             />

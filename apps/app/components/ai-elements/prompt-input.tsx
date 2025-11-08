@@ -17,17 +17,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ChatStatus, FileUIPart } from "ai";
-import {
-  Popover,
-  PopoverAnchor,
-} from "@/components/ui/popover";
+import { Popover, PopoverAnchor } from "@/components/ui/popover";
 import { createPortal } from "react-dom";
 import {
+  ArrowUp,
   ImageIcon,
   Loader2Icon,
   PaperclipIcon,
   PlusIcon,
-  SendIcon,
   SquareIcon,
   XIcon,
 } from "lucide-react";
@@ -661,36 +658,39 @@ export const PromptInputTextarea = ({
   };
 
   // Handle query updates from menu - update textarea value
-  const handleQuery = useCallback((query: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  const handleQuery = useCallback(
+    (query: string) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
 
-    const currentValue = textarea.value;
-    const beforeTrigger = currentValue.substring(0, triggerPos + 1); // Include the @ symbol
-    const afterCursor = currentValue.substring(textarea.selectionStart);
+      const currentValue = textarea.value;
+      const beforeTrigger = currentValue.substring(0, triggerPos + 1); // Include the @ symbol
+      const afterCursor = currentValue.substring(textarea.selectionStart);
 
-    const newValue = beforeTrigger + query + afterCursor;
+      const newValue = beforeTrigger + query + afterCursor;
 
-    // Use native setter for React controlled components
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      "value"
-    )?.set;
+      // Use native setter for React controlled components
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        "value"
+      )?.set;
 
-    if (nativeInputValueSetter) {
-      nativeInputValueSetter.call(textarea, newValue);
-    } else {
-      textarea.value = newValue;
-    }
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(textarea, newValue);
+      } else {
+        textarea.value = newValue;
+      }
 
-    // Trigger input event for React
-    const event = new Event("input", { bubbles: true });
-    textarea.dispatchEvent(event);
+      // Trigger input event for React
+      const event = new Event("input", { bubbles: true });
+      textarea.dispatchEvent(event);
 
-    // Set cursor position after the query
-    const newCursorPos = triggerPos + 1 + query.length;
-    textarea.setSelectionRange(newCursorPos, newCursorPos);
-  }, [triggerPos]);
+      // Set cursor position after the query
+      const newCursorPos = triggerPos + 1 + query.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    },
+    [triggerPos]
+  );
 
   // Handle removing hotkey character (@ and query) - does NOT close menu
   const removeHotkeyCharacter = useCallback(() => {
@@ -768,7 +768,11 @@ export const PromptInputTextarea = ({
                 }}
               />
             </PopoverAnchor>
-            {hotkeyMenu({ onQuery: handleQuery, removeHotkeyCharacter, onClose: handleClose })}
+            {hotkeyMenu({
+              onQuery: handleQuery,
+              removeHotkeyCharacter,
+              onClose: handleClose,
+            })}
           </Popover>
         )}
       </div>
@@ -797,7 +801,7 @@ export const PromptInputTools = ({
   <div
     className={cn(
       "flex items-center gap-1",
-      "[&_button:first-child]:rounded-bl-xl",
+      // "[&_button:first-child]:rounded-bl-xl",
       className
     )}
     {...props}
@@ -886,7 +890,7 @@ export const PromptInputSubmit = ({
   children,
   ...props
 }: PromptInputSubmitProps) => {
-  let Icon = <SendIcon className="size-4" />;
+  let Icon = <ArrowUp className="size-4" />;
 
   if (status === "submitted") {
     Icon = <Loader2Icon className="size-4 animate-spin" />;
