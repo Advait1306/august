@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TasksRouteImport } from './routes/tasks'
-import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as AuthoriseRouteImport } from './routes/authorise'
@@ -25,11 +24,6 @@ import { Route as SettingsAppearanceRouteImport } from './routes/settings/appear
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProjectsRoute = ProjectsRouteImport.update({
-  id: '/projects',
-  path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -89,7 +83,6 @@ export interface FileRoutesByFullPath {
   '/authorise': typeof AuthoriseRoute
   '/home': typeof HomeRoute
   '/mcp': typeof McpRoute
-  '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/claude-code': typeof SettingsClaudeCodeRoute
@@ -103,7 +96,6 @@ export interface FileRoutesByTo {
   '/authorise': typeof AuthoriseRoute
   '/home': typeof HomeRoute
   '/mcp': typeof McpRoute
-  '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/claude-code': typeof SettingsClaudeCodeRoute
@@ -118,7 +110,6 @@ export interface FileRoutesById {
   '/authorise': typeof AuthoriseRoute
   '/home': typeof HomeRoute
   '/mcp': typeof McpRoute
-  '/projects': typeof ProjectsRoute
   '/tasks': typeof TasksRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/claude-code': typeof SettingsClaudeCodeRoute
@@ -134,7 +125,6 @@ export interface FileRouteTypes {
     | '/authorise'
     | '/home'
     | '/mcp'
-    | '/projects'
     | '/tasks'
     | '/settings/appearance'
     | '/settings/claude-code'
@@ -148,7 +138,6 @@ export interface FileRouteTypes {
     | '/authorise'
     | '/home'
     | '/mcp'
-    | '/projects'
     | '/tasks'
     | '/settings/appearance'
     | '/settings/claude-code'
@@ -162,7 +151,6 @@ export interface FileRouteTypes {
     | '/authorise'
     | '/home'
     | '/mcp'
-    | '/projects'
     | '/tasks'
     | '/settings/appearance'
     | '/settings/claude-code'
@@ -177,7 +165,6 @@ export interface RootRouteChildren {
   AuthoriseRoute: typeof AuthoriseRoute
   HomeRoute: typeof HomeRoute
   McpRoute: typeof McpRoute
-  ProjectsRoute: typeof ProjectsRoute
   TasksRoute: typeof TasksRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
   SettingsClaudeCodeRoute: typeof SettingsClaudeCodeRoute
@@ -193,13 +180,6 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/projects': {
-      id: '/projects'
-      path: '/projects'
-      fullPath: '/projects'
-      preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -281,7 +261,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthoriseRoute: AuthoriseRoute,
   HomeRoute: HomeRoute,
   McpRoute: McpRoute,
-  ProjectsRoute: ProjectsRoute,
   TasksRoute: TasksRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
   SettingsClaudeCodeRoute: SettingsClaudeCodeRoute,

@@ -6,6 +6,7 @@ export const IPC_CHANNELS = {
   },
   PROJECTS: {
     SELECT_FOLDER: 'projects:selectFolder',
+    GET_DEFAULT_CWD: 'projects:getDefaultCwd',
   },
   AUTH: {
     OPEN_LOGIN: 'auth:open-login',

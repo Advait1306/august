@@ -4,11 +4,10 @@ import {
   getAgents,
   getMCPs,
   getMessages,
-  getProjects,
   getTasks,
 } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
-import { Agent, Task, Project } from "@jupiter/sync/zero/zero-schema.gen";
+import { Agent, Task, Message } from "@jupiter/sync/zero/zero-schema.gen";
 import { useSyncContext } from "@/src/components/sync_engine";
 import { useZero } from "@/src/hooks/useZero";
 import { nanoid } from "nanoid";
@@ -26,20 +25,35 @@ type TaskRuntimeState = {
   tasks: Task[];
   selectedTaskId: string | "new-conversation";
   selectedTask: Task | "new-conversation" | null;
-  messages: any;
+  messages: readonly Message[] | undefined;
   selectTask: (task: string | "new-conversation") => void;
   sendMessage: (message: string) => void;
   composerStates: Record<string, ComposerState>;
-  setComposerStates: (states: Record<string, ComposerState>) => void;
+  setComposerStates: (
+    states:
+      | Record<string, ComposerState>
+      | ((prev: Record<string, ComposerState>) => Record<string, ComposerState>)
+  ) => void;
   permissions: PermissionState;
   generationState: GenerationState;
   installations: ClaudeInstallation[];
+  defaultCwd: string;
+};
+
+// Helper function to get default cwd (will be populated async)
+const getDefaultCwd = async (): Promise<string> => {
+  try {
+    return await window.api.projects.getDefaultCwd();
+  } catch (error) {
+    console.error("Failed to get default cwd:", error);
+    return "";
+  }
 };
 
 type ComposerState = {
   prompt: string;
-  agent: Agent;
-  project: Project;
+  agent?: Agent;
+  cwd: string;
 };
 
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
@@ -54,6 +68,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   permissions: {},
   generationState: [],
   installations: [],
+  defaultCwd: "",
 });
 
 export const TaskRuntimeProvider = ({
@@ -66,7 +81,6 @@ export const TaskRuntimeProvider = ({
 
   const z = useZero();
   const agents = useQuery(getAgents(syncData.authData))[0];
-  const projects = useQuery(getProjects(syncData.authData))[0];
   const tasks = useQuery(getTasks(syncData.authData))[0];
   const userMcps = useQuery(getMCPs(syncData.authData))[0];
 
@@ -74,11 +88,35 @@ export const TaskRuntimeProvider = ({
 
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
-  >({});
+  >({
+    "new-conversation": {
+      prompt: "",
+      agent: agents[0],
+      cwd: "", // This will be set to defaultCwd once it's loaded in the useEffect below
+    },
+  });
   const [permissions, setPermissions] = useState<PermissionState>({});
   const alwaysAllowTasks = useRef<string[]>([]);
   const [generationState, setGenerationState] = useState<GenerationState>([]);
   const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
+  const [defaultCwd, setDefaultCwd] = useState<string>("");
+
+  // Load default cwd on mount
+  useEffect(() => {
+    const loadDefaultCwd = async () => {
+      const cwd = await getDefaultCwd();
+      setDefaultCwd(cwd);
+      setComposerStates((prev) => ({
+        ...prev,
+        "new-conversation": {
+          ...prev["new-conversation"],
+          cwd: cwd,
+        },
+      }));
+    };
+
+    loadDefaultCwd();
+  }, []);
 
   // We need to wait for the task to be created and then select it
   const [waitForSelect, setWaitForSelect] = useState<string | null>(null);
@@ -95,10 +133,55 @@ export const TaskRuntimeProvider = ({
   const selectedTasksMessages = useQuery(
     getMessages(
       syncData.authData,
-      typeof selectedTask === "object" && selectedTask ? selectedTask.id : ""
+      selectedTaskId === "new-conversation" ? "" : selectedTaskId
     ),
-    { enabled: typeof selectedTask === "object" && selectedTask !== null }
+    { enabled: selectedTaskId !== "new-conversation" }
   );
+
+  // Extract cwd from messages when a task is selected
+  useEffect(() => {
+    if (
+      selectedTaskId !== "new-conversation" &&
+      selectedTasksMessages[0]?.messages
+    ) {
+      const messages = selectedTasksMessages[0].messages;
+
+      // Find the last assistant message with metadata
+      const lastAssistantMsg = [...messages]
+        .reverse()
+        .find((msg) => msg.role === "assistant" && msg.metadata);
+
+      if (lastAssistantMsg && lastAssistantMsg.metadata) {
+        const metadata = lastAssistantMsg.metadata as any;
+        // Check for cwd or old project.path for backward compatibility
+        const cwdFromMessages =
+          metadata?.claude?.cwd || metadata?.claude?.project?.path || "";
+
+        if (
+          cwdFromMessages &&
+          selectedTask &&
+          typeof selectedTask === "object"
+        ) {
+          const agent = agents.find(
+            (agent) => agent.id === selectedTask.agent_id
+          );
+
+          if (agent) {
+            setComposerStates((prev) => {
+              return {
+                ...prev,
+                [selectedTask.id]: {
+                  ...prev[selectedTask.id],
+                  agent: agent,
+                  cwd: cwdFromMessages,
+                },
+              };
+            });
+          }
+        }
+      }
+    }
+  }, [selectedTaskId, selectedTasksMessages, selectedTask, agents]);
 
   // Load Claude Code installations on mount
   useEffect(() => {
@@ -223,37 +306,7 @@ export const TaskRuntimeProvider = ({
 
   const selectTask = (taskId: string | "new-conversation") => {
     setWaitForSelect(null);
-
     setSelectedTaskId(taskId);
-
-    if (taskId !== "new-conversation") {
-      // Find the actual task object
-      const task = tasks?.find((t) => t.id === taskId);
-
-      if (task) {
-        // Composer setup
-        let agent = agents.find((agent) => agent.id === task.agent_id);
-        let project = projects.find(
-          (project) => project.id === task.project_id
-        );
-
-        // TODO (nitpick): If an agent or project name changes once a task is selected,
-        // they don't update automatically in the composer
-        if (project && agent) {
-          // Update composer with the agent and project of selected task
-          setComposerStates((prev) => {
-            return {
-              ...prev,
-              [task.id]: {
-                ...prev[task.id],
-                agent: agent,
-                project: project,
-              },
-            };
-          });
-        }
-      }
-    }
   };
 
   const sendMessage = async (message: string) => {
@@ -265,20 +318,20 @@ export const TaskRuntimeProvider = ({
     setComposerStates((prev) => {
       return {
         ...prev,
-        [taskIdForComposer]: { ...prev[taskIdForComposer], prompt: "" },
+        [selectedTaskId]: { ...prev[selectedTaskId], prompt: "" },
       };
     });
 
     let taskId: string;
-    let agent: Agent;
-    let project: Project;
+    let agent: Agent | undefined;
+    let cwd: string;
     let chatMessages: ModelMessage[];
 
     if (selectedTaskId === "new-conversation") {
       // Set states
       taskId = nanoid();
       agent = composerStates["new-conversation"]?.agent;
-      project = composerStates["new-conversation"]?.project;
+      cwd = composerStates["new-conversation"]?.cwd;
 
       // Create task with first message
       const messageId = nanoid();
@@ -292,8 +345,7 @@ export const TaskRuntimeProvider = ({
       // Create new task
       const result = z.mutate.tasks.create({
         task_id: taskId,
-        project_id: project.id,
-        agent_id: agent.id,
+        ...(agent && { agent_id: agent.id }),
         message_data: {
           task_id: taskId,
           message_id: messageId,
@@ -313,10 +365,10 @@ export const TaskRuntimeProvider = ({
       if (!currentTask) {
         throw new Error("Selected task not found");
       }
-      agent = agents.find((agent) => agent.id === currentTask.agent_id)!;
-      project = projects.find(
-        (project) => project.id === currentTask.project_id
-      )!;
+      agent = currentTask.agent_id
+        ? agents.find((agent) => agent.id === currentTask.agent_id)
+        : undefined;
+      cwd = composerStates[selectedTaskId]?.cwd || defaultCwd;
 
       // Create message
       const messageId = nanoid();
@@ -393,11 +445,11 @@ export const TaskRuntimeProvider = ({
       options: {
         messages: chatMessages,
         runConfig: {
-          project,
+          cwd,
         },
         threadId: taskId,
       },
-      systemPrompt: agent.system_prompt,
+      systemPrompt: agent?.system_prompt,
       path: claudeCode.selectedInstallation?.path,
       mcpServers: userMcps.reduce(
         (acc, mcp) => {
@@ -435,7 +487,11 @@ export const TaskRuntimeProvider = ({
   const resetNewConversation = () => {
     setComposerStates((prev) => {
       const newState = { ...prev };
-      delete newState["new-conversation"];
+      newState["new-conversation"] = {
+        prompt: "",
+        agent: undefined,
+        cwd: defaultCwd,
+      };
       return newState;
     });
   };
@@ -454,6 +510,7 @@ export const TaskRuntimeProvider = ({
         permissions,
         generationState,
         installations,
+        defaultCwd,
       }}
     >
       {children}

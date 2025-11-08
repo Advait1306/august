@@ -14,7 +14,6 @@ import {
 import {
   Bot,
   CheckSquare,
-  FolderKanban,
   Settings,
   User,
   Sun,
@@ -175,15 +174,6 @@ function CommandMenuDialog({
             shortcut: ["G", "T"],
           },
           {
-            id: "projects",
-            title: "Projects",
-            icon: FolderKanban,
-            action: () => {
-              navigate({ to: "/projects" });
-            },
-            shortcut: ["G", "P"],
-          },
-          {
             id: "agents",
             title: "Agents",
             icon: Bot,
@@ -213,7 +203,7 @@ function CommandMenuDialog({
             action: () => {
               navigate({
                 to: "/settings/appearance",
-                search: { from: location.pathname }
+                search: { from: location.pathname },
               });
             },
           },
@@ -366,7 +356,7 @@ function CommandMenuDialog({
         const currentPath = window.location.pathname;
         navigate({
           to: "/settings/appearance",
-          search: { from: currentPath }
+          search: { from: currentPath },
         });
         return;
       }
