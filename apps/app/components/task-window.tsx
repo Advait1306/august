@@ -288,7 +288,7 @@ export default function TaskWindow() {
       )}
 
       {/* Thread */}
-      <div className="absolute w-full h-[calc(100%-200px)] px-8 bottom-40">
+      <div className="absolute w-full h-[calc(100%-210px)] px-8 bottom-40">
         {selectedTaskId === "new-conversation" ? (
           <ConversationEmptyState
             icon={
@@ -481,7 +481,7 @@ export default function TaskWindow() {
             </PromptInputTools>
             <PromptInputSubmit
               className="rounded-full"
-              disabled={isGenerating}
+              disabled={isGenerating || prompt.trim().length === 0}
               status={isGenerating ? "streaming" : "ready"}
             />
           </PromptInputToolbar>
