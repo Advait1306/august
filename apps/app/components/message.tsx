@@ -10,6 +10,7 @@ import {
 import {
   AssistantContent,
   AssistantModelMessage,
+  ToolCallPart,
   ToolResultPart,
   UserModelMessage,
 } from "ai";
@@ -240,7 +241,7 @@ export const AssistantToolPartView = ({
   toolCall,
   toolResult,
 }: {
-  toolCall: any;
+  toolCall: ToolCallPart;
   toolResult: ToolResultPart | undefined;
 }) => {
   return (

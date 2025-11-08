@@ -8,7 +8,7 @@ export function registerProjectIpcHandlers(): void {
   // Add project by selecting folder
   ipcMain.handle(
     IPC_CHANNELS.PROJECTS.SELECT_FOLDER,
-    async (): Promise<IPC.Projects.SelectFolderResponse> => {
+    async (): Promise<IPC.Folder.SelectFolderResponse> => {
       const result = await dialog.showOpenDialog({
         properties: ['openDirectory'],
         title: 'Select Project Folder'
@@ -33,7 +33,7 @@ export function registerProjectIpcHandlers(): void {
   // Get default working directory
   ipcMain.handle(
     IPC_CHANNELS.PROJECTS.GET_DEFAULT_CWD,
-    async (): Promise<IPC.Projects.GetDefaultCwdResponse> => {
+    async (): Promise<IPC.Folder.GetDefaultCwdResponse> => {
       const home = homedir()
       const defaultPath = join(home, 'Documents', 'August')
 

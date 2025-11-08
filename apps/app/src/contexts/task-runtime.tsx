@@ -92,7 +92,7 @@ export const TaskRuntimeProvider = ({
     "new-conversation": {
       prompt: "",
       agent: agents[0],
-      cwd: "",
+      cwd: "", // This will be set to defaultCwd once it's loaded in the useEffect below
     },
   });
   const [permissions, setPermissions] = useState<PermissionState>({});
@@ -133,9 +133,9 @@ export const TaskRuntimeProvider = ({
   const selectedTasksMessages = useQuery(
     getMessages(
       syncData.authData,
-      typeof selectedTask === "object" && selectedTask ? selectedTask.id : ""
+      selectedTaskId === "new-conversation" ? "" : selectedTaskId
     ),
-    { enabled: typeof selectedTask === "object" && selectedTask !== null }
+    { enabled: selectedTaskId !== "new-conversation" }
   );
 
   // Extract cwd from messages when a task is selected
@@ -311,14 +311,10 @@ export const TaskRuntimeProvider = ({
 
   const sendMessage = async (message: string) => {
     // Clear composer prompt
-    const taskIdForComposer =
-      selectedTaskId === "new-conversation"
-        ? "new-conversation"
-        : selectedTaskId;
     setComposerStates((prev) => {
       return {
         ...prev,
-        [taskIdForComposer]: { ...prev[taskIdForComposer], prompt: "" },
+        [selectedTaskId]: { ...prev[selectedTaskId], prompt: "" },
       };
     });
 
@@ -368,7 +364,7 @@ export const TaskRuntimeProvider = ({
       agent = currentTask.agent_id
         ? agents.find((agent) => agent.id === currentTask.agent_id)
         : undefined;
-      cwd = composerStates[selectedTaskId]?.cwd || "";
+      cwd = composerStates[selectedTaskId]?.cwd || defaultCwd;
 
       // Create message
       const messageId = nanoid();

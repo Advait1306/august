@@ -171,7 +171,6 @@ export function PromptMenu({
         ...opt,
         path: [opt.label],
       }));
-      console.log("filteredOptions (no query):", result, isHotkeyMode);
       return result;
     }
 
@@ -258,7 +257,7 @@ export function PromptMenu({
   // Keyboard handler - capture all keys (only when used with hotkey)
   useEffect(() => {
     // Only enable custom keyboard handling when used with hotkey (has onClose, removeHotkeyCharacter, or onQuery)
-    if (!onClose && !removeHotkeyCharacter && !onQuery) {
+    if (!isHotkeyMode) {
       return;
     }
 
@@ -339,13 +338,13 @@ export function PromptMenu({
       onOpenAutoFocus={(e) => e.preventDefault()}
       onEscapeKeyDown={(e) => {
         // Only prevent default when using hotkey mode
-        if (onClose || removeHotkeyCharacter || onQuery) {
+        if (isHotkeyMode) {
           e.preventDefault();
         }
       }}
       onInteractOutside={(e) => {
         // Only prevent default when using hotkey mode
-        if (onClose || removeHotkeyCharacter || onQuery) {
+        if (isHotkeyMode) {
           e.preventDefault();
         }
         onClose?.();

@@ -232,6 +232,9 @@ export default function TaskWindow() {
     });
   }, [setComposerStates, selectedTaskId, defaultCwd]);
 
+  // Note: This effect may cause a jarring scroll when switching tasks, as it attempts to scroll to the end
+  // of the previous task's message list before the new task's messages are loaded. This works for now,
+  // but could be improved by checking if messageParts.length > 0 or using a different dependency array.
   useEffect(() => {
     if (virtualizerRef.current) {
       virtualizerRef.current.scrollToIndex(messageParts.length - 1, {
