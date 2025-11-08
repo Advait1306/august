@@ -2,7 +2,6 @@ import * as React from "react";
 import {
   Bot,
   CheckSquare,
-  FolderKanban,
   Palette,
   Wrench,
   ChevronLeft,
@@ -35,11 +34,6 @@ const data = {
       title: "Tasks",
       url: "/tasks",
       icon: CheckSquare,
-    },
-    {
-      title: "Projects",
-      url: "/projects",
-      icon: FolderKanban,
     },
     {
       title: "Agents",

@@ -886,66 +886,6 @@ export const schema = {
       },
       primaryKey: ["id"],
     },
-    projects: {
-      name: "projects",
-      columns: {
-        id: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "id"
-          >,
-        },
-        name: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "name"
-          >,
-        },
-        path: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "path"
-          >,
-        },
-        created_at: {
-          type: "number",
-          optional: true,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "created_at"
-          >,
-        },
-        organisation_id: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "organisation_id"
-          >,
-        },
-        author_id: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "author_id"
-          >,
-        },
-      },
-      primaryKey: ["id"],
-    },
     tasks: {
       name: "tasks",
       columns: {
@@ -996,20 +936,11 @@ export const schema = {
         },
         agent_id: {
           type: "string",
-          optional: false,
+          optional: true,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "tasks",
             "agent_id"
-          >,
-        },
-        project_id: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "tasks",
-            "project_id"
           >,
         },
         updated_at: {
@@ -1349,14 +1280,6 @@ export const schema = {
           cardinality: "many",
         },
       ],
-      projects: [
-        {
-          sourceField: ["id"],
-          destField: ["organisation_id"],
-          destSchema: "projects",
-          cardinality: "many",
-        },
-      ],
       tasks: [
         {
           sourceField: ["id"],
@@ -1398,32 +1321,6 @@ export const schema = {
         },
       ],
     },
-    projects: {
-      user: [
-        {
-          sourceField: ["author_id"],
-          destField: ["id"],
-          destSchema: "users",
-          cardinality: "one",
-        },
-      ],
-      tasks: [
-        {
-          sourceField: ["id"],
-          destField: ["project_id"],
-          destSchema: "tasks",
-          cardinality: "many",
-        },
-      ],
-      organisation: [
-        {
-          sourceField: ["organisation_id"],
-          destField: ["id"],
-          destSchema: "organisations",
-          cardinality: "one",
-        },
-      ],
-    },
     tasks: {
       user: [
         {
@@ -1438,14 +1335,6 @@ export const schema = {
           sourceField: ["agent_id"],
           destField: ["id"],
           destSchema: "agents",
-          cardinality: "one",
-        },
-      ],
-      project: [
-        {
-          sourceField: ["project_id"],
-          destField: ["id"],
-          destSchema: "projects",
           cardinality: "one",
         },
       ],
@@ -1490,14 +1379,6 @@ export const schema = {
           sourceField: ["id"],
           destField: ["author_id"],
           destSchema: "agents",
-          cardinality: "many",
-        },
-      ],
-      projects: [
-        {
-          sourceField: ["id"],
-          destField: ["author_id"],
-          destSchema: "projects",
           cardinality: "many",
         },
       ],
@@ -1597,11 +1478,6 @@ export type OauthState = Row<Schema["tables"]["oauthStates"]>;
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Organisation = Row<Schema["tables"]["organisations"]>;
-/**
- * Represents a row from the "projects" table.
- * This type is auto-generated from your Drizzle schema definition.
- */
-export type Project = Row<Schema["tables"]["projects"]>;
 /**
  * Represents a row from the "tasks" table.
  * This type is auto-generated from your Drizzle schema definition.

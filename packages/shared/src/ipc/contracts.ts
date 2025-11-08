@@ -14,7 +14,7 @@ export namespace IPC {
     // Run request from caller (no id yet)
     export interface RunRequest {
       options: RunOptions;
-      systemPrompt: string;
+      systemPrompt?: string;
       path?: string;
       env?: Record<string, string>;
       mcpServers?: Record<
@@ -33,11 +33,13 @@ export namespace IPC {
     }
   }
 
-  export namespace Projects {
+  export namespace Folder {
     export type SelectFolderResponse = {
       name: string;
       path: string;
     } | null;
+
+    export type GetDefaultCwdResponse = string;
   }
 
   export namespace Auth {
