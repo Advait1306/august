@@ -310,11 +310,6 @@ export const TaskRuntimeProvider = ({
   };
 
   const sendMessage = async (message: string) => {
-    // Clear composer prompt
-    const taskIdForComposer =
-      selectedTaskId === "new-conversation"
-        ? "new-conversation"
-        : selectedTaskId;
     setComposerStates((prev) => {
       return {
         ...prev,
