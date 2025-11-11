@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
 import TaskWindow from "@/components/task-window";
 import { PlusIcon } from "lucide-react";
+import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
 
 interface TasksProps {
   project?: string;
@@ -36,60 +37,13 @@ function Tasks() {
   const { tasks, selectedTaskId, selectedTask, selectTask } = useTaskRuntime();
 
   // Keyboard navigation with arrow keys
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
-
-      // Skip navigation if typing in input fields or interacting with certain elements
-      const target = e.target as HTMLElement | null;
-      if (target) {
-        const tag = target.tagName;
-        const isEditable = target.isContentEditable;
-        // Check for various interactive elements that should prevent shortcuts
-        if (
-          isEditable ||
-          tag === "INPUT" ||
-          tag === "TEXTAREA" ||
-          tag === "SELECT" ||
-          target.closest('[role="dialog"]') ||
-          target.closest('[role="menu"]') ||
-          target.closest('[role="listbox"]') ||
-          target.closest('[role="combobox"]') ||
-          target.hasAttribute("contenteditable")
-        ) {
-          return;
-        }
-      }
-
-      // Prevent default scrolling behavior
-      e.preventDefault();
-
-      // Build array of all selectable item IDs
-      const allItemIds: Array<string> = [
-        "new-conversation",
-        ...(tasks || []).map((t) => t.id),
-      ];
-
-      // Find current index
-      const currentIndex = allItemIds.indexOf(selectedTaskId);
-
-      // Calculate next index (without wrap-around)
-      let nextIndex = currentIndex;
-      if (e.key === "ArrowDown") {
-        nextIndex = Math.min(currentIndex + 1, allItemIds.length - 1);
-      } else {
-        nextIndex = Math.max(currentIndex - 1, 0);
-      }
-
-      // Only update if index changed
-      if (nextIndex !== currentIndex) {
-        selectTask(allItemIds[nextIndex]);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [tasks, selectedTaskId, selectTask]);
+  useKeyboardNavigation({
+    items: tasks || [],
+    selectedId: selectedTaskId,
+    onSelect: selectTask,
+    getItemId: (task) => task.id,
+    prependIds: ["new-conversation"],
+  });
 
   // Auto-scroll selected task into view
   useEffect(() => {
@@ -113,7 +67,7 @@ function Tasks() {
               onClick={() => selectTask("new-conversation")}
             >
               <span className="pointer-events-none select-text flex flex-row items-center gap-2">
-                <PlusIcon className="w-4 h-4" /> New Conversation
+                <PlusIcon className="w-4 h-4" /> New Task
               </span>
             </div>
             {tasks?.map((task: any) => (

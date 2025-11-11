@@ -40,8 +40,8 @@ export function createMutators(authData: AuthData) {
           system_prompt,
         }: {
           agent_id: string;
-          name: string;
-          system_prompt: string;
+          name?: string;
+          system_prompt?: string;
         }
       ) => {
         await tx.mutate.agents.update({
