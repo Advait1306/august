@@ -28,6 +28,8 @@ import { useZero } from "@/src/hooks/useZero";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 
+import { useNestedSetting } from "@/src/contexts/settings-context";
+
 export const Route = createFileRoute("/agents")({
   component: Agents,
 });
@@ -40,6 +42,7 @@ type NewAgent = Omit<
 function Agents() {
   const z = useZero();
   const syncContext = useSyncContext();
+  const [theme] = useNestedSetting("appearance", "theme");
 
   const agents = useQuery(getAgents(syncContext.authData))[0];
 
@@ -225,19 +228,7 @@ function Agents() {
               </AnimatePresence>
             </div>
 
-            {agents.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <p className="text-muted-foreground mb-4">
-                    No agents created yet
-                  </p>
-                  <Button onClick={startCreate} size="lg">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Your First Agent
-                  </Button>
-                </div>
-              </div>
-            ) : selectedAgent ? (
+            {selectedAgent ? (
               <div className="flex-1 overflow-auto relative">
                 <div className="absolute top-4 right-4">
                   <Button
@@ -279,21 +270,51 @@ function Agents() {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full p-8">
-                <Card className="max-w-md shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)]">
-                  <CardHeader>
-                    <CardTitle>What are Agents?</CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm text-muted-foreground leading-relaxed">
-                    <p>
-                      Agents are customizable AI assistants that you can tailor
-                      to your specific workflows and requirements. Each agent is
-                      built on a special system prompt that defines its
-                      behavior.
-                    </p>
-                  </CardContent>
+              <motion.div
+                className="flex items-center justify-center h-full"
+                initial={{ opacity: 0, y: 80 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 2000,
+                  damping: 300,
+                }}
+              >
+                <Card className="relative w-md h-[400px] overflow-hidden flex justify-end shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] -rotate-2 p-0">
+                  {theme === "light" ||
+                  (theme === "system" &&
+                    window.matchMedia("(prefers-color-scheme: dark)")
+                      .matches === false) ? (
+                    <img
+                      src={"/agent-image-light.png"}
+                      alt="Agents"
+                      className="absolute w-full h-full object-cover"
+                    />
+                  ) : (
+                    <img
+                      src={"/agent-image-dark.png"}
+                      alt="Agents"
+                      className="absolute w-full h-full object-cover"
+                    />
+                  )}
+
+                  <div className="relative z-10 rounded-lg overflow-hidden flex flex-col gap-2 pb-4">
+                    <CardHeader>
+                      <CardTitle className="text-2xl font-medium">
+                        What are Agents?
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm leading-relaxed pb-2 text-foreground/80">
+                      <p>
+                        Agents are customizable AI assistants that you can
+                        tailor to your specific workflows and requirements. Each
+                        agent is built on a special system prompt that defines
+                        its behavior.
+                      </p>
+                    </CardContent>
+                  </div>
                 </Card>
-              </div>
+              </motion.div>
             )}
           </div>
         </div>

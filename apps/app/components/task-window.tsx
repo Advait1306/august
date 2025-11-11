@@ -323,12 +323,17 @@ export default function TaskWindow() {
 
       {/* Composer */}
       <motion.div
-        className="absolute left-1/2 -translate-x-1/2 w-[80%] max-w-3xl bottom-8"
+        className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
+        initial={{
+          y: 40,
+          opacity: 0,
+        }}
         animate={{
           y:
             selectedTaskId === "new-conversation"
-              ? "calc(-50vh + 50% + 2rem)"
-              : "0%",
+              ? "0%"
+              : "calc(50vh - 50% - 3rem)",
+          opacity: 1,
         }}
         transition={{
           type: "spring",
