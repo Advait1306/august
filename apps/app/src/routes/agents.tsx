@@ -28,8 +28,6 @@ import { useZero } from "@/src/hooks/useZero";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 
-import { useNestedSetting } from "@/src/contexts/settings-context";
-
 export const Route = createFileRoute("/agents")({
   component: Agents,
 });
@@ -42,7 +40,6 @@ type NewAgent = Omit<
 function Agents() {
   const z = useZero();
   const syncContext = useSyncContext();
-  const [theme] = useNestedSetting("appearance", "theme");
 
   const agents = useQuery(getAgents(syncContext.authData))[0];
 
@@ -281,30 +278,19 @@ function Agents() {
                 }}
               >
                 <Card className="relative w-md h-[400px] overflow-hidden flex justify-end shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] -rotate-2 p-0">
-                  {theme === "light" ||
-                  (theme === "system" &&
-                    window.matchMedia("(prefers-color-scheme: dark)")
-                      .matches === false) ? (
-                    <img
-                      src={"/agent-image-light.png"}
-                      alt="Agents"
-                      className="absolute w-full h-full object-cover"
-                    />
-                  ) : (
-                    <img
-                      src={"/agent-image-dark.png"}
-                      alt="Agents"
-                      className="absolute w-full h-full object-cover"
-                    />
-                  )}
+                  <img
+                    src={"/agent-image-dark.png"}
+                    alt="Agents"
+                    className="absolute w-full h-full object-cover"
+                  />
 
                   <div className="relative z-10 rounded-lg overflow-hidden flex flex-col gap-2 pb-4">
                     <CardHeader>
-                      <CardTitle className="text-2xl font-medium">
+                      <CardTitle className="text-2xl font-medium text-white">
                         What are Agents?
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="text-sm leading-relaxed pb-2 text-foreground/80">
+                    <CardContent className="text-sm leading-relaxed pb-2 text-white/80">
                       <p>
                         Agents are customizable AI assistants that you can
                         tailor to your specific workflows and requirements. Each
