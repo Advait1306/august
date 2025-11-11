@@ -280,7 +280,7 @@ function Agents() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-full p-8">
-                <Card className="max-w-md">
+                <Card className="max-w-md shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)]">
                   <CardHeader>
                     <CardTitle>What are Agents?</CardTitle>
                   </CardHeader>
