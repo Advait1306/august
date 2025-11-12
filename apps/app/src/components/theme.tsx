@@ -1,14 +1,38 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { useNestedSetting } from "../contexts/settings-context";
 
-type ThemeProps = {
+type ResolvedTheme = "light" | "dark";
+
+type ThemeContextType = {
+  resolvedTheme: ResolvedTheme;
+};
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+type ThemeProviderProps = {
   children: ReactNode;
 };
 
-export function Theme({ children }: ThemeProps) {
+export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme] = useNestedSetting("appearance", "theme");
+  
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
+    // Initialize with current theme
+    if (theme === "system") {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    }
+    return theme as ResolvedTheme;
+  });
 
   // Handle theme changes and apply to DOM
   useEffect(() => {
@@ -23,6 +47,7 @@ export function Theme({ children }: ThemeProps) {
         : "light";
 
       root.classList.add(systemTheme);
+      setResolvedTheme(systemTheme);
 
       // Adding handler to automatically change theme when system theme changes
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
@@ -33,6 +58,7 @@ export function Theme({ children }: ThemeProps) {
 
         const systemTheme = mediaQuery.matches ? "dark" : "light";
         root.classList.add(systemTheme);
+        setResolvedTheme(systemTheme);
       };
 
       mediaQuery.addEventListener("change", handleChange);
@@ -41,7 +67,23 @@ export function Theme({ children }: ThemeProps) {
     }
 
     root.classList.add(theme);
+    setResolvedTheme(theme as ResolvedTheme);
   }, [theme]);
 
-  return <>{children}</>;
+  return (
+    <ThemeContext.Provider value={{ resolvedTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
+
+export function useTheme(): ResolvedTheme {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context.resolvedTheme;
+}
+
+// Backward compatibility export
+export const Theme = ThemeProvider;

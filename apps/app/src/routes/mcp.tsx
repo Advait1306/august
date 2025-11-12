@@ -52,13 +52,9 @@ function MCPCard({ item }: MCPCardProps) {
             />
           )}
           <div className="flex-1 min-w-0 flex flex-col">
-            <h3 className="font-semibold truncate" style={{ color: "black" }}>
-              {item.name}
-            </h3>
+            <h3 className="font-semibold truncate">{item.name}</h3>
             {item.category && (
-              <span className="text-xs line-clamp-1" style={{ color: "black" }}>
-                {item.description}
-              </span>
+              <span className="text-xs line-clamp-1">{item.description}</span>
             )}
           </div>
         </div>
@@ -115,10 +111,7 @@ function ConnectedMCPCard({ item }: ConnectedMCPCardProps) {
           className="w-10 h-10 rounded relative z-10"
         />
       ) : (
-        <div
-          className="relative z-10 text-4xl font-medium"
-          style={{ color: "black" }}
-        >
+        <div className="relative z-10 text-4xl font-medium">
           {item.name.charAt(0).toUpperCase()}
         </div>
       )}
@@ -142,52 +135,52 @@ function MCP() {
     <ShellOnly>
       <div className="flex flex-col justify-start items-start">
         {/* User's MCPs */}
-        <div className="p-4 w-full max-w-[1200px] mx-auto flex flex-col gap-2">
-          <span>Connected accounts</span>
-          {userMcps.length === 0 ? (
-            <div className="text-center py-12">
-              {/* TODO: Add empty state */}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-3">
-              {userMcps.map((mcp) => {
-                // Find the store listing to get the logo
-                const storeListing = mcpStore.find(
-                  (store) => store.id === mcp.mcp_store_id
-                );
+        {userMcps.length > 0 && (
+          <>
+            <div className="bg-background p-4 w-full max-w-[1200px] mx-auto flex flex-col gap-2">
+              <div className="flex flex-wrap gap-3">
+                {userMcps.map((mcp) => {
+                  // Find the store listing to get the logo
+                  const storeListing = mcpStore.find(
+                    (store) => store.id === mcp.mcp_store_id
+                  );
 
-                return (
-                  <ConnectedMCPCard
-                    key={mcp.id}
-                    item={{
-                      id: mcp.id,
-                      name: mcp.name,
-                      logo_url: storeListing?.logo_url || null,
-                    }}
-                  />
-                );
-              })}
+                  return (
+                    <ConnectedMCPCard
+                      key={mcp.id}
+                      item={{
+                        id: mcp.id,
+                        name: mcp.name,
+                        logo_url: storeListing?.logo_url || null,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+            <Separator />
+          </>
+        )}
+        {/* MCP Store */}
+        <div className="mt-6 p-4 w-full max-w-[1200px] mx-auto flex flex-col items-center gap-6">
+          {/* Banner */}
+          {userMcps.length === 0 && (
+            <div className="relative w-full max-w-[1200px] h-[350px] flex flex-row items-center gap-2 border border-border rounded-xl overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full flex flex-col items-start justify-end z-2 p-8 gap-4">
+                <h1 className="text-4xl font-medium text-white tracking-tighter ">
+                  What are connections?
+                </h1>
+                <p className="text-white/80 min-w-[400px] w-[30%] whitespace-pre-wrap">
+                  Connections allow you to give your AI access to external tools
+                  and information.
+                </p>
+              </div>
+              <img
+                src="/connection-image.jpg"
+                className="w-full h-full object-cover z-1 blur scale-130"
+              />
             </div>
           )}
-        </div>
-
-        {/* MCP Store */}
-        <div className="p-4 w-full max-w-[1200px] mx-auto flex flex-col items-center gap-6">
-          <div className="relative w-full h-[500px] flex flex-row items-center gap-2 border border-border rounded-xl overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-full flex flex-col items-start justify-end z-2 px-12 py-12 gap-4">
-              <h1 className="text-4xl font-medium text-white tracking-tighter ">
-                What are connections?
-              </h1>
-              <p className="text-white/80 min-w-[400px] w-[30%] whitespace-pre-wrap">
-                Connections allow you to give your AI access to external tools
-                and information.
-              </p>
-            </div>
-            <img
-              src="/connection-image.jpg"
-              className="w-full h-full object-cover z-1 blur scale-130"
-            />
-          </div>
           {/* Search Bar */}
           <Input
             type="text"
