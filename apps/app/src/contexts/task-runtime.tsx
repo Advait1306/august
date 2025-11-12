@@ -310,7 +310,6 @@ export const TaskRuntimeProvider = ({
   };
 
   const sendMessage = async (message: string) => {
-    // Clear composer prompt
     setComposerStates((prev) => {
       return {
         ...prev,
