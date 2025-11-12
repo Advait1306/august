@@ -20,7 +20,7 @@ export function createServerMutators(
   authData: AuthData,
   asyncTasks: AsyncTask,
   mixpanel: mixpanel.Mixpanel,
-  oauthService?: OAuthService
+  oauthService: OAuthService
 ) {
   // Analytics configuration
   const analyticsConfig = {
@@ -125,31 +125,16 @@ export function createServerMutators(
         }
 
         if (mcp.integration_type === "oauth") {
-          if (oauthService) {
-            asyncTasks.push(async () => {
-              try {
-                await oauthService.revokeToken({ mcpId: mcp_id });
-              } catch (error) {
-                console.error(
-                  "[Server Mutator] Error revoking OAuth token:",
-                  error
-                );
-              }
-            });
+          // Revoke OAuth token synchronously before deleting the connection
+          try {
+            // This will also delete the oauth token from the database
+            await oauthService.revokeToken({ mcpId: mcp_id });
+          } catch (error) {
+            console.error(
+              "[Server Mutator] Error revoking OAuth token:",
+              error
+            );
           }
-
-          const oauthConnection = await tx.query.mcpOauthConnections
-            .where("mcp_id", mcp_id)
-            .one()
-            .run();
-
-          if (!oauthConnection) {
-            throw new Error("OAuth connection not found");
-          }
-
-          await tx.mutate.mcpOauthConnections.delete({
-            id: oauthConnection.id,
-          });
         } else {
           const composioConnection = await tx.query.mcpComposioConnections
             .where("mcp_id", mcp_id)
