@@ -17,6 +17,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@jupiter/shared": "*",
     "@jupiter/sync": "*",
+    "@modelcontextprotocol/sdk": "^1.21.1",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.12",

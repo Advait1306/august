@@ -114,23 +114,55 @@ export function createServerMutators(
         { mcp_id }: { mcp_id: string }
       ) => {
         // Check if MCP belongs to user
-        const mcp = tx.query.mcps
+        const mcp = await tx.query.mcps
           .where("id", mcp_id)
           .where("author_id", authData.userId)
-          .one();
+          .one()
+          .run();
 
         if (!mcp) {
           throw new Error("MCP not found or access denied");
         }
 
-        // Revoke OAuth tokens with the provider (async)
-        if (oauthService) {
-          asyncTasks.push(async () => {
-            try {
-              await oauthService.revokeToken({ mcpId: mcp_id });
-            } catch (error) {
-              console.error("[Server Mutator] Error revoking OAuth token:", error);
-            }
+        if (mcp.integration_type === "oauth") {
+          if (oauthService) {
+            asyncTasks.push(async () => {
+              try {
+                await oauthService.revokeToken({ mcpId: mcp_id });
+              } catch (error) {
+                console.error(
+                  "[Server Mutator] Error revoking OAuth token:",
+                  error
+                );
+              }
+            });
+          }
+
+          const oauthConnection = await tx.query.mcpOauthConnections
+            .where("mcp_id", mcp_id)
+            .one()
+            .run();
+
+          if (!oauthConnection) {
+            throw new Error("OAuth connection not found");
+          }
+
+          await tx.mutate.mcpOauthConnections.delete({
+            id: oauthConnection.id,
+          });
+        } else {
+          const composioConnection = await tx.query.mcpComposioConnections
+            .where("mcp_id", mcp_id)
+            .one()
+            .run();
+
+          if (!composioConnection) {
+            throw new Error("Composio connection not found");
+          }
+
+          // TODO: Figure out how to delete the Composio connection from composio SDK as well
+          await tx.mutate.mcpComposioConnections.delete({
+            id: composioConnection.id,
           });
         }
 
