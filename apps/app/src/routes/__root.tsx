@@ -15,7 +15,6 @@ import { UpdateProvider } from "@/src/contexts/update-context";
 import { UpdateToast } from "@/components/update-toast";
 import { SyncEngine } from "../components/sync_engine";
 import { TaskRuntimeProvider } from "@/src/contexts/task-runtime";
-import { MCPRuntimeProvider } from "@/src/contexts/mcp-runtime";
 import { Analytics } from "@/src/components/analytics";
 
 // Import your Publishable Key
@@ -60,25 +59,23 @@ const RootLayout = () => {
                 <Analytics>
                   <SyncEngine>
                     <SignedIn>
-                      <MCPRuntimeProvider>
-                        <CommandMenuProvider>
-                          <TaskRuntimeProvider>
-                            <div className="[--header-height:calc(--spacing(9))]">
-                              <SidebarProvider className="flex flex-col">
-                                <SiteHeader />
-                                <div className="flex flex-1 overflow-hidden">
-                                  <AppSidebar />
-                                  <SidebarInset>
-                                    <div className="rounded-lg border overflow-hidden flex-1 bg-background">
-                                      <Outlet />
-                                    </div>
-                                  </SidebarInset>
-                                </div>
-                              </SidebarProvider>
-                            </div>
-                          </TaskRuntimeProvider>
-                        </CommandMenuProvider>
-                      </MCPRuntimeProvider>
+                      <CommandMenuProvider>
+                        <TaskRuntimeProvider>
+                          <div className="[--header-height:calc(--spacing(9))]">
+                            <SidebarProvider className="flex flex-col">
+                              <SiteHeader />
+                              <div className="flex flex-1 overflow-hidden">
+                                <AppSidebar />
+                                <SidebarInset>
+                                  <div className="rounded-lg border overflow-hidden flex-1 bg-background">
+                                    <Outlet />
+                                  </div>
+                                </SidebarInset>
+                              </div>
+                            </SidebarProvider>
+                          </div>
+                        </TaskRuntimeProvider>
+                      </CommandMenuProvider>
                     </SignedIn>
                     <SignedOut>
                       <Guard />
