@@ -15,6 +15,7 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
+import { fuzzyMatch } from "@/src/lib/fuzzy-match";
 
 export type PromptMenuOption = {
   label: string;
@@ -99,22 +100,6 @@ function menuReducer(state: MenuState, action: MenuAction): MenuState {
     default:
       return state;
   }
-}
-
-// Helper function for fuzzy matching
-function fuzzyMatch(str: string, query: string): boolean {
-  if (!query) return true;
-
-  const lowerStr = str.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-
-  let queryIndex = 0;
-  for (let i = 0; i < lowerStr.length && queryIndex < lowerQuery.length; i++) {
-    if (lowerStr[i] === lowerQuery[queryIndex]) {
-      queryIndex++;
-    }
-  }
-  return queryIndex === lowerQuery.length;
 }
 
 // Helper function to flatten options

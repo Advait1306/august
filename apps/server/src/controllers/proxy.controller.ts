@@ -6,7 +6,7 @@ import { OAuthService } from "../services/oauth.service";
 import { ComposioService } from "../services/composio.service";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { eq, and } from "drizzle-orm";
-import { mcps, mcpOauthIntegrationDetails, mcpComposioIntegrationDetails } from "@jupiter/sync/db/schema";
+import { mcps, mcpOauthIntegrationDetails } from "@jupiter/sync/db/schema";
 
 export function createProxyController(
   proxyService: ProxyService,
@@ -95,7 +95,11 @@ export function createProxyController(
           .limit(1);
 
         if (!mcp) {
-          console.log("[MCP Proxy] MCP not found:", { mcpId, userId, organisationId });
+          console.log("[MCP Proxy] MCP not found:", {
+            mcpId,
+            userId,
+            organisationId,
+          });
           return res
             .status(404)
             .json({ error: "MCP not found or access denied" });
@@ -115,13 +119,18 @@ export function createProxyController(
           });
 
           if (!connectionUrl) {
-            console.log("[MCP Proxy] No Composio connection URL found for MCP:", { mcpId });
+            console.log(
+              "[MCP Proxy] No Composio connection URL found for MCP:",
+              { mcpId }
+            );
             return res.status(404).json({
               error: "Composio connection not found",
             });
           }
 
-          console.log("[MCP Proxy] Composio connection URL retrieved, forwarding request");
+          console.log(
+            "[MCP Proxy] Composio connection URL retrieved, forwarding request"
+          );
 
           // Forward the request to the Composio MCP server (no auth headers needed)
           await proxyService.forwardToComposioMCP(
@@ -131,7 +140,9 @@ export function createProxyController(
             path
           );
 
-          console.log("[MCP Proxy] Request forwarded successfully to Composio MCP");
+          console.log(
+            "[MCP Proxy] Request forwarded successfully to Composio MCP"
+          );
           return;
         }
 
@@ -144,11 +155,16 @@ export function createProxyController(
           const [oauthDetails] = await db
             .select()
             .from(mcpOauthIntegrationDetails)
-            .where(eq(mcpOauthIntegrationDetails.mcp_store_id, mcp.mcp_store_id))
+            .where(
+              eq(mcpOauthIntegrationDetails.mcp_store_id, mcp.mcp_store_id)
+            )
             .limit(1);
 
           if (!oauthDetails) {
-            console.log("[MCP Proxy] OAuth integration details not found for MCP:", { mcpId });
+            console.log(
+              "[MCP Proxy] OAuth integration details not found for MCP:",
+              { mcpId }
+            );
             return res
               .status(404)
               .json({ error: "OAuth integration details not found" });
@@ -181,10 +197,13 @@ export function createProxyController(
           });
         }
 
-        console.log("[MCP Proxy] Access token retrieved, forwarding request to:", {
-          targetUrl: mcpServerUrl,
-          path,
-        });
+        console.log(
+          "[MCP Proxy] Access token retrieved, forwarding request to:",
+          {
+            targetUrl: mcpServerUrl,
+            path,
+          }
+        );
 
         // Forward the request to the MCP server
         await proxyService.forwardToMCP(
