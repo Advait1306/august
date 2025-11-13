@@ -162,15 +162,6 @@ export function createBillingController(
         return res.status(404).json({ error: "Organisation not found" });
       }
 
-      const paymentId = org[0].payment_id;
-
-      if (!paymentId) {
-        return res.status(400).json({
-          error:
-            "No payment ID found for this organisation. Please contact support.",
-        });
-      }
-
       // Create checkout session
       const checkoutSessionResponse = await dodoClient.checkoutSessions.create({
         product_cart: [{ product_id: PRODUCT_ID, quantity: 1, amount }],
