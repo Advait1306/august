@@ -43,7 +43,7 @@ function bumpVersion(type = 'patch') {
 
 function commitAndTag(version) {
   log(`Committing and tagging version ${version}...`)
-  execCommand(`git add package.json`)
+  execCommand(`git add package.json package-lock.json`)
   execCommand(`git commit -m "chore: bump version to ${version}"`)
   execCommand(`git tag v${version}`)
 }
