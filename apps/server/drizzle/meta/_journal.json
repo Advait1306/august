@@ -36,6 +36,13 @@
       "when": 1761393107715,
       "tag": "0004_clever_blob",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1763015869772,
+      "tag": "0005_closed_red_ghost",
+      "breakpoints": true
     }
   ]
 }
