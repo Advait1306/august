@@ -11,11 +11,16 @@ type AuthData = {
 
 type AsyncTask = Array<() => Promise<void>>;
 
+type OAuthService = {
+  revokeToken: (params: { mcpId: string }) => Promise<void>;
+};
+
 export function createServerMutators(
   clientMutators: CustomMutatorDefs,
   authData: AuthData,
   asyncTasks: AsyncTask,
-  mixpanel: mixpanel.Mixpanel
+  mixpanel: mixpanel.Mixpanel,
+  oauthService: OAuthService
 ) {
   // Analytics configuration
   const analyticsConfig = {
@@ -59,7 +64,7 @@ export function createServerMutators(
         getProperties: (args: any) => ({
           task_id: args.task_id,
           project_id: args.project_id,
-          agent_id: args.agent_id,
+          ...(args.agent_id && { agent_id: args.agent_id }),
         }),
       },
     },
@@ -103,6 +108,53 @@ export function createServerMutators(
   // Override specific mutators that need custom server-side logic
   return {
     ...wrappedMutators,
+    mcps: {
+      delete: async (
+        tx: Transaction<Schema>,
+        { mcp_id }: { mcp_id: string }
+      ) => {
+        // Check if MCP belongs to user
+        const mcp = await tx.query.mcps
+          .where("id", mcp_id)
+          .where("author_id", authData.userId)
+          .one()
+          .run();
+
+        if (!mcp) {
+          throw new Error("MCP not found or access denied");
+        }
+
+        if (mcp.integration_type === "oauth") {
+          // Revoke OAuth token synchronously before deleting the connection
+          try {
+            // This will also delete the oauth token from the database
+            await oauthService.revokeToken({ mcpId: mcp_id });
+          } catch (error) {
+            console.error(
+              "[Server Mutator] Error revoking OAuth token:",
+              error
+            );
+          }
+        } else {
+          const composioConnection = await tx.query.mcpComposioConnections
+            .where("mcp_id", mcp_id)
+            .one()
+            .run();
+
+          if (!composioConnection) {
+            throw new Error("Composio connection not found");
+          }
+
+          // TODO: Figure out how to delete the Composio connection from composio SDK as well
+          await tx.mutate.mcpComposioConnections.delete({
+            id: composioConnection.id,
+          });
+        }
+
+        // Delete the MCP from the database
+        await tx.mutate.mcps.delete({ id: mcp_id });
+      },
+    },
     message: {
       create: async (
         tx: Transaction<Schema>,

@@ -9,19 +9,6 @@ import { autoUpdaterService } from './services/auto-updater-service'
 
 let mainWindow: BrowserWindow | null = null
 
-// Initialize base agents on app startup
-async function initializeBaseAgents(): Promise<void> {
-  const { agentService } = await import('./services/agent-service')
-
-  const builtInAgents = [
-    { id: 'claude-code', name: 'Claude Code', apiKey: null },
-    { id: 'codex', name: 'Codex', apiKey: null },
-    { id: 'opencode', name: 'OpenCode', apiKey: null }
-  ]
-
-  await agentService.seedBaseAgents(builtInAgents)
-}
-
 function createWindow(): void {
   // Create the browser window.
   mainWindow = new BrowserWindow({
@@ -47,7 +34,8 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
 
-    if (!import.meta.env.PROD) {
+    // @ts-ignore VITE_DEV_TOOLS is defined in the .env file
+    if (!import.meta.env.PROD || import.meta.env.VITE_DEV_TOOLS === 'true') {
       mainWindow!.webContents.openDevTools()
     }
   })
@@ -105,25 +93,17 @@ app.whenReady().then(async () => {
 
   // Initialize database and IPC handlers
   try {
-    const { initializeDatabase } = await import('./db')
     const { registerProjectIpcHandlers } = await import('./ipc/projects')
-    const { registerThreadIpcHandlers } = await import('./ipc/threads')
-    const { registerMessageIpcHandlers } = await import('./ipc/messages')
     const { registerAgentIpcHandlers } = await import('./ipc/agents')
     const { registerAuthIpcHandlers } = await import('./ipc/auth')
     const { registerAutoUpdaterIpcHandlers } = await import('./ipc/auto-updater')
-
-    initializeDatabase()
-
-    // Initialize base agents on app startup
-    await initializeBaseAgents()
+    const { registerBrowserIpcHandlers } = await import('./ipc/browser')
 
     registerProjectIpcHandlers()
-    registerThreadIpcHandlers()
-    registerMessageIpcHandlers()
     registerAgentIpcHandlers()
     registerAuthIpcHandlers()
     registerAutoUpdaterIpcHandlers()
+    registerBrowserIpcHandlers()
     AgentAdapterMain.getInstance()
 
     // Initialize auto-updater and start checking for updates

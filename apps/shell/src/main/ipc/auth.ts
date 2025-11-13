@@ -1,4 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron'
+import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -7,7 +8,7 @@ export function setMainWindow(window: BrowserWindow): void {
 }
 
 export function registerAuthIpcHandlers(): void {
-  ipcMain.handle('auth:open-login', async () => {
+  ipcMain.handle(IPC_CHANNELS.AUTH.OPEN_LOGIN, async (): Promise<IPC.Auth.OpenLoginResponse> => {
     // Open the web login page
     const { shell } = await import('electron')
     shell.openExternal('https://app.august.tech/authorise')
@@ -15,10 +16,9 @@ export function registerAuthIpcHandlers(): void {
   })
 }
 
-export function handleAuthToken(token: string): void {
-  console.log('Sending auth ticket: ', token)
+export function handleAuthToken(token: IPC.Auth.TicketReceivedEvent): void {
   // Send the token to the renderer process
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('auth:ticket-received', token)
+    mainWindow.webContents.send(IPC_CHANNELS.AUTH.TICKET_RECEIVED, token)
   }
 }

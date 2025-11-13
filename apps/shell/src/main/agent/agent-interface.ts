@@ -1,4 +1,5 @@
-import { AssistantModelMessage, ModelMessage } from 'ai'
+import { AssistantModelMessage } from 'ai'
+import { IPC } from '@jupiter/shared/ipc'
 
 /**
  * Agent interface for all agents in the system.
@@ -8,18 +9,14 @@ import { AssistantModelMessage, ModelMessage } from 'ai'
  */
 interface AgentInterface {
   run(
-    runOptions: {
-      messages: ModelMessage[]
-      runConfig: Record<string, unknown>
-      threadId: string
-    },
+    params: IPC.Agent.RunParams,
     permissionRequest: (request: {
       toolName: string
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       input: Record<string, any>
       threadId: string
     }) => Promise<boolean>,
-    systemPrompt?: string
+    signal?: AbortSignal
   ): AsyncGenerator<AssistantModelMessage, void>
 }
 

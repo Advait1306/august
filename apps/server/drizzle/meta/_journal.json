@@ -8,6 +8,41 @@
       "when": 1759990766687,
       "tag": "0000_lazy_kat_farrell",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1761311553073,
+      "tag": "0001_fair_piledriver",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1761336119376,
+      "tag": "0002_little_gambit",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1761336570840,
+      "tag": "0003_concerned_fenris",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1761393107715,
+      "tag": "0004_clever_blob",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1763015869772,
+      "tag": "0005_closed_red_ghost",
+      "breakpoints": true
     }
   ]
 }

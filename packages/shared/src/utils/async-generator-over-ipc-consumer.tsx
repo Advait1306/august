@@ -8,6 +8,7 @@ export function asyncGeneratorOverIPCConsumer<T>(f: (id: string) => void) {
   const queue: Array<{ value: T; done: boolean }> = [];
   let done = false;
   let error: Error | null = null;
+  let cancelled = false;
 
   let pendingResolve: ((v: IteratorResult<any>) => void) | null = null;
   let pendingReject: ((e: any) => void) | null = null;
@@ -52,6 +53,15 @@ export function asyncGeneratorOverIPCConsumer<T>(f: (id: string) => void) {
     ipcRenderer.removeListener(`stream:error-${id}`, onError);
   }
 
+  function cancel() {
+    if (!cancelled && !done) {
+      cancelled = true;
+      // Notify main process to cancel the operation
+      ipcRenderer.send(`stream:cancel-${id}`);
+      cleanup();
+    }
+  }
+
   ipcRenderer.on(`stream:chunk-${id}`, onChunk);
   ipcRenderer.on(`stream:done-${id}`, onDone);
   ipcRenderer.on(`stream:error-${id}`, onError);
@@ -61,22 +71,22 @@ export function asyncGeneratorOverIPCConsumer<T>(f: (id: string) => void) {
   const iterator: AsyncIterator<any> = {
     next() {
       if (error) return Promise.reject(error);
+      if (cancelled || done) return Promise.resolve({ value: undefined, done: true });
       if (queue.length) {
         return Promise.resolve(queue.shift()!);
       }
-      if (done) return Promise.resolve({ value: undefined, done: true });
       return new Promise<IteratorResult<any>>((resolve, reject) => {
         pendingResolve = resolve;
         pendingReject = reject;
       });
     },
     return() {
-      // Consumer stopped early — cancel upstream if you support it
-      cleanup();
+      // Consumer stopped early — send cancel signal to main process
+      cancel();
       return Promise.resolve({ value: undefined, done: true });
     },
     throw(err) {
-      cleanup();
+      cancel();
       return Promise.reject(err);
     },
   };
@@ -85,5 +95,6 @@ export function asyncGeneratorOverIPCConsumer<T>(f: (id: string) => void) {
     [Symbol.asyncIterator]() {
       return iterator;
     },
+    cancel, // Expose cancel method for explicit cancellation
   };
 }
