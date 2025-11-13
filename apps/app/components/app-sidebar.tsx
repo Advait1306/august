@@ -2,12 +2,12 @@ import * as React from "react";
 import {
   Bot,
   CheckSquare,
-  FolderKanban,
   Palette,
   Wrench,
   ChevronLeft,
   Wallet,
 } from "lucide-react";
+import { MCPIcon } from "@/components/icons/MCPIcon";
 
 import { NavMain } from "@/components/nav-main";
 import { NavSecondary } from "@/components/nav-secondary";
@@ -36,20 +36,15 @@ const data = {
       icon: CheckSquare,
     },
     {
-      title: "Projects",
-      url: "/projects",
-      icon: FolderKanban,
-    },
-    {
       title: "Agents",
       url: "/agents",
       icon: Bot,
     },
-    // {
-    //   title: "MCP",
-    //   url: "/mcp",
-    //   icon: MCPIcon,
-    // },
+    {
+      title: "MCP",
+      url: "/mcp",
+      icon: MCPIcon,
+    },
   ],
   settingsNav: [
     {

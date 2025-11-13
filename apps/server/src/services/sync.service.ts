@@ -2,9 +2,10 @@ import { ReadonlyJSONValue, withValidation } from "@rocicorp/zero";
 import {
   AuthData as ZeroAuthData,
   getAgents,
+  getMCPStore,
+  getMCPs,
   getMessages,
   getOrganisation,
-  getProjects,
   getTasks,
   getUsage,
 } from "@jupiter/sync/queries/data";
@@ -15,6 +16,7 @@ import { handleGetQueriesRequest } from "@rocicorp/zero/server";
 import type { Mixpanel } from "mixpanel";
 import { AuthData } from "../types/auth.types";
 import { processorType } from "../config/database";
+import { OAuthService } from "./oauth.service";
 
 // Validated queries
 const validated = Object.fromEntries(
@@ -22,16 +24,18 @@ const validated = Object.fromEntries(
     getTasks,
     getMessages,
     getAgents,
-    getProjects,
     getOrganisation,
     getUsage,
+    getMCPStore,
+    getMCPs,
   ].map((q) => [q.queryName, withValidation(q)])
 );
 
 export class SyncService {
   constructor(
     private processor: processorType,
-    private mp: Mixpanel
+    private mp: Mixpanel,
+    private oauthService: OAuthService
   ) {}
 
   /**
@@ -85,7 +89,8 @@ export class SyncService {
         createMutators({ userId: authData.userId, orgId: authData.orgId }),
         { userId: authData.userId, orgId: authData.orgId },
         asyncTasks,
-        this.mp
+        this.mp,
+        this.oauthService
       ),
       query,
       body

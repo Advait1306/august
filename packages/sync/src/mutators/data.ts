@@ -8,44 +8,6 @@ type AuthData = {
 
 export function createMutators(authData: AuthData) {
   return {
-    projects: {
-      create: async (
-        tx: Transaction<Schema>,
-        {
-          project_id,
-          name,
-          path,
-        }: { project_id: string; name: string; path: string }
-      ) => {
-        await tx.mutate.projects.insert({
-          id: project_id,
-          name,
-          path,
-          author_id: authData.userId,
-          organisation_id: authData.orgId,
-        });
-      },
-      update: async (
-        tx: Transaction<Schema>,
-        {
-          project_id,
-          name,
-          path,
-        }: { project_id: string; name: string; path: string }
-      ) => {
-        await tx.mutate.projects.update({
-          id: project_id,
-          name,
-          path,
-        });
-      },
-      delete: async (
-        tx: Transaction<Schema>,
-        { project_id }: { project_id: string }
-      ) => {
-        await tx.mutate.projects.delete({ id: project_id });
-      },
-    },
     agents: {
       create: async (
         tx: Transaction<Schema>,
@@ -78,8 +40,8 @@ export function createMutators(authData: AuthData) {
           system_prompt,
         }: {
           agent_id: string;
-          name: string;
-          system_prompt: string;
+          name?: string;
+          system_prompt?: string;
         }
       ) => {
         await tx.mutate.agents.update({
@@ -100,13 +62,11 @@ export function createMutators(authData: AuthData) {
         tx: Transaction<Schema>,
         {
           task_id,
-          project_id,
           agent_id,
           message_data,
         }: {
           task_id: string;
-          project_id: string;
-          agent_id: string;
+          agent_id?: string;
           message_data: {
             task_id: string;
             message_id: string;
@@ -130,8 +90,7 @@ export function createMutators(authData: AuthData) {
           id: task_id,
           author_id: authData.userId,
           name,
-          project_id,
-          agent_id,
+          ...(agent_id && { agent_id }),
           organisation_id: authData.orgId,
           created_at: Date.now(),
         });
@@ -198,6 +157,14 @@ export function createMutators(authData: AuthData) {
           content: content,
           metadata: metadata,
         });
+      },
+    },
+    mcps: {
+      delete: async (
+        tx: Transaction<Schema>,
+        { mcp_id }: { mcp_id: string }
+      ) => {
+        await tx.mutate.mcps.delete({ id: mcp_id });
       },
     },
   } as const;

@@ -1,8 +1,12 @@
-import { Response } from "express";
+import { Response, Request } from "express";
 import { BillingService, UsageData } from "./billing.service";
+import { OAuthService } from "./oauth.service";
 
 export class ProxyService {
-  constructor(private billingService: BillingService) {}
+  constructor(
+    private billingService: BillingService,
+    private oauthService?: OAuthService
+  ) {}
 
   /**
    * Forward request to Anthropic API and handle streaming response
@@ -149,6 +153,177 @@ export class ProxyService {
       } catch (e) {
         console.error("Failed to parse streaming events:", e);
       }
+    }
+  }
+
+  /**
+   * Forward request to MCP server with OAuth token replacement
+   */
+  async forwardToMCP(
+    mcpServerUrl: string,
+    accessToken: string,
+    req: Request,
+    res: Response,
+    path: string
+  ) {
+    try {
+      // Construct the full URL to the MCP server
+      const targetUrl = new URL(path, mcpServerUrl);
+
+      console.log("[MCP Proxy Service] Forwarding request:", {
+        mcpServerUrl,
+        path,
+        targetUrl: targetUrl.toString(),
+        method: req.method,
+      });
+
+      // Prepare headers, excluding the original Authorization header
+      const headers: Record<string, string> = {};
+
+      // Copy relevant headers from the original request
+      Object.keys(req.headers).forEach((key) => {
+        const value = req.headers[key];
+        // Skip host, authorization, and connection headers
+        if (
+          key.toLowerCase() !== "host" &&
+          key.toLowerCase() !== "authorization" &&
+          key.toLowerCase() !== "connection" &&
+          value
+        ) {
+          headers[key] = Array.isArray(value) ? value[0] : value;
+        }
+      });
+
+      // Add the OAuth access token
+      headers["authorization"] = `Bearer ${accessToken}`;
+
+      // Forward the request
+      console.log("[MCP Proxy Service] Making request with headers:", {
+        ...headers,
+        authorization: "Bearer [REDACTED]",
+      });
+
+      const response = await fetch(targetUrl.toString(), {
+        method: req.method,
+        headers,
+        body: req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(req.body) : undefined,
+      });
+
+      console.log("[MCP Proxy Service] Response received:", {
+        status: response.status,
+        statusText: response.statusText,
+      });
+
+      // Copy response headers
+      response.headers.forEach((value, key) => {
+        res.setHeader(key, value);
+      });
+
+      res.status(response.status);
+
+      // Handle streaming or regular response
+      if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          res.write(chunk);
+        }
+
+        res.end();
+      } else {
+        const data = await response.text();
+        res.send(data);
+      }
+    } catch (error) {
+      console.error("[MCP Proxy] Error forwarding request:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Forward request to Composio MCP server (no auth headers needed)
+   */
+  async forwardToComposioMCP(
+    connectionUrl: string,
+    req: Request,
+    res: Response,
+    path: string
+  ) {
+    try {
+      // Construct the full URL to the Composio MCP server
+      const targetUrl = new URL(path, connectionUrl);
+
+      console.log("[Composio MCP Proxy Service] Forwarding request:", {
+        connectionUrl,
+        path,
+        targetUrl: targetUrl.toString(),
+        method: req.method,
+      });
+
+      // Prepare headers, excluding auth-related headers
+      const headers: Record<string, string> = {};
+
+      // Copy relevant headers from the original request
+      Object.keys(req.headers).forEach((key) => {
+        const value = req.headers[key];
+        // Skip host, authorization, and connection headers
+        if (
+          key.toLowerCase() !== "host" &&
+          key.toLowerCase() !== "authorization" &&
+          key.toLowerCase() !== "connection" &&
+          value
+        ) {
+          headers[key] = Array.isArray(value) ? value[0] : value;
+        }
+      });
+
+      // NO authorization header is added for Composio MCPs
+
+      // Forward the request
+      console.log("[Composio MCP Proxy Service] Making request with headers:", headers);
+
+      const response = await fetch(targetUrl.toString(), {
+        method: req.method,
+        headers,
+        body: req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(req.body) : undefined,
+      });
+
+      console.log("[Composio MCP Proxy Service] Response received:", {
+        status: response.status,
+        statusText: response.statusText,
+      });
+
+      // Copy response headers
+      response.headers.forEach((value, key) => {
+        res.setHeader(key, value);
+      });
+
+      res.status(response.status);
+
+      // Handle streaming or regular response
+      if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          res.write(chunk);
+        }
+
+        res.end();
+      } else {
+        const data = await response.text();
+        res.send(data);
+      }
+    } catch (error) {
+      console.error("[Composio MCP Proxy] Error forwarding request:", error);
+      throw error;
     }
   }
 }

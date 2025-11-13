@@ -7,16 +7,6 @@ export type AuthData = {
   orgId: string;
 };
 
-export const getProjects = syncedQueryWithContext(
-  "getProjects",
-  z.tuple([]),
-  (context: AuthData) => {
-    return builder.projects
-      .where("author_id", context.userId)
-      .where("organisation_id", context.orgId);
-  }
-);
-
 export const getAgents = syncedQueryWithContext(
   "getAgents",
   z.tuple([]),
@@ -45,7 +35,7 @@ export const getMessages = syncedQueryWithContext(
       .where("author_id", context.userId)
       .where("organisation_id", context.orgId)
       .one()
-      .related("messages", (q) => {
+      .related("messages", (q: typeof builder.messages) => {
         return q.orderBy("created_at", "asc");
       });
   }
@@ -67,5 +57,24 @@ export const getUsage = syncedQueryWithContext(
       .where("organisation_id", context.orgId)
       .orderBy("created_at", "desc")
       .limit(50);
+  }
+);
+
+export const getMCPStore = syncedQueryWithContext(
+  "getMCPStore",
+  z.tuple([]),
+  () => {
+    return builder.mcpStore.where("is_active", 1).orderBy("sort_order", "asc");
+  }
+);
+
+export const getMCPs = syncedQueryWithContext(
+  "getMCPs",
+  z.tuple([]),
+  (context: AuthData) => {
+    return builder.mcps
+      .where("author_id", context.userId)
+      .where("organisation_id", context.orgId)
+      .orderBy("created_at", "desc");
   }
 );

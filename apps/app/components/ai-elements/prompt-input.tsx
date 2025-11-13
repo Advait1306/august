@@ -17,12 +17,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ChatStatus, FileUIPart } from "ai";
+import { Popover, PopoverAnchor } from "@/components/ui/popover";
+import { createPortal } from "react-dom";
 import {
+  ArrowUp,
   ImageIcon,
   Loader2Icon,
   PaperclipIcon,
   PlusIcon,
-  SendIcon,
   SquareIcon,
   XIcon,
 } from "lucide-react";
@@ -460,7 +462,7 @@ export const PromptInput = ({
       />
       <form
         className={cn(
-          "w-full divide-y overflow-hidden rounded-xl border bg-background shadow-sm",
+          "w-full overflow-hidden rounded-xl border bg-background shadow-sm",
           className
         )}
         onSubmit={handleSubmit}
@@ -481,17 +483,136 @@ export const PromptInputBody = ({
   <div className={cn(className, "flex flex-col")} {...props} />
 );
 
-export type PromptInputTextareaProps = ComponentProps<typeof Textarea>;
+// Custom hook for caret positioning with Portal
+function useCaretPosition() {
+  const measurementDivRef = useRef<HTMLDivElement>(null);
 
+  const getCaretCoordinates = useCallback(
+    (element: HTMLTextAreaElement, position: number) => {
+      const div = measurementDivRef.current;
+      if (!div) return { top: 0, left: 0 };
+
+      const style = window.getComputedStyle(element);
+
+      // Get padding values from textarea
+      const paddingTop = parseFloat(style.paddingTop) || 0;
+      const paddingLeft = parseFloat(style.paddingLeft) || 0;
+      const paddingRight = parseFloat(style.paddingRight) || 0;
+
+      // Apply styles to the measurement div
+      div.style.font = style.font;
+      div.style.fontSize = style.fontSize;
+      div.style.fontFamily = style.fontFamily;
+      div.style.fontWeight = style.fontWeight;
+      div.style.letterSpacing = style.letterSpacing;
+      div.style.lineHeight = style.lineHeight;
+      div.style.textTransform = style.textTransform;
+      div.style.wordSpacing = style.wordSpacing;
+      div.style.width = `${element.clientWidth - paddingLeft - paddingRight}px`;
+
+      const textBeforeCaret = element.value.substring(0, position);
+      div.textContent = textBeforeCaret;
+
+      const span = document.createElement("span");
+      span.textContent = "|";
+      div.appendChild(span);
+
+      const coordinates = {
+        top: span.offsetTop,
+        left: span.offsetLeft,
+      };
+
+      // Clean up the span
+      div.removeChild(span);
+
+      return {
+        top: coordinates.top + paddingTop - element.scrollTop,
+        left: coordinates.left + paddingLeft - element.scrollLeft,
+      };
+    },
+    []
+  );
+
+  // Render the measurement div via Portal
+  const MeasurementPortal = useCallback(() => {
+    if (typeof window === "undefined") return null;
+
+    return createPortal(
+      <div
+        ref={measurementDivRef}
+        style={{
+          position: "absolute",
+          visibility: "hidden",
+          whiteSpace: "pre-wrap",
+          overflowWrap: "break-word",
+          padding: "0",
+          border: "0",
+          boxSizing: "content-box",
+          pointerEvents: "none",
+        }}
+        aria-hidden="true"
+      />,
+      document.body
+    );
+  }, []);
+
+  return { getCaretCoordinates, MeasurementPortal };
+}
+
+export type PromptInputTextareaProps = ComponentProps<typeof Textarea> & {
+  hotkey?: string;
+  hotkeyMenu?: (params: {
+    onQuery: (query: string) => void;
+    removeHotkeyCharacter: () => void;
+    onClose: () => void;
+  }) => React.ReactNode;
+};
+
+// NOTE: This component exists in a controlled/uncontrolled hybrid state. It can accept a `value` prop
+// from the parent (controlled), but uses direct DOM manipulation via nativeInputValueSetter for hotkey
+// menu interactions. This can cause issues with cursor positioning or state synchronization in some cases.
+// For now, this serves our purpose as FormData handles submission and the parent can optionally control
+// the value. A full refactor to purely controlled with cursor management would be needed for complex use cases.
 export const PromptInputTextarea = ({
   onChange,
   className,
   placeholder = "What would you like me to do?",
+  hotkey = "@",
+  hotkeyMenu,
   ...props
 }: PromptInputTextareaProps) => {
   const attachments = usePromptInputAttachments();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [triggerPos, setTriggerPos] = useState(0);
+  const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
+
+  const { getCaretCoordinates, MeasurementPortal } = useCaretPosition();
 
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
+    // Don't handle Enter if menu is open (let menu handle it)
+    if (showMenu && e.key === "Enter") {
+      return;
+    }
+
+    // Detect hotkey trigger
+    if (e.key === hotkey && hotkeyMenu) {
+      const cursorPos = e.currentTarget.selectionStart;
+      setTimeout(() => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+          const coords = getCaretCoordinates(textarea, cursorPos + 1);
+          setAnchorPosition({
+            top: coords.top + textarea.offsetTop,
+            left: coords.left + textarea.offsetLeft,
+          });
+        }
+        setShowMenu(true);
+        setTriggerPos(cursorPos);
+      }, 0);
+    }
+
     if (e.key === "Enter") {
       // Don't submit if IME composition is in progress
       if (e.nativeEvent.isComposing) {
@@ -536,24 +657,126 @@ export const PromptInputTextarea = ({
     }
   };
 
+  // Handle query updates from menu - update textarea value
+  const handleQuery = useCallback(
+    (query: string) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const currentValue = textarea.value;
+      const beforeTrigger = currentValue.substring(0, triggerPos + 1); // Include the @ symbol
+      const afterCursor = currentValue.substring(textarea.selectionStart);
+
+      const newValue = beforeTrigger + query + afterCursor;
+
+      // Use native setter for React controlled components
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        "value"
+      )?.set;
+
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(textarea, newValue);
+      } else {
+        textarea.value = newValue;
+      }
+
+      // Trigger input event for React
+      const event = new Event("input", { bubbles: true });
+      textarea.dispatchEvent(event);
+
+      // Set cursor position after the query
+      const newCursorPos = triggerPos + 1 + query.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    },
+    [triggerPos]
+  );
+
+  // Handle removing hotkey character (@ and query) - does NOT close menu
+  const removeHotkeyCharacter = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const currentValue = textarea.value;
+    const beforeTrigger = currentValue.substring(0, triggerPos);
+    // Find where the query ends (cursor position)
+    const afterQuery = currentValue.substring(textarea.selectionStart);
+
+    const newValue = beforeTrigger + afterQuery;
+
+    // Use native setter for React controlled components
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLTextAreaElement.prototype,
+      "value"
+    )?.set;
+
+    if (nativeInputValueSetter) {
+      nativeInputValueSetter.call(textarea, newValue);
+    } else {
+      textarea.value = newValue;
+    }
+
+    // Trigger input event for React
+    const event = new Event("input", { bubbles: true });
+    textarea.dispatchEvent(event);
+
+    // Set cursor position after removing the trigger and query
+    const newCursorPos = triggerPos;
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
+    textarea.focus();
+  }, [triggerPos]);
+
+  // Handle closing menu without selection
+  const handleClose = useCallback(() => {
+    setShowMenu(false);
+    textareaRef.current?.focus();
+  }, []);
+
   return (
-    <Textarea
-      className={cn(
-        "w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
-        "field-sizing-content bg-transparent dark:bg-transparent",
-        "max-h-48 min-h-16",
-        "focus-visible:ring-0",
-        className
-      )}
-      name="message"
-      onChange={(e) => {
-        onChange?.(e);
-      }}
-      onKeyDown={handleKeyDown}
-      onPaste={handlePaste}
-      placeholder={placeholder}
-      {...props}
-    />
+    <>
+      <MeasurementPortal />
+      <div className="relative">
+        <Textarea
+          ref={textareaRef}
+          className={cn(
+            "w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
+            "field-sizing-content bg-transparent dark:bg-transparent",
+            "max-h-48 min-h-16",
+            "focus-visible:ring-0",
+            className
+          )}
+          name="message"
+          onChange={(e) => {
+            onChange?.(e);
+          }}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          placeholder={placeholder}
+          {...props}
+        />
+        {showMenu && hotkeyMenu && (
+          <Popover open={true} modal={false}>
+            <PopoverAnchor asChild>
+              <span
+                ref={anchorRef}
+                style={{
+                  position: "absolute",
+                  top: `${anchorPosition.top}px`,
+                  left: `${anchorPosition.left}px`,
+                  width: "1px",
+                  height: "1px",
+                }}
+              />
+            </PopoverAnchor>
+            {hotkeyMenu({
+              onQuery: handleQuery,
+              removeHotkeyCharacter,
+              onClose: handleClose,
+            })}
+          </Popover>
+        )}
+      </div>
+    </>
   );
 };
 
@@ -578,7 +801,7 @@ export const PromptInputTools = ({
   <div
     className={cn(
       "flex items-center gap-1",
-      "[&_button:first-child]:rounded-bl-xl",
+      // "[&_button:first-child]:rounded-bl-xl",
       className
     )}
     {...props}
@@ -667,7 +890,7 @@ export const PromptInputSubmit = ({
   children,
   ...props
 }: PromptInputSubmitProps) => {
-  let Icon = <SendIcon className="size-4" />;
+  let Icon = <ArrowUp className="size-4" />;
 
   if (status === "submitted") {
     Icon = <Loader2Icon className="size-4 animate-spin" />;

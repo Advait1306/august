@@ -90,6 +90,585 @@ export const schema = {
       },
       primaryKey: ["id"],
     },
+    composioStates: {
+      name: "composioStates",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "id"
+          >,
+        },
+        connection_request_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "connection_request_id"
+          >,
+        },
+        user_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "user_id"
+          >,
+        },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "organisation_id"
+          >,
+        },
+        mcp_store_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "mcp_store_id"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "created_at"
+          >,
+        },
+        expires_at: {
+          type: "number",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "composioStates",
+            "expires_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "composio_states",
+    },
+    mcpComposioConnections: {
+      name: "mcpComposioConnections",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioConnections",
+            "id"
+          >,
+        },
+        mcp_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioConnections",
+            "mcp_id"
+          >,
+        },
+        connection_url: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioConnections",
+            "connection_url"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioConnections",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioConnections",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "mcp_composio_connections",
+    },
+    mcpComposioIntegrationDetails: {
+      name: "mcpComposioIntegrationDetails",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioIntegrationDetails",
+            "id"
+          >,
+        },
+        mcp_store_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioIntegrationDetails",
+            "mcp_store_id"
+          >,
+        },
+        auth_config_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioIntegrationDetails",
+            "auth_config_id"
+          >,
+        },
+        mcp_config_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioIntegrationDetails",
+            "mcp_config_id"
+          >,
+        },
+        metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioIntegrationDetails",
+            "metadata"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioIntegrationDetails",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpComposioIntegrationDetails",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "mcp_composio_integration_details",
+    },
+    mcpOauthConnections: {
+      name: "mcpOauthConnections",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "id"
+          >,
+        },
+        mcp_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "mcp_id"
+          >,
+        },
+        oauth_client_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "oauth_client_id"
+          >,
+        },
+        oauth_client_secret: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "oauth_client_secret"
+          >,
+        },
+        access_token: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "access_token"
+          >,
+        },
+        refresh_token: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "refresh_token"
+          >,
+        },
+        token_type: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "token_type"
+          >,
+        },
+        expires_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "expires_at"
+          >,
+        },
+        scope: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "scope"
+          >,
+        },
+        provider_metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "provider_metadata"
+          >,
+        },
+        oauth_metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "oauth_metadata"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthConnections",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "mcp_oauth_connections",
+    },
+    mcpOauthIntegrationDetails: {
+      name: "mcpOauthIntegrationDetails",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthIntegrationDetails",
+            "id"
+          >,
+        },
+        mcp_store_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthIntegrationDetails",
+            "mcp_store_id"
+          >,
+        },
+        mcp_server_url: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthIntegrationDetails",
+            "mcp_server_url"
+          >,
+        },
+        default_scopes: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthIntegrationDetails",
+            "default_scopes"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthIntegrationDetails",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpOauthIntegrationDetails",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "mcp_oauth_integration_details",
+    },
+    mcpStore: {
+      name: "mcpStore",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "id"
+          >,
+        },
+        slug: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "slug"
+          >,
+        },
+        name: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "name"
+          >,
+        },
+        description: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "description"
+          >,
+        },
+        logo_url: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "logo_url"
+          >,
+        },
+        category: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "category"
+          >,
+        },
+        integration_type: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "integration_type"
+          >,
+        },
+        is_active: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "is_active"
+          >,
+        },
+        sort_order: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "sort_order"
+          >,
+        },
+        metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "metadata"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcpStore",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "mcp_store",
+    },
+    mcps: {
+      name: "mcps",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "id"
+          >,
+        },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "organisation_id"
+          >,
+        },
+        author_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "author_id"
+          >,
+        },
+        name: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "name"
+          >,
+        },
+        mcp_store_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "mcp_store_id"
+          >,
+        },
+        integration_type: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "integration_type"
+          >,
+        },
+        custom_mcp_server_url: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "custom_mcp_server_url"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "mcps",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+    },
     messages: {
       name: "messages",
       columns: {
@@ -159,6 +738,121 @@ export const schema = {
       },
       primaryKey: ["id"],
     },
+    oauthStates: {
+      name: "oauthStates",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "id"
+          >,
+        },
+        state: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "state"
+          >,
+        },
+        user_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "user_id"
+          >,
+        },
+        organisation_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "organisation_id"
+          >,
+        },
+        mcp_store_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "mcp_store_id"
+          >,
+        },
+        custom_mcp_url: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "custom_mcp_url"
+          >,
+        },
+        custom_mcp_name: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "custom_mcp_name"
+          >,
+        },
+        oauth_metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "oauth_metadata"
+          >,
+        },
+        redirect_uri: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "redirect_uri"
+          >,
+        },
+        code_verifier: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "code_verifier"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "created_at"
+          >,
+        },
+        expires_at: {
+          type: "number",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "oauthStates",
+            "expires_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+      serverName: "oauth_states",
+    },
     organisations: {
       name: "organisations",
       columns: {
@@ -187,66 +881,6 @@ export const schema = {
             ZeroSchema,
             "organisations",
             "wallet"
-          >,
-        },
-      },
-      primaryKey: ["id"],
-    },
-    projects: {
-      name: "projects",
-      columns: {
-        id: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "id"
-          >,
-        },
-        name: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "name"
-          >,
-        },
-        path: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "path"
-          >,
-        },
-        created_at: {
-          type: "number",
-          optional: true,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "created_at"
-          >,
-        },
-        organisation_id: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "organisation_id"
-          >,
-        },
-        author_id: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "projects",
-            "author_id"
           >,
         },
       },
@@ -302,20 +936,11 @@ export const schema = {
         },
         agent_id: {
           type: "string",
-          optional: false,
+          optional: true,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "tasks",
             "agent_id"
-          >,
-        },
-        project_id: {
-          type: "string",
-          optional: false,
-          customType: null as unknown as ZeroCustomType<
-            ZeroSchema,
-            "tasks",
-            "project_id"
           >,
         },
         updated_at: {
@@ -460,12 +1085,188 @@ export const schema = {
         },
       ],
     },
+    composioStates: {
+      user: [
+        {
+          sourceField: ["user_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+      mcpStore: [
+        {
+          sourceField: ["mcp_store_id"],
+          destField: ["id"],
+          destSchema: "mcpStore",
+          cardinality: "one",
+        },
+      ],
+    },
+    mcpComposioConnections: {
+      mcp: [
+        {
+          sourceField: ["mcp_id"],
+          destField: ["id"],
+          destSchema: "mcps",
+          cardinality: "one",
+        },
+      ],
+    },
+    mcpComposioIntegrationDetails: {
+      mcpStore: [
+        {
+          sourceField: ["mcp_store_id"],
+          destField: ["id"],
+          destSchema: "mcpStore",
+          cardinality: "one",
+        },
+      ],
+    },
+    mcpOauthConnections: {
+      mcp: [
+        {
+          sourceField: ["mcp_id"],
+          destField: ["id"],
+          destSchema: "mcps",
+          cardinality: "one",
+        },
+      ],
+    },
+    mcpOauthIntegrationDetails: {
+      mcpStore: [
+        {
+          sourceField: ["mcp_store_id"],
+          destField: ["id"],
+          destSchema: "mcpStore",
+          cardinality: "one",
+        },
+      ],
+    },
+    mcpStore: {
+      oauthDetails: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_store_id"],
+          destSchema: "mcpOauthIntegrationDetails",
+          cardinality: "one",
+        },
+      ],
+      composioDetails: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_store_id"],
+          destSchema: "mcpComposioIntegrationDetails",
+          cardinality: "one",
+        },
+      ],
+      mcps: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_store_id"],
+          destSchema: "mcps",
+          cardinality: "many",
+        },
+      ],
+      oauthStates: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_store_id"],
+          destSchema: "oauthStates",
+          cardinality: "many",
+        },
+      ],
+      composioStates: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_store_id"],
+          destSchema: "composioStates",
+          cardinality: "many",
+        },
+      ],
+    },
+    mcps: {
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+      user: [
+        {
+          sourceField: ["author_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+      mcpStore: [
+        {
+          sourceField: ["mcp_store_id"],
+          destField: ["id"],
+          destSchema: "mcpStore",
+          cardinality: "one",
+        },
+      ],
+      oauthConnections: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_id"],
+          destSchema: "mcpOauthConnections",
+          cardinality: "many",
+        },
+      ],
+      composioConnections: [
+        {
+          sourceField: ["id"],
+          destField: ["mcp_id"],
+          destSchema: "mcpComposioConnections",
+          cardinality: "many",
+        },
+      ],
+    },
     messages: {
       task: [
         {
           sourceField: ["task_id"],
           destField: ["id"],
           destSchema: "tasks",
+          cardinality: "one",
+        },
+      ],
+    },
+    oauthStates: {
+      user: [
+        {
+          sourceField: ["user_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+      mcpStore: [
+        {
+          sourceField: ["mcp_store_id"],
+          destField: ["id"],
+          destSchema: "mcpStore",
           cardinality: "one",
         },
       ],
@@ -479,14 +1280,6 @@ export const schema = {
           cardinality: "many",
         },
       ],
-      projects: [
-        {
-          sourceField: ["id"],
-          destField: ["organisation_id"],
-          destSchema: "projects",
-          cardinality: "many",
-        },
-      ],
       tasks: [
         {
           sourceField: ["id"],
@@ -495,30 +1288,36 @@ export const schema = {
           cardinality: "many",
         },
       ],
-    },
-    projects: {
-      user: [
-        {
-          sourceField: ["author_id"],
-          destField: ["id"],
-          destSchema: "users",
-          cardinality: "one",
-        },
-      ],
-      tasks: [
+      usage: [
         {
           sourceField: ["id"],
-          destField: ["project_id"],
-          destSchema: "tasks",
+          destField: ["organisation_id"],
+          destSchema: "usage",
           cardinality: "many",
         },
       ],
-      organisation: [
+      mcps: [
         {
-          sourceField: ["organisation_id"],
-          destField: ["id"],
-          destSchema: "organisations",
-          cardinality: "one",
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "mcps",
+          cardinality: "many",
+        },
+      ],
+      oauthStates: [
+        {
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "oauthStates",
+          cardinality: "many",
+        },
+      ],
+      composioStates: [
+        {
+          sourceField: ["id"],
+          destField: ["organisation_id"],
+          destSchema: "composioStates",
+          cardinality: "many",
         },
       ],
     },
@@ -539,14 +1338,6 @@ export const schema = {
           cardinality: "one",
         },
       ],
-      project: [
-        {
-          sourceField: ["project_id"],
-          destField: ["id"],
-          destSchema: "projects",
-          cardinality: "one",
-        },
-      ],
       messages: [
         {
           sourceField: ["id"],
@@ -555,6 +1346,16 @@ export const schema = {
           cardinality: "many",
         },
       ],
+      organisation: [
+        {
+          sourceField: ["organisation_id"],
+          destField: ["id"],
+          destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+    },
+    usage: {
       organisation: [
         {
           sourceField: ["organisation_id"],
@@ -581,11 +1382,27 @@ export const schema = {
           cardinality: "many",
         },
       ],
-      projects: [
+      mcps: [
         {
           sourceField: ["id"],
           destField: ["author_id"],
-          destSchema: "projects",
+          destSchema: "mcps",
+          cardinality: "many",
+        },
+      ],
+      oauthStates: [
+        {
+          sourceField: ["id"],
+          destField: ["user_id"],
+          destSchema: "oauthStates",
+          cardinality: "many",
+        },
+      ],
+      composioStates: [
+        {
+          sourceField: ["id"],
+          destField: ["user_id"],
+          destSchema: "composioStates",
           cardinality: "many",
         },
       ],
@@ -606,20 +1423,61 @@ export type Schema = typeof schema;
  */
 export type Agent = Row<Schema["tables"]["agents"]>;
 /**
+ * Represents a row from the "composioStates" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type ComposioState = Row<Schema["tables"]["composioStates"]>;
+/**
+ * Represents a row from the "mcpComposioConnections" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type McpComposioConnection = Row<
+  Schema["tables"]["mcpComposioConnections"]
+>;
+/**
+ * Represents a row from the "mcpComposioIntegrationDetails" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type McpComposioIntegrationDetail = Row<
+  Schema["tables"]["mcpComposioIntegrationDetails"]
+>;
+/**
+ * Represents a row from the "mcpOauthConnections" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type McpOauthConnection = Row<Schema["tables"]["mcpOauthConnections"]>;
+/**
+ * Represents a row from the "mcpOauthIntegrationDetails" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type McpOauthIntegrationDetail = Row<
+  Schema["tables"]["mcpOauthIntegrationDetails"]
+>;
+/**
+ * Represents a row from the "mcpStore" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type McpStore = Row<Schema["tables"]["mcpStore"]>;
+/**
+ * Represents a row from the "mcps" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type Mcp = Row<Schema["tables"]["mcps"]>;
+/**
  * Represents a row from the "messages" table.
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Message = Row<Schema["tables"]["messages"]>;
 /**
+ * Represents a row from the "oauthStates" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type OauthState = Row<Schema["tables"]["oauthStates"]>;
+/**
  * Represents a row from the "organisations" table.
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Organisation = Row<Schema["tables"]["organisations"]>;
-/**
- * Represents a row from the "projects" table.
- * This type is auto-generated from your Drizzle schema definition.
- */
-export type Project = Row<Schema["tables"]["projects"]>;
 /**
  * Represents a row from the "tasks" table.
  * This type is auto-generated from your Drizzle schema definition.

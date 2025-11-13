@@ -1,14 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PencilIcon, Plus, Trash2 } from "lucide-react";
+import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,23 +14,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { createFileRoute } from "@tanstack/react-router";
 import { ShellOnly } from "@/components/restrictor";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
@@ -44,6 +25,8 @@ import { useQuery } from "@rocicorp/zero/react";
 import { getAgents } from "@jupiter/sync/queries/data";
 import { nanoid } from "nanoid";
 import { useZero } from "@/src/hooks/useZero";
+import { motion, AnimatePresence } from "motion/react";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/agents")({
   component: Agents,
@@ -62,330 +45,318 @@ function Agents() {
 
   // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Form states
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [agentToDelete, setAgentToDelete] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [newAgentName, setNewAgentName] = useState("");
 
-  // Form data
-  const [newAgentForm, setNewAgentForm] = useState<NewAgent>({
-    name: "",
-    system_prompt: "",
-    base_agent: "claude-code" as Agent["base_agent"],
-  });
+  // Local editing state to prevent cursor jumping
+  const [localName, setLocalName] = useState("");
+  const [localSystemPrompt, setLocalSystemPrompt] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
 
-  const [editAgentForm, setEditAgentForm] = useState<NewAgent>({
-    name: "",
-    system_prompt: "",
-    base_agent: "claude-code" as Agent["base_agent"],
-  });
+  // Derive selected agent from agents array
+  const selectedAgent = agents.find((a) => a.id === selectedAgentId) || null;
+
+  // Sync local state when selected agent changes
+  useEffect(() => {
+    if (selectedAgent) {
+      setLocalName(selectedAgent.name);
+      setLocalSystemPrompt(selectedAgent.system_prompt);
+    }
+  }, [selectedAgent?.id]);
 
   // Handlers
   const handleCreateAgent = async () => {
-    try {
-      const result = z.mutate.agents.create({
-        agent_id: nanoid(),
-        name: newAgentForm.name,
-        system_prompt: newAgentForm.system_prompt,
-        base_agent: newAgentForm.base_agent,
-      });
+    if (!newAgentName.trim()) return;
 
-      await result.client;
-      setShowCreateDialog(false);
-      setNewAgentForm({
-        name: "",
+    try {
+      const agentId = nanoid();
+
+      const result = z.mutate.agents.create({
+        agent_id: agentId,
+        name: newAgentName,
         system_prompt: "",
         base_agent: "claude-code" as Agent["base_agent"],
       });
+      await result.client;
+
+      // Immediately open the newly created agent
+      setSelectedAgentId(agentId);
+
+      setShowCreateDialog(false);
+      setNewAgentName("");
     } catch (error) {
       console.error("Failed to create agent:", error);
     }
   };
 
-  const handleEditAgent = async () => {
-    if (!selectedAgent) return;
-    try {
-      const result = z.mutate.agents.update({
-        agent_id: selectedAgent.id,
-        name: editAgentForm.name,
-        system_prompt: editAgentForm.system_prompt,
-      });
+  const handleUpdateAgent = async (updates: Partial<NewAgent>) => {
+    if (!selectedAgentId) return;
 
+    try {
+      const updateData: {
+        agent_id: string;
+        name?: string;
+        system_prompt?: string;
+      } = {
+        agent_id: selectedAgentId,
+      };
+
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.system_prompt !== undefined)
+        updateData.system_prompt = updates.system_prompt;
+
+      const result = z.mutate.agents.update(updateData);
       await result.client;
-      setShowEditDialog(false);
-      setSelectedAgent(null);
-      setEditAgentForm({
-        name: "",
-        system_prompt: "",
-        base_agent: "claude-code" as Agent["base_agent"],
-      });
     } catch (error) {
       console.error("Failed to update agent:", error);
     }
   };
 
   const handleDeleteAgent = async () => {
-    if (!agentToDelete) return;
-    try {
-      const result = z.mutate.agents.delete({
-        agent_id: agentToDelete,
-      });
+    if (!selectedAgentId) return;
 
+    try {
+      // Find the index of the current agent
+      const currentIndex = agents.findIndex((a) => a.id === selectedAgentId);
+
+      // Determine which agent to select next
+      let nextAgentId: string | null = null;
+      if (agents.length > 1) {
+        if (currentIndex < agents.length - 1) {
+          // Select the next agent
+          nextAgentId = agents[currentIndex + 1].id;
+        } else if (currentIndex > 0) {
+          // If it's the last agent, select the previous one
+          nextAgentId = agents[currentIndex - 1].id;
+        }
+      }
+
+      const result = z.mutate.agents.delete({
+        agent_id: selectedAgentId,
+      });
       await result.client;
+
+      setSelectedAgentId(nextAgentId);
       setShowDeleteDialog(false);
-      setAgentToDelete(null);
     } catch (error) {
       console.error("Failed to delete agent:", error);
     }
   };
 
-  const openEditDialog = (agent: Agent) => {
-    setSelectedAgent(agent);
-    setEditAgentForm({
-      name: agent.name,
-      system_prompt: agent.system_prompt,
-      base_agent: agent.base_agent,
-    });
-    setShowEditDialog(true);
+  const startCreate = () => {
+    setShowCreateDialog(true);
   };
 
-  const openDeleteDialog = (agentId: string) => {
-    setAgentToDelete(agentId);
-    setShowDeleteDialog(true);
-  };
+  // Keyboard navigation with arrow keys
+  useKeyboardNavigation({
+    items: agents || [],
+    selectedId: selectedAgentId || "",
+    onSelect: (id) => {
+      setSelectedAgentId(id);
+    },
+    getItemId: (agent) => agent.id,
+  });
+
+  // Auto-scroll selected agent into view
+  useEffect(() => {
+    const selectedElement = document.querySelector('[data-selected="true"]');
+    if (selectedElement) {
+      selectedElement.scrollIntoView({
+        block: "nearest",
+      });
+    }
+  }, [selectedAgentId]);
 
   return (
     <ShellOnly>
-      <div>
-        <div className="flex justify-end p-2">
-          <Button
-            onClick={() => setShowCreateDialog(true)}
-            variant="outline"
-            className="p-0 h-[28px] text-[0.8rem]"
-            hotkey="c"
-          >
-            <Plus className="h-4 w-4" />
-            Create Agent
-          </Button>
-        </div>
-
-        <Separator />
-
-        <div className="flex flex-col">
-          <div className="p-4 flex flex-col gap-2">
-            <h1 className="text-3xl font-bold tracking-tight">Agents</h1>
-            <span className="text-muted-foreground">
-              Create custom agents with your own system prompts.
-            </span>
-          </div>
-          <ul>
-            {agents.map((agent) => (
-              <li key={agent.id} className="first:border-t border-card-border">
-                <ContextMenu>
-                  <ContextMenuTrigger>
-                    <div className="bg-card hover:bg-secondary flex flex-col justify-between border-b border-card-border px-4 py-2 cursor-pointer">
-                      <div>
-                        <h3>{agent.name}</h3>
-                      </div>
-                    </div>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => openEditDialog(agent)}>
-                      Edit
-                    </ContextMenuItem>
-                    <ContextMenuItem
-                      variant="destructive"
-                      onClick={() => openDeleteDialog(agent.id)}
-                    >
-                      Delete
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {agents.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">No agents created yet</p>
-            <Button onClick={() => setShowCreateDialog(true)} size="lg">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Agent
-            </Button>
-          </div>
-        )}
-
-        {/* Create Agent Dialog */}
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Agent</DialogTitle>
-              <DialogDescription>
-                Create a custom agent with your own system prompt and
-                personality.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  value={newAgentForm.name}
-                  onChange={(e) =>
-                    setNewAgentForm({ ...newAgentForm, name: e.target.value })
-                  }
-                  placeholder="Enter agent name"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="baseAgent">Base Agent</Label>
-                <Select
-                  value={newAgentForm.base_agent}
-                  onValueChange={(value) =>
-                    setNewAgentForm({
-                      ...newAgentForm,
-                      base_agent: value as Agent["base_agent"],
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select base agent" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="claude-code">Claude Code</SelectItem>
-                    <SelectItem value="codex" disabled>
-                      Codex (Coming Soon)
-                    </SelectItem>
-                    <SelectItem value="opencode" disabled>
-                      OpenCode (Coming Soon)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="systemPrompt">System Prompt</Label>
-                <Textarea
-                  id="systemPrompt"
-                  value={newAgentForm.system_prompt}
-                  onChange={(e) =>
-                    setNewAgentForm({
-                      ...newAgentForm,
-                      system_prompt: e.target.value,
-                    })
-                  }
-                  placeholder="Enter the system prompt that defines your agent's behavior..."
-                  className="min-h-[100px]"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowCreateDialog(false)}
+      <div className="flex h-[calc(100vh-var(--header-height))] w-full">
+        <div className="flex flex-row w-full">
+          {/* Agent List Sidebar */}
+          <div className="flex-1 min-w-[200px] max-w-[300px] bg-[#E8E8E8] border-r border-border dark:bg-[#141414] flex flex-col">
+            <div className="flex-1 overflow-auto flex flex-col gap-1 p-2">
+              <div
+                className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer"
+                onClick={startCreate}
               >
-                Cancel
-              </Button>
-              <Button onClick={handleCreateAgent}>Create Agent</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Agent Dialog */}
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Agent</DialogTitle>
-              <DialogDescription>
-                Modify your agent&apos;s configuration and behavior.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="editName">Name</Label>
-                <Input
-                  id="editName"
-                  value={editAgentForm.name || ""}
-                  onChange={(e) =>
-                    setEditAgentForm({ ...editAgentForm, name: e.target.value })
-                  }
-                  placeholder="Enter agent name"
-                />
+                <span className="pointer-events-none select-text flex flex-row items-center gap-2">
+                  <Plus className="w-4 h-4" /> New Agent
+                </span>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="editBaseAgent">Base Agent</Label>
-                <Select
-                  value={editAgentForm.base_agent}
-                  onValueChange={(value) =>
-                    setEditAgentForm({
-                      ...editAgentForm,
-                      base_agent: value as Agent["base_agent"],
-                    })
-                  }
+              {agents.map((agent) => (
+                <div
+                  key={agent.id}
+                  className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+                  data-selected={selectedAgentId === agent.id}
+                  onClick={() => setSelectedAgentId(agent.id)}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select base agent" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="claude-code">Claude Code</SelectItem>
-                    <SelectItem value="codex" disabled>
-                      Codex (Coming Soon)
-                    </SelectItem>
-                    <SelectItem value="opencode" disabled>
-                      OpenCode (Coming Soon)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="editSystemPrompt">System Prompt</Label>
-                <Textarea
-                  id="editSystemPrompt"
-                  value={editAgentForm.system_prompt || ""}
-                  onChange={(e) =>
-                    setEditAgentForm({
-                      ...editAgentForm,
-                      system_prompt: e.target.value,
-                    })
-                  }
-                  placeholder="Enter the system prompt that defines your agent's behavior..."
-                  className="min-h-[100px]"
-                />
-              </div>
+                  <span className="pointer-events-none select-text line-clamp-1">
+                    {agent.name}
+                  </span>
+                </div>
+              ))}
             </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowEditDialog(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleEditAgent}>Save Changes</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          </div>
 
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the
-                agent and all its memories.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteAgent}>
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          {/* Main Content Area - Document View/Editor */}
+          <div className="relative flex-3 flex flex-col h-full overflow-hidden bg-background">
+            <div className="w-full absolute top-0 z-50 pt-4 pointer-events-none flex justify-center">
+              <AnimatePresence>
+                {isEditing && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 1000,
+                      damping: 50,
+                    }}
+                    className="pointer-events-auto"
+                  >
+                    <Badge variant="default" className="rounded-full gap-2">
+                      <PencilIcon className="h-3 w-3" />
+                      Changes will be automatically saved
+                    </Badge>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {selectedAgent ? (
+              <div className="flex-1 overflow-auto relative">
+                <div className="absolute top-4 right-4">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="max-w-3xl mx-auto px-16 py-16">
+                  <Input
+                    value={localName}
+                    onChange={(e) => {
+                      setLocalName(e.target.value);
+                    }}
+                    onFocus={() => setIsEditing(true)}
+                    onBlur={(e) => {
+                      handleUpdateAgent({ name: e.target.value });
+                      setIsEditing(false);
+                    }}
+                    placeholder="Enter agent name"
+                    className="!bg-background !text-4xl font-semibold mb-8 border-none px-0 shadow-none focus-visible:ring-0 tracking-tight"
+                  />
+                  <Textarea
+                    value={localSystemPrompt}
+                    onChange={(e) => {
+                      setLocalSystemPrompt(e.target.value);
+                    }}
+                    onFocus={() => setIsEditing(true)}
+                    onBlur={(e) => {
+                      handleUpdateAgent({ system_prompt: e.target.value });
+                      setIsEditing(false);
+                    }}
+                    placeholder="Enter the system prompt that defines your agent's behavior..."
+                    className="!bg-background min-h-[300px] resize-none border-none px-0 shadow-none focus-visible:ring-0 !text-base/7 whitespace-pre-wrap text-muted-foreground"
+                  />
+                </div>
+              </div>
+            ) : (
+              <motion.div
+                className="flex items-center justify-center h-full"
+                initial={{ opacity: 0, y: 80 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 2000,
+                  damping: 300,
+                }}
+              >
+                <Card className="relative w-md h-[400px] overflow-hidden flex justify-end shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] -rotate-2 p-0">
+                  <img
+                    src={"/agent-image-dark.png"}
+                    alt="Agents"
+                    className="absolute w-full h-full object-cover"
+                  />
+
+                  <div className="relative z-10 rounded-lg overflow-hidden flex flex-col gap-2 pb-4">
+                    <CardHeader>
+                      <CardTitle className="text-2xl font-medium text-white">
+                        What are Agents?
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm leading-relaxed pb-2 text-white/80">
+                      <p>
+                        Agents are customizable AI assistants that you can
+                        tailor to your specific workflows and requirements. Each
+                        agent is built on a special system prompt that defines
+                        its behavior.
+                      </p>
+                    </CardContent>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Create Agent Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent showCloseButton={false}>
+          <div className="grid gap-4">
+            <Label htmlFor="agentName">Name</Label>
+            <Input
+              id="agentName"
+              value={newAgentName}
+              onChange={(e) => setNewAgentName(e.target.value)}
+              placeholder="Enter agent name"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleCreateAgent();
+                }
+              }}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCreateDialog(false);
+                setNewAgentName("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreateAgent}>Create Agent</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              agent and all its configuration.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAgent}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ShellOnly>
   );
 }

@@ -6,6 +6,7 @@ export const IPC_CHANNELS = {
   },
   PROJECTS: {
     SELECT_FOLDER: 'projects:selectFolder',
+    GET_DEFAULT_CWD: 'projects:getDefaultCwd',
   },
   AUTH: {
     OPEN_LOGIN: 'auth:open-login',
@@ -18,5 +19,8 @@ export const IPC_CHANNELS = {
   },
   CLAUDE_CODE: {
     DISCOVER_INSTALLATIONS: 'claude-code:discoverInstallations',
+  },
+  BROWSER: {
+    OPEN_URL: 'browser:open-url',
   },
 } as const;
