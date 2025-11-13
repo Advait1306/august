@@ -131,6 +131,7 @@ export default function TaskWindow() {
     selectedTask,
     messages,
     sendMessage,
+    stopGeneration,
     composerStates,
     setComposerStates,
     permissions,
@@ -342,7 +343,13 @@ export default function TaskWindow() {
         }}
       >
         <PromptInput
-          onSubmit={() => {
+          onSubmit={(_, e) => {
+            // If generating, stop the generation instead of submitting
+            if (isGenerating) {
+              e.preventDefault();
+              stopGeneration(selectedTaskId);
+              return;
+            }
             sendMessage(prompt);
           }}
           className="rounded-3xl p-2"
@@ -486,7 +493,7 @@ export default function TaskWindow() {
             </PromptInputTools>
             <PromptInputSubmit
               className="rounded-full"
-              disabled={isGenerating || prompt.trim().length === 0}
+              disabled={!isGenerating && prompt.trim().length === 0}
               status={isGenerating ? "streaming" : "ready"}
             />
           </PromptInputToolbar>

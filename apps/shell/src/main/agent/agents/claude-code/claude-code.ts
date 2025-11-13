@@ -33,7 +33,8 @@ export class ClaudeCodeAgent implements AgentInterface {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       input: Record<string, any>
       threadId: string
-    }) => Promise<boolean>
+    }) => Promise<boolean>,
+    signal?: AbortSignal
   ): AsyncGenerator<AssistantModelMessage, void> {
     log.info('ClaudeCodeAgent.run called', {
       threadId: params.options.threadId,
@@ -79,12 +80,24 @@ export class ClaudeCodeAgent implements AgentInterface {
     })
 
     try {
+      // Check if already cancelled before starting
+      if (signal?.aborted) {
+        log.info('Agent run cancelled before start')
+        return
+      }
+
       // Wait for initialization to complete
       log.info('Waiting for initialization...')
       if (ClaudeCodeAgent.initPromise) {
         await ClaudeCodeAgent.initPromise
       }
       log.info('Initialization complete')
+
+      // Check if cancelled after initialization
+      if (signal?.aborted) {
+        log.info('Agent run cancelled after initialization')
+        return
+      }
 
       if (ClaudeCodeAgent.agentInfo === null) {
         log.error('ClaudeCodeAgent.agentInfo is null after initialization')
@@ -148,6 +161,12 @@ export class ClaudeCodeAgent implements AgentInterface {
             }
           }
         })) {
+          // Check if cancelled during iteration
+          if (signal?.aborted) {
+            log.info('Agent run cancelled during query loop')
+            break
+          }
+
           log.debug('Received data from Claude Code:', { type: data.type })
 
           // We also let the user message type through as

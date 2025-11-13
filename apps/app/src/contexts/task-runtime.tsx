@@ -28,6 +28,7 @@ type TaskRuntimeState = {
   messages: readonly Message[] | undefined;
   selectTask: (task: string | "new-conversation") => void;
   sendMessage: (message: string) => void;
+  stopGeneration: (taskId: string) => void;
   composerStates: Record<string, ComposerState>;
   setComposerStates: (
     states:
@@ -63,6 +64,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   selectedTask: "new-conversation",
   selectTask: () => {},
   sendMessage: () => {},
+  stopGeneration: () => {},
   composerStates: {},
   setComposerStates: () => {},
   permissions: {},
@@ -100,6 +102,9 @@ export const TaskRuntimeProvider = ({
   const [generationState, setGenerationState] = useState<GenerationState>([]);
   const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
   const [defaultCwd, setDefaultCwd] = useState<string>("");
+
+  // Track active agent iterators for cancellation
+  const activeIterators = useRef<Record<string, { cancel: () => void }>>({});
 
   // Load default cwd on mount
   useEffect(() => {
@@ -309,6 +314,22 @@ export const TaskRuntimeProvider = ({
     setSelectedTaskId(taskId);
   };
 
+  const stopGeneration = (taskId: string) => {
+    const iterator = activeIterators.current[taskId];
+    if (iterator) {
+      iterator.cancel();
+      delete activeIterators.current[taskId];
+      setGenerationState((prev) => prev.filter((id) => id !== taskId));
+
+      // Clear all pending permissions for this task without denying them
+      setPermissions((prev) => {
+        const newPermissions = { ...prev };
+        delete newPermissions[taskId];
+        return newPermissions;
+      });
+    }
+  };
+
   const sendMessage = async (message: string) => {
     setComposerStates((prev) => {
       return {
@@ -436,7 +457,8 @@ export const TaskRuntimeProvider = ({
       throw new Error("Failed to get token");
     }
 
-    for await (const reply of window.api.agent.run({
+    // Create agent iterator and store it for cancellation
+    const agentIterator = window.api.agent.run({
       options: {
         messages: chatMessages,
         runConfig: {
@@ -466,17 +488,26 @@ export const TaskRuntimeProvider = ({
               ANTHROPIC_API_KEY: token,
             }
           : undefined,
-    })) {
-      z.mutate.message.update({
-        task_id: taskId,
-        message_id: replyId,
-        role: reply.role,
-        content: reply.content as Record<string, any>[],
-        metadata: reply.providerOptions ?? {},
-      });
-    }
+    });
 
-    setGenerationState((prev) => prev.filter((id) => id !== taskId));
+    // Store the iterator for cancellation
+    activeIterators.current[taskId] = agentIterator;
+
+    try {
+      for await (const reply of agentIterator) {
+        z.mutate.message.update({
+          task_id: taskId,
+          message_id: replyId,
+          role: reply.role,
+          content: reply.content as Record<string, any>[],
+          metadata: reply.providerOptions ?? {},
+        });
+      }
+    } finally {
+      // Clean up the iterator reference and generation state
+      delete activeIterators.current[taskId];
+      setGenerationState((prev) => prev.filter((id) => id !== taskId));
+    }
   };
 
   const resetNewConversation = () => {
@@ -500,6 +531,7 @@ export const TaskRuntimeProvider = ({
         selectTask,
         messages: selectedTasksMessages[0]?.messages,
         sendMessage,
+        stopGeneration,
         composerStates,
         setComposerStates,
         permissions,
