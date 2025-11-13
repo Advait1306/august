@@ -1,4 +1,4 @@
-import { IpcMainInvokeEvent } from "electron";
+import { IpcMainInvokeEvent, ipcMain } from "electron";
 
 export function asyncGeneratorOverIPCSender<T>(
   event: IpcMainInvokeEvent,
@@ -17,4 +17,22 @@ export function asyncGeneratorOverIPCCloser(
   if (!event.sender.isDestroyed()) {
     event.sender.send(`stream:done-${id}`);
   }
+}
+
+export function asyncGeneratorOverIPCCancelListener(
+  event: IpcMainInvokeEvent,
+  id: string,
+  onCancel: () => void
+): () => void {
+  const cancelHandler = () => {
+    onCancel();
+  };
+
+  // Listen for cancel signal from renderer
+  ipcMain.on(`stream:cancel-${id}`, cancelHandler);
+
+  // Return cleanup function
+  return () => {
+    ipcMain.removeListener(`stream:cancel-${id}`, cancelHandler);
+  };
 }

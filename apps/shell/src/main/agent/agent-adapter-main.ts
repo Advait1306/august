@@ -5,7 +5,8 @@ import { ClaudeCodeAgent } from './agents/claude-code/claude-code'
 import { ipcMain, IpcMainInvokeEvent } from 'electron'
 import {
   asyncGeneratorOverIPCCloser,
-  asyncGeneratorOverIPCSender
+  asyncGeneratorOverIPCSender,
+  asyncGeneratorOverIPCCancelListener
 } from '@jupiter/shared/async-generator-over-ipc-sender'
 import { agentRequestPermissionOverIPC } from '@jupiter/shared/agent-request-permission-over-ipc'
 import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
@@ -42,17 +43,35 @@ export class AgentAdapterMain {
   }
 
   public async runAgent(event: IpcMainInvokeEvent, params: IPC.Agent.RunParams): Promise<void> {
-    // Run enhanced agent
-    for await (const message of this.agents['claude-code'].run(
-      params,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (request: { toolName: string; input: Record<string, any>; threadId: string }) => {
-        return agentRequestPermissionOverIPC(event, request)
-      }
-    )) {
-      asyncGeneratorOverIPCSender(event, params.id, message)
-    }
+    // Create an AbortController for cancellation
+    const abortController = new AbortController()
 
-    asyncGeneratorOverIPCCloser(event, params.id)
+    // Register cancel listener
+    const cleanupCancelListener = asyncGeneratorOverIPCCancelListener(event, params.id, () => {
+      abortController.abort()
+    })
+
+    try {
+      // Run enhanced agent with abort signal
+      for await (const message of this.agents['claude-code'].run(
+        params,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (request: { toolName: string; input: Record<string, any>; threadId: string }) => {
+          return agentRequestPermissionOverIPC(event, request)
+        },
+        abortController.signal
+      )) {
+        // Check if cancelled before sending each message
+        if (abortController.signal.aborted) {
+          break
+        }
+        asyncGeneratorOverIPCSender(event, params.id, message)
+      }
+
+      asyncGeneratorOverIPCCloser(event, params.id)
+    } finally {
+      // Always cleanup the cancel listener
+      cleanupCancelListener()
+    }
   }
 }

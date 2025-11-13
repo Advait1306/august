@@ -34,7 +34,8 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
 
-    if (!import.meta.env.PROD) {
+    // @ts-ignore VITE_DEV_TOOLS is defined in the .env file
+    if (!import.meta.env.PROD || import.meta.env.VITE_DEV_TOOLS === 'true') {
       mainWindow!.webContents.openDevTools()
     }
   })

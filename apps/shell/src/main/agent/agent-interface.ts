@@ -15,7 +15,8 @@ interface AgentInterface {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       input: Record<string, any>
       threadId: string
-    }) => Promise<boolean>
+    }) => Promise<boolean>,
+    signal?: AbortSignal
   ): AsyncGenerator<AssistantModelMessage, void>
 }
 
