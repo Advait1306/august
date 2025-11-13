@@ -100,8 +100,8 @@ CREATE TABLE "oauth_states" (
 );
 --> statement-breakpoint
 ALTER TABLE "projects" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
-DROP TABLE "projects" CASCADE;--> statement-breakpoint
 ALTER TABLE "tasks" DROP CONSTRAINT "tasks_project_id_projects_id_fk";
+DROP TABLE "projects" CASCADE;--> statement-breakpoint
 --> statement-breakpoint
 ALTER TABLE "tasks" ALTER COLUMN "agent_id" DROP NOT NULL;--> statement-breakpoint
 ALTER TABLE "composio_states" ADD CONSTRAINT "composio_states_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
