@@ -4,7 +4,7 @@ This guide explains how to set up and use the voice input feature for the tasks 
 
 ## Overview
 
-The voice input feature allows users to record audio and have it transcribed into text using OpenAI's Whisper API. The audio is captured in the browser and sent to the backend server, which forwards it to OpenAI's Whisper API for transcription.
+The voice input feature allows users to record audio and have it **transcribed in real-time** as they speak using OpenAI's Realtime API with WebSocket streaming. This provides a much more responsive experience compared to batch transcription.
 
 ## Architecture
 
@@ -13,14 +13,24 @@ User clicks mic button
     ↓
 Browser captures audio (Web Audio API)
     ↓
-Audio sent to /api/transcribe endpoint
+Audio converted to PCM16 @ 24kHz in browser
     ↓
-Backend forwards to OpenAI Whisper API
+Audio streamed via WebSocket to backend
     ↓
-Transcription returned to frontend
+Backend proxies to OpenAI Realtime API
     ↓
-Text inserted into textarea
+Real-time transcription events streamed back
+    ↓
+Text appears in textarea as user speaks
 ```
+
+### Key Features
+
+- ✅ **Real-time streaming**: See transcription appear as you speak
+- ✅ **Low latency**: Minimal delay between speech and text
+- ✅ **Audio processing**: Automatic resampling to 24kHz PCM16
+- ✅ **Speech detection**: Automatic detection of speech start/stop
+- ✅ **Secure**: API key never exposed to client
 
 ## Prerequisites
 
@@ -48,11 +58,12 @@ OPENAI_API_KEY=sk-your-api-key-here
 
 ## Pricing
 
-OpenAI Whisper API pricing (as of 2025):
-- **$0.006 per minute** of audio transcribed
-- Approximately **$0.36 per hour** of audio
+OpenAI Realtime API pricing (as of 2025):
+- **Text input/output**: Billed per token (similar to GPT-4o)
+- **Audio input**: Billed per token at audio-specific rates
+- **Real-time transcription models**: `gpt-4o-mini-transcribe` and `gpt-4o-transcribe`
 
-For typical voice input usage (1-2 minute clips), costs are minimal.
+For typical voice input usage (1-2 minute clips), costs are minimal. The streaming nature means you only pay for the audio actually processed.
 
 ## Usage
 
@@ -66,13 +77,20 @@ For typical voice input usage (1-2 minute clips), costs are minimal.
 6. Wait for processing (you'll see a loading spinner)
 7. The transcribed text will automatically appear in the textarea
 
-### Supported Audio Formats
+### Audio Format
 
-The browser recorder uses:
-- **WebM** (if supported by browser)
-- **MP4** (fallback)
+The implementation uses:
+- **Format**: 16-bit PCM (raw audio)
+- **Sample Rate**: 24000 Hz (24 kHz)
+- **Channels**: 1 (mono)
+- **Encoding**: Little-endian
+- **Transmission**: Base64-encoded over WebSocket
 
-Both formats are supported by OpenAI's Whisper API.
+Audio is captured from the browser microphone and automatically:
+1. Converted from Float32 to Int16 (PCM16)
+2. Resampled to 24kHz if necessary
+3. Encoded to base64
+4. Streamed to the backend in real-time
 
 ### Browser Permissions
 
@@ -80,34 +98,51 @@ Users will need to grant microphone permissions when first using the feature. Mo
 
 ## Technical Details
 
-### Backend Endpoint
+### Backend WebSocket Endpoint
 
-**POST** `/api/transcribe`
+**WebSocket** `ws://localhost:8080/api/realtime`
 
-**Authentication:** Required (Clerk Bearer token)
+**Authentication:** Required (Clerk token via query parameter)
 
-**Request:**
-- Content-Type: `multipart/form-data`
-- Body: `audio` file (WebM or MP4)
-- Optional: `language` parameter for language hint
+**Connection URL:**
+```
+ws://localhost:8080/api/realtime?token=<clerk-bearer-token>
+```
 
-**Response:**
+**Message Format (Client → Server):**
 ```json
 {
-  "text": "Transcribed text here"
+  "type": "input_audio_buffer.append",
+  "audio": "<base64-encoded-pcm16-audio>"
 }
 ```
+
+**Message Format (Server → Client):**
+```json
+{
+  "type": "conversation.item.input_audio_transcription.completed",
+  "transcript": "Transcribed text here"
+}
+```
+
+**Other Events:**
+- `input_audio_buffer.speech_started` - Speech detected
+- `input_audio_buffer.speech_stopped` - Speech ended
+- `error` - Transcription error occurred
 
 ### Frontend Component
 
 **File:** `apps/app/components/voice-recorder.tsx`
 
 The `VoiceRecorder` component handles:
-- Browser microphone access
-- Audio recording using MediaRecorder API
-- Sending audio to backend
-- Displaying recording/processing states
-- Error handling
+- Browser microphone access with optimized audio constraints
+- Real-time audio processing using Web Audio API
+- Float32 to PCM16 audio conversion
+- Audio resampling to 24kHz
+- WebSocket connection management
+- Real-time transcription event handling
+- Visual feedback (pulsing red mic during recording)
+- Proper cleanup on unmount
 
 **File:** `apps/app/components/task-window.tsx`
 
@@ -116,12 +151,15 @@ The voice recorder is integrated into the `PromptInputTools` toolbar alongside o
 ### Dependencies
 
 **Backend:**
-- `openai` (^6.2.0) - OpenAI SDK
-- `multer` - File upload handling
+- `ws` (^8.18.3) - WebSocket server
+- `@types/ws` (^8.18.1) - TypeScript types for ws
+- Native Node.js `http` server for WebSocket upgrade handling
 
 **Frontend:**
-- `lucide-react` - Icons (Mic, MicOff, Loader2)
+- `lucide-react` - Icons (Mic, MicOff)
 - `@clerk/clerk-react` - Authentication
+- Native browser WebSocket API
+- Web Audio API (AudioContext, ScriptProcessorNode)
 
 ## Troubleshooting
 
@@ -169,25 +207,44 @@ The voice recorder is integrated into the `PromptInputTools` toolbar alongside o
 
 4. Test the voice input feature on the tasks page
 
-### Server Endpoint Location
+### Server Implementation
 
-**File:** `apps/server/src/controllers/proxy.controller.ts`
+**WebSocket Controller:** `apps/server/src/controllers/realtime.controller.ts`
 
-The `/api/transcribe` endpoint is defined in the proxy controller alongside other API endpoints.
+The WebSocket server:
+- Handles connection upgrades on `/api/realtime` path
+- Validates Clerk authentication tokens
+- Establishes bidirectional proxy to OpenAI's Realtime API
+- Forwards audio data from client to OpenAI
+- Streams transcription events from OpenAI back to client
+- Manages connection lifecycle and cleanup
+
+**Main Server:** `apps/server/src/index.ts`
+
+The WebSocket server is attached to the Express HTTP server, allowing both REST and WebSocket endpoints to coexist.
 
 ## Security Considerations
 
 1. **API Key Protection:** The OpenAI API key is only stored on the backend server and never exposed to the client
-2. **Authentication:** All transcription requests require valid Clerk authentication
-3. **Rate Limiting:** Consider implementing rate limiting to prevent abuse
-4. **File Size Limits:** Multer is configured with memory storage; consider adding file size limits for production
+2. **Authentication:** All WebSocket connections require valid Clerk authentication token
+3. **Connection Limits:** OpenAI Realtime API sessions are limited to 30 minutes maximum
+4. **Token Validation:** In production, implement proper Clerk token validation on the backend before allowing WebSocket upgrade
+5. **Rate Limiting:** Consider implementing rate limiting to prevent abuse of WebSocket connections
 
 ## Future Enhancements
 
 Potential improvements:
 - [ ] Add language detection/selection UI
-- [ ] Support for longer recordings with chunking
-- [ ] Real-time transcription as user speaks
+- [ ] Visual audio level indicator during recording
+- [ ] Support for punctuation commands ("period", "comma", etc.)
 - [ ] Offline mode with local Whisper model (for users with GPUs)
-- [ ] Audio visualization during recording
-- [ ] Playback before submitting
+- [ ] Audio visualization waveform during recording
+- [ ] Session reconnection on temporary network issues
+- [ ] Support for voice commands to control the textarea
+
+## Performance Notes
+
+- **Latency**: Transcription typically appears within 1-2 seconds of speaking
+- **Browser Compatibility**: Requires browsers supporting WebSocket and Web Audio API (all modern browsers)
+- **Sample Rate**: Browser audio is automatically resampled to 24kHz if needed
+- **Buffer Size**: Uses 4096-sample buffers for optimal balance between latency and performance

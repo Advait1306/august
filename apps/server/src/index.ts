@@ -28,6 +28,7 @@ import { createSyncController } from "./controllers/sync.controller";
 import { createProxyController } from "./controllers/proxy.controller";
 import { createBillingController } from "./controllers/billing.controller";
 import { createMCPController } from "./controllers/mcp.controller";
+import { createRealtimeWebSocketServer } from "./controllers/realtime.controller";
 
 const app = express();
 
@@ -78,6 +79,9 @@ app.use(createProxyController(proxyService, billingService, oauthService, compos
 app.use(createBillingController(clerkClient, db, dodoClient, billingService));
 app.use(createMCPController(db));
 
-app.listen(8080, () => {
+const server = app.listen(8080, () => {
   console.log("Server is running on port 8080");
 });
+
+// Setup WebSocket server for Realtime API
+createRealtimeWebSocketServer(server);
