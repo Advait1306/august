@@ -5,9 +5,13 @@ export function createRedirectController(): Router {
 
   /**
    * Redirect all requests to Composio auth callback
+   * Preserves all query parameters from the original request
    */
-  router.all("/redirect/composio", (_req: Request, res: Response) => {
-    res.redirect("https://backend.composio.dev/api/v3/toolkits/auth/callback");
+  router.all("/redirect/composio", (req: Request, res: Response) => {
+    const baseUrl = "https://backend.composio.dev/api/v3/toolkits/auth/callback";
+    const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
+    const redirectUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+    res.redirect(redirectUrl);
   });
 
   return router;
