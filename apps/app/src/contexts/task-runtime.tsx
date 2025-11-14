@@ -488,6 +488,10 @@ export const TaskRuntimeProvider = ({
               ANTHROPIC_API_KEY: token,
             }
           : undefined,
+      ...(claudeCode.inheritUserSettings &&
+        claudeCode.selectedInstallation?.source !== "bundled" && {
+          settingSources: ["user"],
+        }),
     });
 
     // Store the iterator for cancellation

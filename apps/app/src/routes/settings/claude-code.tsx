@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSettingsSection } from "@/src/contexts/settings-context";
 import { useClaudeCodeInstallations } from "@/src/contexts/task-runtime";
@@ -61,7 +62,12 @@ function ClaudeCodeSettings() {
                     (i) => i.path === path
                   );
                   if (installation) {
-                    updateClaudeCode({ selectedInstallation: installation });
+                    updateClaudeCode({
+                      selectedInstallation: installation,
+                      ...(installation.source === "bundled" && {
+                        inheritUserSettings: false,
+                      }),
+                    });
                   }
                 }}
               >
@@ -124,6 +130,31 @@ function ClaudeCodeSettings() {
                 </SelectContent>
               </Select>
             )}
+          </div>
+
+          <div className="flex flex-row justify-between items-center">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="inherit-user-settings">
+                Inherit User Settings
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {claudeCode.selectedInstallation?.source === "bundled"
+                  ? "Only available for non-bundled Claude Code installations"
+                  : "Pass user settings to the local Claude Code instance"}
+              </p>
+            </div>
+            <Switch
+              id="inherit-user-settings"
+              checked={
+                claudeCode.selectedInstallation?.source === "bundled"
+                  ? false
+                  : claudeCode.inheritUserSettings
+              }
+              disabled={claudeCode.selectedInstallation?.source === "bundled"}
+              onCheckedChange={(checked) =>
+                updateClaudeCode({ inheritUserSettings: checked })
+              }
+            />
           </div>
         </div>
       </div>
