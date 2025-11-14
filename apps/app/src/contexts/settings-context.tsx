@@ -60,6 +60,7 @@ export type Settings = {
     selectedInstallation?: ClaudeInstallation;
     autoUpdate: boolean;
     enableLogging: boolean;
+    inheritUserSettings: boolean;
   };
   privacy: {
     analytics: boolean;
@@ -98,6 +99,7 @@ const defaultSettingsValues: Settings = {
     selectedInstallation: undefined,
     autoUpdate: true,
     enableLogging: false,
+    inheritUserSettings: false,
   },
   privacy: {
     analytics: true,
