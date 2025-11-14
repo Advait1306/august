@@ -28,6 +28,7 @@ import { createSyncController } from "./controllers/sync.controller";
 import { createProxyController } from "./controllers/proxy.controller";
 import { createBillingController } from "./controllers/billing.controller";
 import { createMCPController } from "./controllers/mcp.controller";
+import { createRedirectController } from "./controllers/redirect.controller";
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use(createSyncController(syncService));
 app.use(createProxyController(proxyService, billingService, oauthService, composioService, db));
 app.use(createBillingController(clerkClient, db, dodoClient, billingService));
 app.use(createMCPController(db));
+app.use(createRedirectController());
 
 app.listen(8080, () => {
   console.log("Server is running on port 8080");
