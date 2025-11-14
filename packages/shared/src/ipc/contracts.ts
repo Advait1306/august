@@ -25,6 +25,7 @@ export namespace IPC {
           headers: Record<string, string>;
         }
       >;
+      settingSources?: string[];
     }
 
     // Full run parameters (with id for IPC)
