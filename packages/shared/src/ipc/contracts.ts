@@ -19,11 +19,17 @@ export namespace IPC {
       env?: Record<string, string>;
       mcpServers?: Record<
         string,
-        {
-          type: "http";
-          url: string;
-          headers: Record<string, string>;
-        }
+        | {
+            type: "http";
+            url: string;
+            headers: Record<string, string>;
+          }
+        | {
+            type: "stdio";
+            command: string;
+            args?: string[];
+            env?: Record<string, string>;
+          }
       >;
     }
 

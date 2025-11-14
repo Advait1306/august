@@ -10,7 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const integrationType = pgEnum("integration_type", ["oauth", "composio"]);
+export const integrationType = pgEnum("integration_type", ["oauth", "composio", "local"]);
 
 export const users = pgTable("users", {
   id: varchar().primaryKey().notNull(),
@@ -92,6 +92,10 @@ export const mcps = pgTable("mcps", {
   mcp_store_id: varchar().references(() => mcpStore.id), // null for custom MCPs
   integration_type: integrationType().notNull(),
   custom_mcp_server_url: varchar(), // Only for custom MCPs (when mcp_store_id is null)
+  // Local MCP configuration (for integration_type = 'local')
+  local_command: varchar(), // e.g., "npx", "node", "python"
+  local_args: jsonb().$type<string[]>(), // e.g., ["--yes", "@negokaz/excel-mcp-server"]
+  local_env: jsonb().$type<Record<string, string>>(), // e.g., {"EXCEL_MCP_PAGING_CELLS_LIMIT": "4000"}
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
 });

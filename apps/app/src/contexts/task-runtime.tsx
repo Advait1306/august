@@ -470,13 +470,24 @@ export const TaskRuntimeProvider = ({
       path: claudeCode.selectedInstallation?.path,
       mcpServers: userMcps.reduce(
         (acc, mcp) => {
-          acc[mcp.name] = {
-            type: "http",
-            url: `${import.meta.env.VITE_SERVER_URL}/proxy/mcp/${mcp.id}/`,
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          };
+          // Handle local/stdio MCPs
+          if (mcp.integration_type === "local") {
+            acc[mcp.name] = {
+              type: "stdio",
+              command: mcp.local_command!,
+              args: mcp.local_args ?? undefined,
+              env: mcp.local_env ?? undefined,
+            };
+          } else {
+            // Handle OAuth/Composio MCPs via HTTP proxy
+            acc[mcp.name] = {
+              type: "http",
+              url: `${import.meta.env.VITE_SERVER_URL}/proxy/mcp/${mcp.id}/`,
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            };
+          }
           return acc;
         },
         {} as NonNullable<IPC.Agent.RunRequest["mcpServers"]>
