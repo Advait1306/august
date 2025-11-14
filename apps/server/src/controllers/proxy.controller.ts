@@ -7,6 +7,8 @@ import { ComposioService } from "../services/composio.service";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { eq, and } from "drizzle-orm";
 import { mcps, mcpOauthIntegrationDetails } from "@jupiter/sync/db/schema";
+import OpenAI, { toFile } from "openai";
+import multer from "multer";
 
 export function createProxyController(
   proxyService: ProxyService,
@@ -16,6 +18,55 @@ export function createProxyController(
   db: NodePgDatabase
 ): Router {
   const router = Router();
+  const upload = multer({ storage: multer.memoryStorage() });
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  /**
+   * Whisper transcription endpoint
+   */
+  router.post(
+    "/api/transcribe",
+    upload.single("audio"),
+    async (req: Request, res: Response) => {
+      const { isAuthenticated, userId, orgId } = getAuth(req);
+
+      if (!isAuthenticated) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ error: "No audio file provided" });
+      }
+
+      try {
+        // Convert buffer to a file using OpenAI's toFile helper
+        const audioFile = await toFile(
+          req.file.buffer,
+          req.file.originalname,
+          { type: req.file.mimetype }
+        );
+
+        // Call OpenAI Whisper API
+        const transcription = await openai.audio.transcriptions.create({
+          file: audioFile,
+          model: "whisper-1",
+          language: req.body.language || undefined, // Optional: language hint
+        });
+
+        return res.json({
+          text: transcription.text,
+        });
+      } catch (error) {
+        console.error("Error transcribing audio:", error);
+        return res.status(500).json({
+          error: "Failed to transcribe audio",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+  );
 
   /**
    * Proxy requests to Anthropic API

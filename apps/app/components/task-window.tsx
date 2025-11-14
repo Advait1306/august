@@ -28,6 +28,7 @@ import { XIcon, PlusIcon, FolderIcon, BotIcon } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import { VoiceRecorder } from "@/components/voice-recorder";
 
 // Message part types for virtualization
 type MessagePart =
@@ -173,6 +174,15 @@ export default function TaskWindow() {
       });
     },
     [setComposerStates, selectedTaskId]
+  );
+
+  const handleVoiceTranscription = useCallback(
+    (text: string) => {
+      // Append transcription to existing prompt with a space
+      const newPrompt = prompt ? `${prompt} ${text}` : text;
+      setPrompt(newPrompt);
+    },
+    [prompt, setPrompt]
   );
 
   // Only allowed for "new-conversation"
@@ -490,6 +500,10 @@ export default function TaskWindow() {
                     <span>{cwd.match(/[^/\\]+$/)?.[0] || "Folder"}</span>
                   </Badge>
                 )}
+              <VoiceRecorder
+                onTranscription={handleVoiceTranscription}
+                disabled={isGenerating}
+              />
             </PromptInputTools>
             <PromptInputSubmit
               className="rounded-full"
