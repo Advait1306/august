@@ -3,12 +3,14 @@ import { query } from '@anthropic-ai/claude-agent-sdk'
 import assert from 'node:assert'
 import log from 'electron-log/main'
 import { findClaudeBinary } from './find-claude-code'
+import { findNodeRuntime, getNodeEnvironment } from '../../utils/find-node-runtime'
 import { IPC } from '@jupiter/shared/ipc'
 import { AssistantContent, AssistantModelMessage, TextPart, UserModelMessage } from 'ai'
 
 export class ClaudeCodeAgent implements AgentInterface {
   private static agentInfo: { path: string; env: NodeJS.ProcessEnv } | null = null
   private static initPromise: Promise<void> | null = null
+  private static nodeRuntime: Awaited<ReturnType<typeof findNodeRuntime>> | null = null
 
   constructor() {
     if (ClaudeCodeAgent.initPromise === null) {
@@ -24,6 +26,70 @@ export class ClaudeCodeAgent implements AgentInterface {
       ClaudeCodeAgent.agentInfo = binary
       log.info('Initialized Claude executable:', ClaudeCodeAgent.agentInfo.path)
     }
+
+    if (ClaudeCodeAgent.nodeRuntime === null) {
+      log.info('Finding Node.js runtime...')
+      ClaudeCodeAgent.nodeRuntime = await findNodeRuntime()
+      if (ClaudeCodeAgent.nodeRuntime) {
+        log.info('Found Node.js runtime:', {
+          version: ClaudeCodeAgent.nodeRuntime.version,
+          source: ClaudeCodeAgent.nodeRuntime.source
+        })
+      } else {
+        log.warn('No Node.js runtime found - local MCP servers requiring Node.js will not work')
+      }
+    }
+  }
+
+  /**
+   * Resolve Node.js-related commands to their actual paths
+   */
+  private resolveNodeCommand(command: string): string {
+    if (!ClaudeCodeAgent.nodeRuntime) {
+      return command
+    }
+
+    const commandMap: Record<string, string> = {
+      node: ClaudeCodeAgent.nodeRuntime.nodePath,
+      npm: ClaudeCodeAgent.nodeRuntime.npmPath,
+      npx: ClaudeCodeAgent.nodeRuntime.npxPath
+    }
+
+    return commandMap[command.toLowerCase()] || command
+  }
+
+  /**
+   * Process MCP servers config to resolve Node.js commands
+   */
+  private async resolveMcpServerCommands(
+    mcpServers?: IPC.Agent.RunRequest['mcpServers']
+  ): Promise<IPC.Agent.RunRequest['mcpServers']> {
+    if (!mcpServers) {
+      return mcpServers
+    }
+
+    const resolved: IPC.Agent.RunRequest['mcpServers'] = {}
+
+    for (const [name, config] of Object.entries(mcpServers)) {
+      if (config.type === 'stdio') {
+        // Resolve node/npm/npx commands to actual paths
+        const resolvedCommand = this.resolveNodeCommand(config.command)
+
+        log.info(`Resolved MCP command for "${name}":`, {
+          original: config.command,
+          resolved: resolvedCommand
+        })
+
+        resolved[name] = {
+          ...config,
+          command: resolvedCommand
+        }
+      } else {
+        resolved[name] = config
+      }
+    }
+
+    return resolved
   }
 
   async *run(
@@ -107,8 +173,12 @@ export class ClaudeCodeAgent implements AgentInterface {
       const agentInfo = ClaudeCodeAgent.agentInfo
       log.info('Using Claude executable:', agentInfo.path)
 
-      // Merge provided env with agentInfo.env
-      const mergedEnv = { ...agentInfo.env, ...params.env }
+      // Resolve Node.js commands in MCP servers
+      const resolvedMcpServers = await this.resolveMcpServerCommands(params.mcpServers)
+
+      // Merge Node.js environment for local MCP servers
+      const nodeEnv = await getNodeEnvironment()
+      const mergedEnv = { ...agentInfo.env, ...nodeEnv, ...params.env }
 
       try {
         log.info('Starting query to Claude Code binary', {
@@ -119,7 +189,8 @@ export class ClaudeCodeAgent implements AgentInterface {
 
         log.info('Path to Claude Code executable:', params.path)
         log.info('Environment:', mergedEnv)
-        log.info('MCP servers:', params.mcpServers)
+        log.info('MCP servers (original):', params.mcpServers)
+        log.info('MCP servers (resolved):', resolvedMcpServers)
 
         for await (const data of query({
           prompt: (async function* () {
@@ -137,7 +208,7 @@ export class ClaudeCodeAgent implements AgentInterface {
             log.info('receivedResult resolved')
           })(),
           options: {
-            mcpServers: params.mcpServers,
+            mcpServers: resolvedMcpServers,
             pathToClaudeCodeExecutable: params.path,
             env: mergedEnv,
             resume: sessionId,
