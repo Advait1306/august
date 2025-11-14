@@ -7,7 +7,13 @@ import { organisations } from "@jupiter/sync/db/schema";
 import { Webhook } from "standardwebhooks";
 import { BillingService } from "../services/billing.service";
 
-const PRODUCT_ID = "pdt_CyV6Fvwt5AjgHg49qI6qc";
+// Product IDs for different environments
+const PRODUCT_ID_DEV_STAGING = "pdt_CyV6Fvwt5AjgHg49qI6qc";
+const PRODUCT_ID_PRODUCTION = "pdt_1sxa3DfkaEPHQsR2wzRax";
+
+const PRODUCT_ID = process.env.NODE_ENV === "production"
+  ? PRODUCT_ID_PRODUCTION
+  : PRODUCT_ID_DEV_STAGING;
 
 export function createBillingController(
   clerkClient: ClerkClient,
