@@ -289,7 +289,7 @@ export default function TaskWindow() {
       )}
 
       {/* Thread */}
-      <div className="absolute w-full h-[calc(100%-210px)] px-8 bottom-40">
+      <div className="absolute w-full h-[calc(100%-210px)] px-8 bottom-40 flex justify-center">
         {selectedTaskId === "new-conversation" ? (
           <ConversationEmptyState
             icon={
@@ -300,7 +300,7 @@ export default function TaskWindow() {
             description="Share an idea with your artificial helper"
           />
         ) : (
-          <VList className="h-full no-scrollbar" ref={virtualizerRef}>
+          <VList className="h-full no-scrollbar w-full max-w-[720px]" ref={virtualizerRef}>
             {messageParts.map((part) => (
               <div key={part.id}>
                 {part.type === "user-content" && (

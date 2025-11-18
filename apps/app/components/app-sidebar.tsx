@@ -24,10 +24,11 @@ import { OrganizationSwitcher } from "@clerk/clerk-react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AgentsContent } from "@/components/agents-content";
 import { MCPContent } from "@/components/mcp-content";
 import { X } from "lucide-react";
+import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
 
 const data = {
   settingsNav: [
@@ -57,11 +58,63 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { tasks, selectedTaskId, selectTask } = useTaskRuntime();
   const [showAgentsDialog, setShowAgentsDialog] = useState(false);
   const [showMCPDialog, setShowMCPDialog] = useState(false);
+  const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showTopGradient, setShowTopGradient] = useState(false);
+  const [showBottomGradient, setShowBottomGradient] = useState(false);
 
   const handleBack = () => {
     const backTo = fromParam || "/tasks";
     navigate({ to: backTo as any });
   };
+
+  // Scroll selected task into view
+  useEffect(() => {
+    const selectedElement = taskRefs.current.get(selectedTaskId);
+    if (selectedElement) {
+      selectedElement.scrollIntoView({
+        behavior: "instant",
+        block: "nearest",
+      });
+    }
+  }, [selectedTaskId]);
+
+  // Handle scroll to show/hide gradients
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      setShowTopGradient(scrollTop > 0);
+      setShowBottomGradient(scrollTop + clientHeight < scrollHeight - 1);
+    };
+
+    // Initial check
+    handleScroll();
+
+    container.addEventListener("scroll", handleScroll);
+    // Also check on resize in case content changes
+    const resizeObserver = new ResizeObserver(handleScroll);
+    resizeObserver.observe(container);
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      resizeObserver.disconnect();
+    };
+  }, [tasks]);
+
+  // Keyboard navigation for tasks
+  useKeyboardNavigation({
+    items: tasks || [],
+    selectedId: selectedTaskId,
+    onSelect: (id) => {
+      navigate({ to: "/tasks" });
+      selectTask(id);
+    },
+    getItemId: (task) => task.id,
+    prependIds: ["new-conversation"],
+  });
 
   return (
     <>
@@ -96,10 +149,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <div className="flex flex-col flex-1 min-h-0">
                 {/* Fixed Header */}
                 <div className="flex-shrink-0 px-2">
-                  <div className="text-xs font-semibold text-muted-foreground px-2 py-1">
+                  <div className="text-[10px] font-semibold text-muted-foreground px-2 py-1">
                     TASKS
                   </div>
                   <div
+                    ref={(el) => {
+                      if (el) {
+                        taskRefs.current.set("new-conversation", el);
+                      } else {
+                        taskRefs.current.delete("new-conversation");
+                      }
+                    }}
                     className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground cursor-pointer mb-1"
                     data-selected={selectedTaskId === "new-conversation"}
                     onClick={() => {
@@ -113,23 +173,47 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   </div>
                 </div>
 
-                {/* Scrollable Task List */}
-                <div className="flex-1 overflow-auto px-2 flex flex-col gap-1">
-                  {tasks?.map((task: any) => (
-                    <div
-                      key={task.id}
-                      className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground cursor-pointer"
-                      data-selected={selectedTaskId === task.id}
-                      onClick={() => {
-                        navigate({ to: "/tasks" });
-                        selectTask(task.id);
-                      }}
-                    >
-                      <span className="pointer-events-none select-text line-clamp-1">
-                        {task.name}
-                      </span>
+                {/* Scrollable Task List with Gradients */}
+                <div className="flex-1 relative min-h-0">
+                  <div
+                    ref={scrollContainerRef}
+                    className="absolute inset-0 overflow-auto px-2 flex flex-col gap-1"
+                  >
+                    {tasks?.map((task: any) => (
+                      <div
+                        key={task.id}
+                        ref={(el) => {
+                          if (el) {
+                            taskRefs.current.set(task.id, el);
+                          } else {
+                            taskRefs.current.delete(task.id);
+                          }
+                        }}
+                        className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground cursor-pointer"
+                        data-selected={selectedTaskId === task.id}
+                        onClick={() => {
+                          navigate({ to: "/tasks" });
+                          selectTask(task.id);
+                        }}
+                      >
+                        <span className="pointer-events-none select-text line-clamp-1">
+                          {task.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Gradient Overlays */}
+                  {showTopGradient && (
+                    <div className="absolute top-0 left-0 right-0 h-12 pointer-events-none z-10">
+                      <div className="absolute inset-0 bg-gradient-to-b from-sidebar via-sidebar/50 to-transparent" />
                     </div>
-                  ))}
+                  )}
+                  {showBottomGradient && (
+                    <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none z-10">
+                      <div className="absolute inset-0 bg-gradient-to-t from-sidebar via-sidebar/50 to-transparent" />
+                    </div>
+                  )}
                 </div>
               </div>
 
