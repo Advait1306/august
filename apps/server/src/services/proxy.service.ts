@@ -297,9 +297,12 @@ export class ProxyService {
         statusText: response.statusText,
       });
 
-      // Copy response headers
+      // Copy response headers, but skip content-encoding since fetch automatically decompresses
       response.headers.forEach((value, key) => {
-        res.setHeader(key, value);
+        // Skip content-encoding header because the response body is already decompressed by fetch
+        if (key.toLowerCase() !== 'content-encoding') {
+          res.setHeader(key, value);
+        }
       });
 
       res.status(response.status);
