@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { PencilIcon, Plus, Trash2 } from "lucide-react";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
@@ -49,6 +49,16 @@ export function AgentsContent() {
   const [localName, setLocalName] = useState("");
   const [localSystemPrompt, setLocalSystemPrompt] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+
+  // Gradient states for sidebar
+  const [showTopGradient, setShowTopGradient] = useState(false);
+  const [showBottomGradient, setShowBottomGradient] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Gradient states for document view
+  const [showDocTopGradient, setShowDocTopGradient] = useState(false);
+  const [showDocBottomGradient, setShowDocBottomGradient] = useState(false);
+  const docScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Derive selected agent from agents array
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) || null;
@@ -164,32 +174,104 @@ export function AgentsContent() {
     }
   }, [selectedAgentId]);
 
+  // Handle scroll to show/hide gradients for sidebar
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      setShowTopGradient(scrollTop > 0);
+      setShowBottomGradient(scrollTop + clientHeight < scrollHeight - 1);
+    };
+
+    // Initial check
+    handleScroll();
+
+    container.addEventListener("scroll", handleScroll);
+    // Also check on resize in case content changes
+    const resizeObserver = new ResizeObserver(handleScroll);
+    resizeObserver.observe(container);
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      resizeObserver.disconnect();
+    };
+  }, [agents]);
+
+  // Handle scroll to show/hide gradients for document view
+  useEffect(() => {
+    const container = docScrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      setShowDocTopGradient(scrollTop > 0);
+      setShowDocBottomGradient(scrollTop + clientHeight < scrollHeight - 1);
+    };
+
+    // Initial check
+    handleScroll();
+
+    container.addEventListener("scroll", handleScroll);
+    // Also check on resize in case content changes
+    const resizeObserver = new ResizeObserver(handleScroll);
+    resizeObserver.observe(container);
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      resizeObserver.disconnect();
+    };
+  }, [selectedAgent]);
+
   return (
     <div className="flex h-full w-full">
       <div className="flex flex-row w-full">
         {/* Agent List Sidebar */}
-        <div className="flex-1 min-w-[200px] max-w-[300px] bg-[#E8E8E8] border-r border-border dark:bg-[#141414] flex flex-col pl-2">
-          <div className="flex-1 overflow-auto flex flex-col gap-1 pr-2 pt-2">
+        <div className="flex-1 min-w-[200px] max-w-[300px] bg-[#E8E8E8] border-r border-border dark:bg-[#141414] flex flex-col">
+          {/* Fixed Header */}
+          <div className="flex-shrink-0 px-2 pt-2">
             <div
-              className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer"
+              className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer mb-1"
               onClick={startCreate}
             >
               <span className="pointer-events-none select-text flex flex-row items-center gap-2">
                 <Plus className="w-4 h-4" /> New Agent
               </span>
             </div>
-            {agents.map((agent) => (
-              <div
-                key={agent.id}
-                className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
-                data-selected={selectedAgentId === agent.id}
-                onClick={() => setSelectedAgentId(agent.id)}
-              >
-                <span className="pointer-events-none select-text line-clamp-1">
-                  {agent.name}
-                </span>
+          </div>
+
+          {/* Scrollable Agent List with Gradients */}
+          <div className="flex-1 relative min-h-0">
+            <div
+              ref={scrollContainerRef}
+              className="absolute inset-0 overflow-auto px-2 flex flex-col gap-1"
+            >
+              {agents.map((agent) => (
+                <div
+                  key={agent.id}
+                  className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+                  data-selected={selectedAgentId === agent.id}
+                  onClick={() => setSelectedAgentId(agent.id)}
+                >
+                  <span className="pointer-events-none select-text line-clamp-1">
+                    {agent.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Gradient Overlays */}
+            {showTopGradient && (
+              <div className="absolute top-0 left-0 right-0 h-12 pointer-events-none z-10">
+                <div className="absolute inset-0 bg-gradient-to-b from-[#E8E8E8] via-[#E8E8E8]/50 to-transparent dark:from-[#141414] dark:via-[#141414]/50" />
               </div>
-            ))}
+            )}
+            {showBottomGradient && (
+              <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none z-10">
+                <div className="absolute inset-0 bg-gradient-to-t from-[#E8E8E8] via-[#E8E8E8]/50 to-transparent dark:from-[#141414] dark:via-[#141414]/50" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -218,46 +300,66 @@ export function AgentsContent() {
             </AnimatePresence>
           </div>
 
+          {selectedAgent && (
+            <div className="absolute bottom-6 right-6 z-50">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
           {selectedAgent ? (
-            <div className="flex-1 overflow-auto relative">
-              <div className="absolute top-4 right-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowDeleteDialog(true)}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+            <div className="flex-1 relative min-h-0">
+              <div
+                ref={docScrollContainerRef}
+                className="absolute inset-0 overflow-auto"
+              >
+                <div className="max-w-3xl mx-auto px-16 py-6">
+                  <Input
+                    value={localName}
+                    onChange={(e) => {
+                      setLocalName(e.target.value);
+                    }}
+                    onFocus={() => setIsEditing(true)}
+                    onBlur={(e) => {
+                      handleUpdateAgent({ name: e.target.value });
+                      setIsEditing(false);
+                    }}
+                    placeholder="Enter agent name"
+                    className="!bg-background !text-4xl font-semibold mb-8 border-none px-0 shadow-none focus-visible:ring-0 tracking-tight"
+                  />
+                  <Textarea
+                    value={localSystemPrompt}
+                    onChange={(e) => {
+                      setLocalSystemPrompt(e.target.value);
+                    }}
+                    onFocus={() => setIsEditing(true)}
+                    onBlur={(e) => {
+                      handleUpdateAgent({ system_prompt: e.target.value });
+                      setIsEditing(false);
+                    }}
+                    placeholder="Enter the system prompt that defines your agent's behavior..."
+                    className="!bg-background min-h-[300px] resize-none border-none px-0 shadow-none focus-visible:ring-0 !text-base/7 whitespace-pre-wrap text-muted-foreground"
+                  />
+                </div>
               </div>
-              <div className="max-w-3xl mx-auto px-16 py-16">
-                <Input
-                  value={localName}
-                  onChange={(e) => {
-                    setLocalName(e.target.value);
-                  }}
-                  onFocus={() => setIsEditing(true)}
-                  onBlur={(e) => {
-                    handleUpdateAgent({ name: e.target.value });
-                    setIsEditing(false);
-                  }}
-                  placeholder="Enter agent name"
-                  className="!bg-background !text-4xl font-semibold mb-8 border-none px-0 shadow-none focus-visible:ring-0 tracking-tight"
-                />
-                <Textarea
-                  value={localSystemPrompt}
-                  onChange={(e) => {
-                    setLocalSystemPrompt(e.target.value);
-                  }}
-                  onFocus={() => setIsEditing(true)}
-                  onBlur={(e) => {
-                    handleUpdateAgent({ system_prompt: e.target.value });
-                    setIsEditing(false);
-                  }}
-                  placeholder="Enter the system prompt that defines your agent's behavior..."
-                  className="!bg-background min-h-[300px] resize-none border-none px-0 shadow-none focus-visible:ring-0 !text-base/7 whitespace-pre-wrap text-muted-foreground"
-                />
-              </div>
+
+              {/* Gradient Overlays */}
+              {showDocTopGradient && (
+                <div className="absolute top-0 left-0 right-0 h-16 pointer-events-none z-10">
+                  <div className="absolute inset-0 bg-gradient-to-b from-background via-background/50 to-transparent" />
+                </div>
+              )}
+              {showDocBottomGradient && (
+                <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none z-10">
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+                </div>
+              )}
             </div>
           ) : (
             <motion.div

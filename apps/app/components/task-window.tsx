@@ -120,10 +120,15 @@ export default function TaskWindow() {
   const agents = useQuery(getAgents(syncData.authData))[0];
 
   const virtualizerRef = useRef<VListHandle>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Hover states for badges
   const [isAgentBadgeHovered, setIsAgentBadgeHovered] = useState(false);
   const [isCwdBadgeHovered, setIsCwdBadgeHovered] = useState(false);
+
+  // Gradient states
+  const [showTopGradient, setShowTopGradient] = useState(false);
+  const [showBottomGradient, setShowBottomGradient] = useState(false);
 
   // Messages
   const {
@@ -244,6 +249,38 @@ export default function TaskWindow() {
     }
   }, [selectedTaskId, messages]);
 
+  // Handle scroll to show/hide gradients
+  useEffect(() => {
+    // Add a small delay to ensure VList is mounted
+    const timer = setTimeout(() => {
+      // VList creates its own scroll container - find it via DOM
+      const container = scrollContainerRef.current?.querySelector('[style*="overflow"]') as HTMLElement;
+
+      if (!container) return;
+
+      const handleScroll = () => {
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        setShowTopGradient(scrollTop > 0);
+        setShowBottomGradient(scrollTop + clientHeight < scrollHeight - 1);
+      };
+
+      // Initial check
+      handleScroll();
+
+      container.addEventListener("scroll", handleScroll);
+      // Also check on resize in case content changes
+      const resizeObserver = new ResizeObserver(handleScroll);
+      resizeObserver.observe(container);
+
+      return () => {
+        container.removeEventListener("scroll", handleScroll);
+        resizeObserver.disconnect();
+      };
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [messages, selectedTaskId]);
+
   // Menu options for @ hotkey
   const menuOptions = useMemo<PromptMenuOption[]>(() => {
     return [
@@ -300,25 +337,39 @@ export default function TaskWindow() {
             description="Share an idea with your artificial helper"
           />
         ) : (
-          <VList className="h-full no-scrollbar w-full max-w-[720px]" ref={virtualizerRef}>
-            {messageParts.map((part) => (
-              <div key={part.id}>
-                {part.type === "user-content" && (
-                  <UserMessagePartView content={part.content} />
-                )}
-                {part.type === "assistant-text" && (
-                  <AssistantTextPartView text={part.text} />
-                )}
-                {part.type === "assistant-tool" && (
-                  <AssistantToolPartView
-                    toolCall={part.toolCall}
-                    toolResult={part.toolResult}
-                  />
-                )}
+          <div ref={scrollContainerRef} className="relative h-full w-full max-w-[720px]">
+            <VList className="h-full no-scrollbar w-full" ref={virtualizerRef}>
+              {messageParts.map((part) => (
+                <div key={part.id}>
+                  {part.type === "user-content" && (
+                    <UserMessagePartView content={part.content} />
+                  )}
+                  {part.type === "assistant-text" && (
+                    <AssistantTextPartView text={part.text} />
+                  )}
+                  {part.type === "assistant-tool" && (
+                    <AssistantToolPartView
+                      toolCall={part.toolCall}
+                      toolResult={part.toolResult}
+                    />
+                  )}
+                </div>
+              ))}
+              {isGenerating && <BlinkingCursor />}
+            </VList>
+
+            {/* Gradient Overlays */}
+            {showTopGradient && (
+              <div className="absolute top-0 left-0 right-0 h-16 pointer-events-none z-10">
+                <div className="absolute inset-0 bg-gradient-to-b from-background via-background/50 to-transparent" />
               </div>
-            ))}
-            {isGenerating && <BlinkingCursor />}
-          </VList>
+            )}
+            {showBottomGradient && (
+              <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none z-10">
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+              </div>
+            )}
+          </div>
         )}
       </div>
 
