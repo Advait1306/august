@@ -1,7 +1,6 @@
 import * as React from "react";
 import {
   Bot,
-  CheckSquare,
   Palette,
   Wrench,
   ChevronLeft,
@@ -11,7 +10,6 @@ import {
 import { MCPIcon } from "@/components/icons/MCPIcon";
 
 import { NavMain } from "@/components/nav-main";
-import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import { NavWallet } from "@/components/nav-wallet";
 import {
@@ -29,6 +27,7 @@ import { AgentsContent } from "@/components/agents-content";
 import { MCPContent } from "@/components/mcp-content";
 import { X } from "lucide-react";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
+import { motion, AnimatePresence } from "motion/react";
 
 const data = {
   settingsNav: [
@@ -102,18 +101,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       container.removeEventListener("scroll", handleScroll);
       resizeObserver.disconnect();
     };
-  }, [tasks]);
+  }, [tasks, showAgentsDialog, showMCPDialog]);
 
-  // Keyboard navigation for tasks
+  // Keyboard navigation for tasks (disabled when dialogs are open)
   useKeyboardNavigation({
-    items: tasks || [],
+    items: showAgentsDialog || showMCPDialog ? [] : tasks || [],
     selectedId: selectedTaskId,
     onSelect: (id) => {
       navigate({ to: "/tasks" });
       selectTask(id);
     },
     getItemId: (task) => task.id,
-    prependIds: ["new-conversation"],
+    prependIds: showAgentsDialog || showMCPDialog ? [] : ["new-conversation"],
   });
 
   return (
@@ -247,42 +246,78 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </Sidebar>
 
       {/* Agents Overlay */}
-      {showAgentsDialog && (
-        <div className="fixed inset-0 z-50 bg-background">
-          <div className="absolute top-6 right-6 z-10">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowAgentsDialog(false)}
-              className="rounded-full"
+      <AnimatePresence>
+        {showAgentsDialog && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80"
+            onClick={() => setShowAgentsDialog(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className="relative w-[80%] h-[80%] bg-background border border-border rounded-lg overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
             >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="h-full w-full">
-            <AgentsContent />
-          </div>
-        </div>
-      )}
+              <div className="absolute top-6 right-6 z-10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowAgentsDialog(false)}
+                  className="rounded-full"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="h-full w-full">
+                <AgentsContent />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* MCP Overlay */}
-      {showMCPDialog && (
-        <div className="fixed inset-0 z-50 bg-background pt-6 pb-6">
-          <div className="absolute top-6 right-6 z-10">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowMCPDialog(false)}
-              className="rounded-full"
+      <AnimatePresence>
+        {showMCPDialog && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80"
+            onClick={() => setShowMCPDialog(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className="relative w-[80%] h-[80%] bg-background border border-border rounded-lg overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2 }}
             >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="h-full w-full">
-            <MCPContent />
-          </div>
-        </div>
-      )}
+              <div className="absolute top-6 right-6 z-10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowMCPDialog(false)}
+                  className="rounded-full"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="h-full w-full">
+                <MCPContent />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
