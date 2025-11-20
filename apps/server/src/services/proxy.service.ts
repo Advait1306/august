@@ -297,9 +297,15 @@ export class ProxyService {
         statusText: response.statusText,
       });
 
-      // Copy response headers
+      // Copy response headers, but skip compression-related headers since fetch automatically decompresses
       response.headers.forEach((value, key) => {
-        res.setHeader(key, value);
+        const lowerKey = key.toLowerCase();
+        // Skip compression-related headers because the response body is already decompressed by fetch
+        // - content-encoding: indicates compression type (gzip, brotli, etc.)
+        // - content-length: reflects compressed size, which won't match decompressed body
+        if (lowerKey !== 'content-encoding' && lowerKey !== 'content-length') {
+          res.setHeader(key, value);
+        }
       });
 
       res.status(response.status);

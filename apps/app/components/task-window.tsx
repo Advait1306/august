@@ -28,6 +28,7 @@ import { XIcon, PlusIcon, FolderIcon, BotIcon } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import { useScrollGradients } from "@/hooks/use-scroll-gradients";
 
 // Message part types for virtualization
 type MessagePart =
@@ -120,6 +121,7 @@ export default function TaskWindow() {
   const agents = useQuery(getAgents(syncData.authData))[0];
 
   const virtualizerRef = useRef<VListHandle>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Hover states for badges
   const [isAgentBadgeHovered, setIsAgentBadgeHovered] = useState(false);
@@ -143,6 +145,15 @@ export default function TaskWindow() {
   const messageParts = useMemo(() => {
     return messages ? flattenMessagesToParts(messages) : [];
   }, [messages]);
+
+  // Use scroll gradients hook with drillToScrollElement for VList
+  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(
+    scrollContainerRef,
+    {
+      drillToScrollElement: true,
+      initDelay: 100,
+    }
+  );
 
   // Derived state and functions for ease of use
   const composerState = composerStates[selectedTaskId];
@@ -244,6 +255,11 @@ export default function TaskWindow() {
     }
   }, [selectedTaskId, messages]);
 
+  // Recalculate gradients when messages or task changes
+  useEffect(() => {
+    recalculate();
+  }, [messages, selectedTaskId, recalculate]);
+
   // Menu options for @ hotkey
   const menuOptions = useMemo<PromptMenuOption[]>(() => {
     return [
@@ -289,7 +305,7 @@ export default function TaskWindow() {
       )}
 
       {/* Thread */}
-      <div className="absolute w-full h-[calc(100%-210px)] px-8 bottom-40">
+      <div className="absolute w-full h-[calc(100%-210px)] px-8 bottom-40 flex justify-center">
         {selectedTaskId === "new-conversation" ? (
           <ConversationEmptyState
             icon={
@@ -300,25 +316,39 @@ export default function TaskWindow() {
             description="Share an idea with your artificial helper"
           />
         ) : (
-          <VList className="h-full no-scrollbar" ref={virtualizerRef}>
-            {messageParts.map((part) => (
-              <div key={part.id}>
-                {part.type === "user-content" && (
-                  <UserMessagePartView content={part.content} />
-                )}
-                {part.type === "assistant-text" && (
-                  <AssistantTextPartView text={part.text} />
-                )}
-                {part.type === "assistant-tool" && (
-                  <AssistantToolPartView
-                    toolCall={part.toolCall}
-                    toolResult={part.toolResult}
-                  />
-                )}
+          <div ref={scrollContainerRef} className="relative h-full w-full max-w-[720px]">
+            <VList className="h-full no-scrollbar w-full" ref={virtualizerRef}>
+              {messageParts.map((part) => (
+                <div key={part.id}>
+                  {part.type === "user-content" && (
+                    <UserMessagePartView content={part.content} />
+                  )}
+                  {part.type === "assistant-text" && (
+                    <AssistantTextPartView text={part.text} />
+                  )}
+                  {part.type === "assistant-tool" && (
+                    <AssistantToolPartView
+                      toolCall={part.toolCall}
+                      toolResult={part.toolResult}
+                    />
+                  )}
+                </div>
+              ))}
+              {isGenerating && <BlinkingCursor />}
+            </VList>
+
+            {/* Gradient Overlays */}
+            {showTopGradient && (
+              <div className="absolute top-0 left-0 right-0 h-16 pointer-events-none z-10">
+                <div className="absolute inset-0 bg-gradient-to-b from-background via-background/50 to-transparent" />
               </div>
-            ))}
-            {isGenerating && <BlinkingCursor />}
-          </VList>
+            )}
+            {showBottomGradient && (
+              <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none z-10">
+                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+              </div>
+            )}
+          </div>
         )}
       </div>
 

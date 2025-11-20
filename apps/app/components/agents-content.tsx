@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { PencilIcon, Plus, Trash2 } from "lucide-react";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
@@ -17,27 +17,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createFileRoute } from "@tanstack/react-router";
-import { ShellOnly } from "@/components/restrictor";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
-import { useSyncContext } from "../components/sync_engine";
+import { useSyncContext } from "../src/components/sync_engine";
 import { useQuery } from "@rocicorp/zero/react";
 import { getAgents } from "@jupiter/sync/queries/data";
 import { nanoid } from "nanoid";
 import { useZero } from "@/src/hooks/useZero";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
-
-export const Route = createFileRoute("/agents")({
-  component: Agents,
-});
+import { useScrollGradients } from "@/hooks/use-scroll-gradients";
 
 type NewAgent = Omit<
   Agent,
   "id" | "created_at" | "author_id" | "organisation_id"
 >;
 
-function Agents() {
+export function AgentsContent() {
   const z = useZero();
   const syncContext = useSyncContext();
 
@@ -56,8 +51,13 @@ function Agents() {
   const [localSystemPrompt, setLocalSystemPrompt] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
+  // Scroll gradient hooks
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   // Derive selected agent from agents array
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) || null;
+
+  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(scrollContainerRef);
 
   // Sync local state when selected agent changes
   useEffect(() => {
@@ -170,21 +170,34 @@ function Agents() {
     }
   }, [selectedAgentId]);
 
+  // Recalculate gradients when agents change
+  useEffect(() => {
+    recalculate();
+  }, [agents, recalculate]);
+
   return (
-    <ShellOnly>
-      <div className="flex h-[calc(100vh-var(--header-height))] w-full">
-        <div className="flex flex-row w-full">
-          {/* Agent List Sidebar */}
-          <div className="flex-1 min-w-[200px] max-w-[300px] bg-[#E8E8E8] border-r border-border dark:bg-[#141414] flex flex-col">
-            <div className="flex-1 overflow-auto flex flex-col gap-1 p-2">
-              <div
-                className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer"
-                onClick={startCreate}
-              >
-                <span className="pointer-events-none select-text flex flex-row items-center gap-2">
-                  <Plus className="w-4 h-4" /> New Agent
-                </span>
-              </div>
+    <div className="flex h-full w-full">
+      <div className="flex flex-row w-full">
+        {/* Agent List Sidebar */}
+        <div className="flex-1 min-w-[200px] max-w-[300px] bg-[#E8E8E8] border-r border-border dark:bg-[#141414] flex flex-col">
+          {/* Fixed Header */}
+          <div className="flex-shrink-0 px-2 pt-2">
+            <div
+              className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer mb-1"
+              onClick={startCreate}
+            >
+              <span className="pointer-events-none select-text flex flex-row items-center gap-2">
+                <Plus className="w-4 h-4" /> New Agent
+              </span>
+            </div>
+          </div>
+
+          {/* Scrollable Agent List with Gradients */}
+          <div className="flex-1 relative min-h-0">
+            <div
+              ref={scrollContainerRef}
+              className="absolute inset-0 overflow-auto px-2 flex flex-col gap-1"
+            >
               {agents.map((agent) => (
                 <div
                   key={agent.id}
@@ -198,111 +211,126 @@ function Agents() {
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Main Content Area - Document View/Editor */}
-          <div className="relative flex-3 flex flex-col h-full overflow-hidden bg-background">
-            <div className="w-full absolute top-0 z-50 pt-4 pointer-events-none flex justify-center">
-              <AnimatePresence>
-                {isEditing && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 1000,
-                      damping: 50,
-                    }}
-                    className="pointer-events-auto"
-                  >
-                    <Badge variant="default" className="rounded-full gap-2">
-                      <PencilIcon className="h-3 w-3" />
-                      Changes will be automatically saved
-                    </Badge>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {selectedAgent ? (
-              <div className="flex-1 overflow-auto relative">
-                <div className="absolute top-4 right-4">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowDeleteDialog(true)}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="max-w-3xl mx-auto px-16 py-16">
-                  <Input
-                    value={localName}
-                    onChange={(e) => {
-                      setLocalName(e.target.value);
-                    }}
-                    onFocus={() => setIsEditing(true)}
-                    onBlur={(e) => {
-                      handleUpdateAgent({ name: e.target.value });
-                      setIsEditing(false);
-                    }}
-                    placeholder="Enter agent name"
-                    className="!bg-background !text-4xl font-semibold mb-8 border-none px-0 shadow-none focus-visible:ring-0 tracking-tight"
-                  />
-                  <Textarea
-                    value={localSystemPrompt}
-                    onChange={(e) => {
-                      setLocalSystemPrompt(e.target.value);
-                    }}
-                    onFocus={() => setIsEditing(true)}
-                    onBlur={(e) => {
-                      handleUpdateAgent({ system_prompt: e.target.value });
-                      setIsEditing(false);
-                    }}
-                    placeholder="Enter the system prompt that defines your agent's behavior..."
-                    className="!bg-background min-h-[300px] resize-none border-none px-0 shadow-none focus-visible:ring-0 !text-base/7 whitespace-pre-wrap text-muted-foreground"
-                  />
-                </div>
+            {/* Gradient Overlays */}
+            {showTopGradient && (
+              <div className="absolute top-0 left-0 right-0 h-12 pointer-events-none z-10">
+                <div className="absolute inset-0 bg-gradient-to-b from-[#E8E8E8] via-[#E8E8E8]/50 to-transparent dark:from-[#141414] dark:via-[#141414]/50" />
               </div>
-            ) : (
-              <motion.div
-                className="flex items-center justify-center h-full"
-                initial={{ opacity: 0, y: 80 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 2000,
-                  damping: 300,
-                }}
-              >
-                <Card className="relative w-md h-[400px] overflow-hidden flex justify-end shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] -rotate-2 p-0">
-                  <img
-                    src={"/agent-image-dark.png"}
-                    alt="Agents"
-                    className="absolute w-full h-full object-cover"
-                  />
-
-                  <div className="relative z-10 rounded-lg overflow-hidden flex flex-col gap-2 pb-4">
-                    <CardHeader>
-                      <CardTitle className="text-2xl font-medium text-white">
-                        What are Agents?
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-sm leading-relaxed pb-2 text-white/80">
-                      <p>
-                        Agents are customizable AI assistants that you can
-                        tailor to your specific workflows and requirements. Each
-                        agent is built on a special system prompt that defines
-                        its behavior.
-                      </p>
-                    </CardContent>
-                  </div>
-                </Card>
-              </motion.div>
+            )}
+            {showBottomGradient && (
+              <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none z-10">
+                <div className="absolute inset-0 bg-gradient-to-t from-[#E8E8E8] via-[#E8E8E8]/50 to-transparent dark:from-[#141414] dark:via-[#141414]/50" />
+              </div>
             )}
           </div>
+        </div>
+
+        {/* Main Content Area - Document View/Editor */}
+        <div className="relative flex-3 flex flex-col h-full overflow-hidden bg-background pr-6 py-6">
+          <div className="w-full absolute top-0 z-50 pt-4 pointer-events-none flex justify-center">
+            <AnimatePresence>
+              {isEditing && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 1000,
+                    damping: 50,
+                  }}
+                  className="pointer-events-auto"
+                >
+                  <Badge variant="default" className="rounded-full gap-2">
+                    <PencilIcon className="h-3 w-3" />
+                    Changes will be automatically saved
+                  </Badge>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {selectedAgent && (
+            <div className="absolute bottom-6 right-6 z-50">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {selectedAgent ? (
+            <div className="flex-1 overflow-auto">
+              <div className="max-w-3xl mx-auto px-16 py-6">
+                <Input
+                  value={localName}
+                  onChange={(e) => {
+                    setLocalName(e.target.value);
+                  }}
+                  onFocus={() => setIsEditing(true)}
+                  onBlur={(e) => {
+                    handleUpdateAgent({ name: e.target.value });
+                    setIsEditing(false);
+                  }}
+                  placeholder="Enter agent name"
+                  className="!bg-background !text-4xl font-semibold mb-8 border-none px-0 shadow-none focus-visible:ring-0 tracking-tight"
+                />
+                <Textarea
+                  value={localSystemPrompt}
+                  onChange={(e) => {
+                    setLocalSystemPrompt(e.target.value);
+                  }}
+                  onFocus={() => setIsEditing(true)}
+                  onBlur={(e) => {
+                    handleUpdateAgent({ system_prompt: e.target.value });
+                    setIsEditing(false);
+                  }}
+                  placeholder="Enter the system prompt that defines your agent's behavior..."
+                  className="!bg-background min-h-[300px] resize-none border-none px-0 shadow-none focus-visible:ring-0 !text-base/7 whitespace-pre-wrap text-muted-foreground"
+                />
+              </div>
+            </div>
+          ) : (
+            <motion.div
+              className="flex items-center justify-center h-full"
+              initial={{ opacity: 0, y: 80 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                type: "spring",
+                stiffness: 2000,
+                damping: 300,
+              }}
+            >
+              <Card className="relative w-md h-[400px] overflow-hidden flex justify-end shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] -rotate-2 p-0">
+                <img
+                  src={"/agent-image-dark.png"}
+                  alt="Agents"
+                  className="absolute w-full h-full object-cover"
+                />
+
+                <div className="relative z-10 rounded-lg overflow-hidden flex flex-col gap-2 pb-4">
+                  <CardHeader>
+                    <CardTitle className="text-2xl font-medium text-white">
+                      What are Agents?
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm leading-relaxed pb-2 text-white/80">
+                    <p>
+                      Agents are customizable AI assistants that you can
+                      tailor to your specific workflows and requirements. Each
+                      agent is built on a special system prompt that defines
+                      its behavior.
+                    </p>
+                  </CardContent>
+                </div>
+              </Card>
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -357,6 +385,6 @@ function Agents() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </ShellOnly>
+    </div>
   );
 }
