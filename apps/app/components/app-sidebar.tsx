@@ -28,6 +28,7 @@ import { MCPContent } from "@/components/mcp-content";
 import { X } from "lucide-react";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
 import { motion, AnimatePresence } from "motion/react";
+import { useScrollGradients } from "@/hooks/use-scroll-gradients";
 
 const data = {
   settingsNav: [
@@ -55,17 +56,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isSettingsPage = location.pathname.startsWith("/settings");
   const fromParam = isSettingsPage ? (location.search as any)?.from : undefined;
   const { tasks, selectedTaskId, selectTask } = useTaskRuntime();
-  const [showAgentsDialog, setShowAgentsDialog] = useState(false);
-  const [showMCPDialog, setShowMCPDialog] = useState(false);
+  const [dialog, setDialog] = useState<null | "agents" | "mcp">(null);
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [showTopGradient, setShowTopGradient] = useState(false);
-  const [showBottomGradient, setShowBottomGradient] = useState(false);
 
   const handleBack = () => {
     const backTo = fromParam || "/tasks";
     navigate({ to: backTo as any });
   };
+
+  // Use scroll gradients hook
+  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(scrollContainerRef);
 
   // Scroll selected task into view
   useEffect(() => {
@@ -78,41 +79,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [selectedTaskId]);
 
-  // Handle scroll to show/hide gradients
+  // Recalculate gradients when tasks or dialog state changes
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      setShowTopGradient(scrollTop > 0);
-      setShowBottomGradient(scrollTop + clientHeight < scrollHeight - 1);
-    };
-
-    // Initial check
-    handleScroll();
-
-    container.addEventListener("scroll", handleScroll);
-    // Also check on resize in case content changes
-    const resizeObserver = new ResizeObserver(handleScroll);
-    resizeObserver.observe(container);
-
-    return () => {
-      container.removeEventListener("scroll", handleScroll);
-      resizeObserver.disconnect();
-    };
-  }, [tasks, showAgentsDialog, showMCPDialog]);
+    recalculate();
+  }, [tasks, dialog, recalculate]);
 
   // Keyboard navigation for tasks (disabled when dialogs are open)
   useKeyboardNavigation({
-    items: showAgentsDialog || showMCPDialog ? [] : tasks || [],
+    items: dialog ? [] : tasks || [],
     selectedId: selectedTaskId,
     onSelect: (id) => {
       navigate({ to: "/tasks" });
       selectTask(id);
     },
     getItemId: (task) => task.id,
-    prependIds: showAgentsDialog || showMCPDialog ? [] : ["new-conversation"],
+    prependIds: dialog ? [] : ["new-conversation"],
   });
 
   return (
@@ -221,7 +202,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Button
                   variant="ghost"
                   className="w-full justify-start h-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowAgentsDialog(true)}
+                  onClick={() => setDialog("agents")}
                 >
                   <Bot className="h-4 w-4 mr-2" />
                   Agents
@@ -229,7 +210,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Button
                   variant="ghost"
                   className="w-full justify-start h-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowMCPDialog(true)}
+                  onClick={() => setDialog("mcp")}
                 >
                   <MCPIcon className="h-4 w-4 mr-2" />
                   MCP
@@ -245,12 +226,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )}
       </Sidebar>
 
-      {/* Agents Overlay */}
+      {/* Dialog Overlay */}
       <AnimatePresence>
-        {showAgentsDialog && (
+        {dialog && (
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center bg-background/80"
-            onClick={() => setShowAgentsDialog(false)}
+            onClick={() => setDialog(null)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -268,51 +249,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setShowAgentsDialog(false)}
+                  onClick={() => setDialog(null)}
                   className="rounded-full"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
               <div className="h-full w-full">
-                <AgentsContent />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* MCP Overlay */}
-      <AnimatePresence>
-        {showMCPDialog && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80"
-            onClick={() => setShowMCPDialog(false)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <motion.div
-              className="relative w-[80%] h-[80%] bg-background border border-border rounded-lg overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="absolute top-6 right-6 z-10">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowMCPDialog(false)}
-                  className="rounded-full"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="h-full w-full">
-                <MCPContent />
+                {dialog === "agents" ? <AgentsContent /> : <MCPContent />}
               </div>
             </motion.div>
           </motion.div>

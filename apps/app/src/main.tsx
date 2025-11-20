@@ -19,12 +19,10 @@ declare module "@tanstack/react-router" {
 // Manually preload specific routes
 if (window.electron) {
   // Only preload routes if in electron shell
-  router.preloadRoute({ to: "/agents" });
   router.preloadRoute({
     to: "/tasks",
     search: { project: undefined, agent: undefined },
   });
-  router.preloadRoute({ to: "/mcp" });
 }
 
 // Render the app

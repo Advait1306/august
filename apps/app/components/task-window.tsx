@@ -28,6 +28,7 @@ import { XIcon, PlusIcon, FolderIcon, BotIcon } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import { useScrollGradients } from "@/hooks/use-scroll-gradients";
 
 // Message part types for virtualization
 type MessagePart =
@@ -126,10 +127,6 @@ export default function TaskWindow() {
   const [isAgentBadgeHovered, setIsAgentBadgeHovered] = useState(false);
   const [isCwdBadgeHovered, setIsCwdBadgeHovered] = useState(false);
 
-  // Gradient states
-  const [showTopGradient, setShowTopGradient] = useState(false);
-  const [showBottomGradient, setShowBottomGradient] = useState(false);
-
   // Messages
   const {
     selectedTaskId,
@@ -148,6 +145,15 @@ export default function TaskWindow() {
   const messageParts = useMemo(() => {
     return messages ? flattenMessagesToParts(messages) : [];
   }, [messages]);
+
+  // Use scroll gradients hook with drillToScrollElement for VList
+  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(
+    scrollContainerRef,
+    {
+      drillToScrollElement: true,
+      initDelay: 100,
+    }
+  );
 
   // Derived state and functions for ease of use
   const composerState = composerStates[selectedTaskId];
@@ -249,37 +255,10 @@ export default function TaskWindow() {
     }
   }, [selectedTaskId, messages]);
 
-  // Handle scroll to show/hide gradients
+  // Recalculate gradients when messages or task changes
   useEffect(() => {
-    // Add a small delay to ensure VList is mounted
-    const timer = setTimeout(() => {
-      // VList creates its own scroll container - find it via DOM
-      const container = scrollContainerRef.current?.querySelector('[style*="overflow"]') as HTMLElement;
-
-      if (!container) return;
-
-      const handleScroll = () => {
-        const { scrollTop, scrollHeight, clientHeight } = container;
-        setShowTopGradient(scrollTop > 0);
-        setShowBottomGradient(scrollTop + clientHeight < scrollHeight - 1);
-      };
-
-      // Initial check
-      handleScroll();
-
-      container.addEventListener("scroll", handleScroll);
-      // Also check on resize in case content changes
-      const resizeObserver = new ResizeObserver(handleScroll);
-      resizeObserver.observe(container);
-
-      return () => {
-        container.removeEventListener("scroll", handleScroll);
-        resizeObserver.disconnect();
-      };
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [messages, selectedTaskId]);
+    recalculate();
+  }, [messages, selectedTaskId, recalculate]);
 
   // Menu options for @ hotkey
   const menuOptions = useMemo<PromptMenuOption[]>(() => {

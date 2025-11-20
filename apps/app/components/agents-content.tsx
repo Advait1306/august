@@ -25,6 +25,7 @@ import { nanoid } from "nanoid";
 import { useZero } from "@/src/hooks/useZero";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
+import { useScrollGradients } from "@/hooks/use-scroll-gradients";
 
 type NewAgent = Omit<
   Agent,
@@ -50,18 +51,13 @@ export function AgentsContent() {
   const [localSystemPrompt, setLocalSystemPrompt] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
-  // Gradient states for sidebar
-  const [showTopGradient, setShowTopGradient] = useState(false);
-  const [showBottomGradient, setShowBottomGradient] = useState(false);
+  // Scroll gradient hooks
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // Gradient states for document view
-  const [showDocTopGradient, setShowDocTopGradient] = useState(false);
-  const [showDocBottomGradient, setShowDocBottomGradient] = useState(false);
-  const docScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Derive selected agent from agents array
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) || null;
+
+  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(scrollContainerRef);
 
   // Sync local state when selected agent changes
   useEffect(() => {
@@ -174,55 +170,10 @@ export function AgentsContent() {
     }
   }, [selectedAgentId]);
 
-  // Handle scroll to show/hide gradients for sidebar
+  // Recalculate gradients when agents change
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      setShowTopGradient(scrollTop > 0);
-      setShowBottomGradient(scrollTop + clientHeight < scrollHeight - 1);
-    };
-
-    // Initial check
-    handleScroll();
-
-    container.addEventListener("scroll", handleScroll);
-    // Also check on resize in case content changes
-    const resizeObserver = new ResizeObserver(handleScroll);
-    resizeObserver.observe(container);
-
-    return () => {
-      container.removeEventListener("scroll", handleScroll);
-      resizeObserver.disconnect();
-    };
-  }, [agents]);
-
-  // Handle scroll to show/hide gradients for document view
-  useEffect(() => {
-    const container = docScrollContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      setShowDocTopGradient(scrollTop > 0);
-      setShowDocBottomGradient(scrollTop + clientHeight < scrollHeight - 1);
-    };
-
-    // Initial check
-    handleScroll();
-
-    container.addEventListener("scroll", handleScroll);
-    // Also check on resize in case content changes
-    const resizeObserver = new ResizeObserver(handleScroll);
-    resizeObserver.observe(container);
-
-    return () => {
-      container.removeEventListener("scroll", handleScroll);
-      resizeObserver.disconnect();
-    };
-  }, [selectedAgent]);
+    recalculate();
+  }, [agents, recalculate]);
 
   return (
     <div className="flex h-full w-full">
@@ -314,52 +265,35 @@ export function AgentsContent() {
           )}
 
           {selectedAgent ? (
-            <div className="flex-1 relative min-h-0">
-              <div
-                ref={docScrollContainerRef}
-                className="absolute inset-0 overflow-auto"
-              >
-                <div className="max-w-3xl mx-auto px-16 py-6">
-                  <Input
-                    value={localName}
-                    onChange={(e) => {
-                      setLocalName(e.target.value);
-                    }}
-                    onFocus={() => setIsEditing(true)}
-                    onBlur={(e) => {
-                      handleUpdateAgent({ name: e.target.value });
-                      setIsEditing(false);
-                    }}
-                    placeholder="Enter agent name"
-                    className="!bg-background !text-4xl font-semibold mb-8 border-none px-0 shadow-none focus-visible:ring-0 tracking-tight"
-                  />
-                  <Textarea
-                    value={localSystemPrompt}
-                    onChange={(e) => {
-                      setLocalSystemPrompt(e.target.value);
-                    }}
-                    onFocus={() => setIsEditing(true)}
-                    onBlur={(e) => {
-                      handleUpdateAgent({ system_prompt: e.target.value });
-                      setIsEditing(false);
-                    }}
-                    placeholder="Enter the system prompt that defines your agent's behavior..."
-                    className="!bg-background min-h-[300px] resize-none border-none px-0 shadow-none focus-visible:ring-0 !text-base/7 whitespace-pre-wrap text-muted-foreground"
-                  />
-                </div>
+            <div className="flex-1 overflow-auto">
+              <div className="max-w-3xl mx-auto px-16 py-6">
+                <Input
+                  value={localName}
+                  onChange={(e) => {
+                    setLocalName(e.target.value);
+                  }}
+                  onFocus={() => setIsEditing(true)}
+                  onBlur={(e) => {
+                    handleUpdateAgent({ name: e.target.value });
+                    setIsEditing(false);
+                  }}
+                  placeholder="Enter agent name"
+                  className="!bg-background !text-4xl font-semibold mb-8 border-none px-0 shadow-none focus-visible:ring-0 tracking-tight"
+                />
+                <Textarea
+                  value={localSystemPrompt}
+                  onChange={(e) => {
+                    setLocalSystemPrompt(e.target.value);
+                  }}
+                  onFocus={() => setIsEditing(true)}
+                  onBlur={(e) => {
+                    handleUpdateAgent({ system_prompt: e.target.value });
+                    setIsEditing(false);
+                  }}
+                  placeholder="Enter the system prompt that defines your agent's behavior..."
+                  className="!bg-background min-h-[300px] resize-none border-none px-0 shadow-none focus-visible:ring-0 !text-base/7 whitespace-pre-wrap text-muted-foreground"
+                />
               </div>
-
-              {/* Gradient Overlays */}
-              {showDocTopGradient && (
-                <div className="absolute top-0 left-0 right-0 h-16 pointer-events-none z-10">
-                  <div className="absolute inset-0 bg-gradient-to-b from-background via-background/50 to-transparent" />
-                </div>
-              )}
-              {showDocBottomGradient && (
-                <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none z-10">
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-                </div>
-              )}
             </div>
           ) : (
             <motion.div
