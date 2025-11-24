@@ -147,13 +147,11 @@ export default function TaskWindow() {
   }, [messages]);
 
   // Use scroll gradients hook with drillToScrollElement for VList
-  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(
-    scrollContainerRef,
-    {
+  const { showTopGradient, showBottomGradient, recalculate } =
+    useScrollGradients(scrollContainerRef, {
       drillToScrollElement: true,
       initDelay: 100,
-    }
-  );
+    });
 
   // Derived state and functions for ease of use
   const composerState = composerStates[selectedTaskId];
@@ -316,7 +314,10 @@ export default function TaskWindow() {
             description="Share an idea with your artificial helper"
           />
         ) : (
-          <div ref={scrollContainerRef} className="relative h-full w-full max-w-[720px]">
+          <div
+            ref={scrollContainerRef}
+            className="relative h-full w-full max-w-[720px]"
+          >
             <VList className="h-full no-scrollbar w-full" ref={virtualizerRef}>
               {messageParts.map((part) => (
                 <div key={part.id}>
