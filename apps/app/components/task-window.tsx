@@ -21,8 +21,8 @@ import { VList, VListHandle } from "virtua";
 import {
   UserMessagePartView,
   AssistantTextPartView,
-  AssistantToolPartView,
 } from "./message";
+import { ToolGroupView } from "./tool-group";
 import { AssistantContent, ToolResultPart } from "ai";
 import { XIcon, PlusIcon, FolderIcon, BotIcon } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -41,12 +41,15 @@ type MessagePart =
       partIndex: number;
     }
   | {
-      type: "assistant-tool";
+      type: "tool-group";
       id: string;
-      toolCall: any;
-      toolResult: ToolResultPart | undefined;
+      tools: Array<{
+        toolCall: any;
+        toolResult: ToolResultPart | undefined;
+        partIndex: number;
+      }>;
       messageIndex: number;
-      partIndex: number;
+      startPartIndex: number;
     };
 
 // Transform messages into flat list of parts for virtualization
@@ -75,9 +78,32 @@ function flattenMessagesToParts(messages: readonly any[]): MessagePart[] {
           AssistantContent,
           string
         >;
+
+        // Track consecutive tool calls to group them
+        let currentToolGroup: Array<{
+          toolCall: any;
+          toolResult: ToolResultPart | undefined;
+          partIndex: number;
+        }> = [];
+        let toolGroupStartIndex = -1;
+
         contentParts.forEach((content: any, partIndex: number) => {
           switch (content.type) {
             case "text":
+              // If we have accumulated tools, push them as a group first
+              if (currentToolGroup.length > 0) {
+                parts.push({
+                  type: "tool-group",
+                  id: `assistant-${messageIndex}-group-${toolGroupStartIndex}`,
+                  tools: currentToolGroup,
+                  messageIndex,
+                  startPartIndex: toolGroupStartIndex,
+                });
+                currentToolGroup = [];
+                toolGroupStartIndex = -1;
+              }
+
+              // Add the text part
               parts.push({
                 type: "assistant-text",
                 id: `assistant-${messageIndex}-${partIndex}`,
@@ -92,12 +118,14 @@ function flattenMessagesToParts(messages: readonly any[]): MessagePart[] {
                   part.type === "tool-result" &&
                   part.toolCallId === content.toolCallId
               );
-              parts.push({
-                type: "assistant-tool",
-                id: `assistant-${messageIndex}-${partIndex}`,
+
+              // Start or continue tool group
+              if (currentToolGroup.length === 0) {
+                toolGroupStartIndex = partIndex;
+              }
+              currentToolGroup.push({
                 toolCall: content,
                 toolResult: result,
-                messageIndex,
                 partIndex,
               });
               break;
@@ -107,6 +135,17 @@ function flattenMessagesToParts(messages: readonly any[]): MessagePart[] {
               break;
           }
         });
+
+        // Handle any remaining tools at the end
+        if (currentToolGroup.length > 0) {
+          parts.push({
+            type: "tool-group",
+            id: `assistant-${messageIndex}-group-${toolGroupStartIndex}`,
+            tools: currentToolGroup,
+            messageIndex,
+            startPartIndex: toolGroupStartIndex,
+          });
+        }
       }
     }
   });
@@ -327,11 +366,8 @@ export default function TaskWindow() {
                   {part.type === "assistant-text" && (
                     <AssistantTextPartView text={part.text} />
                   )}
-                  {part.type === "assistant-tool" && (
-                    <AssistantToolPartView
-                      toolCall={part.toolCall}
-                      toolResult={part.toolResult}
-                    />
+                  {part.type === "tool-group" && (
+                    <ToolGroupView tools={part.tools} />
                   )}
                 </div>
               ))}
