@@ -155,10 +155,7 @@ export const UserMessagePartView = ({ content }: { content: any }) => {
   const contents =
     typeof content === "string"
       ? [
-          <MessageContent
-            className="rounded-3xl max-w-[80%]"
-            key="0"
-          >
+          <MessageContent className="rounded-3xl max-w-[80%]" key="0">
             {content}
           </MessageContent>,
         ]
@@ -166,10 +163,7 @@ export const UserMessagePartView = ({ content }: { content: any }) => {
           switch (contentPart.type) {
             case "text":
               return (
-                <MessageContent
-                  className="rounded-3xl max-w-[80%]"
-                  key={index}
-                >
+                <MessageContent className="rounded-3xl max-w-[80%]" key={index}>
                   {contentPart.text}
                 </MessageContent>
               );
@@ -265,7 +259,7 @@ export const AssistantToolPartView = ({
   toolResult: ToolResultPart | undefined;
 }) => {
   return (
-    <Tool className="rounded-2xl">
+    <Tool className="rounded-2xl bg-accent w-fit max-w-full">
       <ToolHeader
         type={`tool-${toolCall.toolName}`}
         state={toolResult ? "output-available" : "input-available"}

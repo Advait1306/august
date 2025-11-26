@@ -10,21 +10,24 @@ import { cn } from "@/lib/utils";
 import type { ToolUIPart } from "ai";
 import {
   CheckCircleIcon,
+  CheckIcon,
   ChevronDownIcon,
   CircleIcon,
   ClockIcon,
   WrenchIcon,
   XCircleIcon,
+  XIcon,
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 import { CodeBlock } from "./code-block";
+import { Spinner } from "../ui/spinner";
 
 export type ToolProps = ComponentProps<typeof Collapsible>;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
   <Collapsible
-    className={cn("not-prose mb-4 w-full rounded-md border", className)}
+    className={cn("not-prose mb-4 w-full rounded-md", className)}
     {...props}
   />
 );
@@ -37,13 +40,6 @@ export type ToolHeaderProps = {
 };
 
 const getStatusBadge = (status: ToolUIPart["state"]) => {
-  const colors = {
-    "input-streaming": "bg-[#dbd493]",
-    "input-available": "bg-[#93acdb]",
-    "output-available": "bg-[#97db93]",
-    "output-error": "bg-[#db9393]",
-  } as const;
-
   const textColors = {
     "input-streaming": "text-white",
     "input-available": "text-white",
@@ -51,34 +47,23 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
     "output-error": "text-white",
   } as const;
 
-  const labels = {
-    "input-streaming": "Pending",
-    "input-available": "Running",
-    "output-available": "Completed",
-    "output-error": "Error",
-  } as const;
-
   const icons = {
     "input-streaming": <CircleIcon className="size-4" />,
-    "input-available": (
-      <ClockIcon className="size-4 animate-pulse text-white" />
-    ),
-    "output-available": <CheckCircleIcon className="size-4 text-green-600" />,
-    "output-error": <XCircleIcon className="size-4 text-red-600" />,
+    "input-available": <Spinner className="size-4 animate-spin text-white" />,
+    "output-available": <CheckIcon className="size-4 text-green-500" />,
+    "output-error": <XIcon className="size-4 text-red-500" />,
   } as const;
 
   return (
-    <Badge
+    <div
       className={cn(
         "gap-1.5 rounded-full text-xs",
-        colors[status],
-        textColors[status]
+        textColors[status],
+        "opacity-70"
       )}
-      variant="secondary"
     >
       {icons[status]}
-      {labels[status]}
-    </Badge>
+    </div>
   );
 };
 
@@ -91,19 +76,21 @@ export const ToolHeader = ({
 }: ToolHeaderProps) => (
   <CollapsibleTrigger
     className={cn(
-      "flex w-full items-center justify-between gap-4 p-3",
+      "flex w-full items-center justify-between gap-4 p-0.5 pr-2",
       className
     )}
     {...props}
   >
     <div className="flex items-center gap-2">
-      <WrenchIcon className="size-4 text-muted-foreground" />
-      <span className="font-medium text-sm">
+      <div className="p-2 bg-[black] rounded-full">
+        <WrenchIcon className="size-3 text-muted-foreground" />
+      </div>
+      <span className="font-medium text-xs">
         {title ?? type.split("-").slice(1).join("-")}
       </span>
       {getStatusBadge(state)}
     </div>
-    <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+    {/* <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" /> */}
   </CollapsibleTrigger>
 );
 
