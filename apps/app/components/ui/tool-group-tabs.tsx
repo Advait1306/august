@@ -74,10 +74,14 @@ function ToolGroupTabsContent({
 }: React.ComponentProps<typeof TabsPrimitive.Content>) {
   return (
     <TabsPrimitive.Content data-slot="tabs-content" {...props} asChild>
-      <motion.div className={cn("flex-1 outline-none relative", className)}>
+      <motion.div>
         {props.children}
 
-        <div className="absolute inset-0 -z-1 bg-accent rounded-b-2xl"></div>
+        {/* <motion.div
+          className="absolute inset-0 -z-1 bg-accent rounded-b-2xl"
+          layoutId="tool-group-tabs-content-background"
+          layout
+        /> */}
       </motion.div>
     </TabsPrimitive.Content>
   );

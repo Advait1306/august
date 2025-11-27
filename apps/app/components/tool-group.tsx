@@ -11,9 +11,10 @@ import {
   ToolGroupTabsList,
   ToolGroupTabsTrigger,
 } from "@/components/ui/tool-group-tabs";
-import { motion } from "motion/react";
+import { AnimatePresence, AnimateSharedLayout, motion } from "motion/react";
 import { ToolCallPart, ToolResultPart } from "ai";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 // Component to render a group of consecutive tools horizontally
 export const ToolGroupView = ({
@@ -29,12 +30,7 @@ export const ToolGroupView = ({
 
   return (
     <ToolGroupTabs value={selectedId} asChild={true}>
-      <motion.div
-        className="w-full"
-        layout="size"
-        key={selectedId}
-        layoutId="test"
-      >
+      <motion.div className="w-full" layout>
         <ToolGroupTabsList>
           {tools.map((tool) => {
             const toolValue = `tool-${tool.partIndex}`;
@@ -64,23 +60,39 @@ export const ToolGroupView = ({
             );
           })}
         </ToolGroupTabsList>
-        {selectedId &&
-          tools.map((tool) => (
-            <ToolGroupTabsContent
-              key={tool.partIndex}
-              value={`tool-${tool.partIndex}`}
+
+        <AnimatePresence>
+          {selectedId && (
+            <motion.div
+              layout
+              className={cn(
+                "flex-1 outline-none relative overflow-hidden bg-accent"
+              )}
+              initial={{ height: 0 }}
+              animate={{ height: "400px" }}
+              layoutId="tool-group-tabs-content"
+              id="tool-group-tabs-content"
+              key="tool-group-tabs-content"
             >
-              <ToolContent>
-                <ToolInput input={tool.toolCall.input} />
-                {tool.toolResult && (
-                  <ToolOutput
-                    errorText={undefined}
-                    output={tool.toolResult.output}
-                  />
-                )}
-              </ToolContent>
-            </ToolGroupTabsContent>
-          ))}
+              {tools.map((tool) => (
+                <ToolGroupTabsContent
+                  key={tool.partIndex}
+                  value={`tool-${tool.partIndex}`}
+                >
+                  <ToolContent>
+                    <ToolInput input={tool.toolCall.input} />
+                    {tool.toolResult && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={tool.toolResult.output}
+                      />
+                    )}
+                  </ToolContent>
+                </ToolGroupTabsContent>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </ToolGroupTabs>
   );

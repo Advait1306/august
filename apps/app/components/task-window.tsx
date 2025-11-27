@@ -339,7 +339,10 @@ export default function TaskWindow() {
       )}
 
       {/* Thread */}
-      <div className="absolute w-full h-[calc(100%-210px)] px-8 bottom-40 flex justify-center">
+      <motion.div
+        layout
+        className="absolute w-full h-[calc(100%-210px)] px-8 bottom-40 flex justify-center"
+      >
         {selectedTaskId === "new-conversation" ? (
           <ConversationEmptyState
             icon={
@@ -350,26 +353,32 @@ export default function TaskWindow() {
             description="Share an idea with your artificial helper"
           />
         ) : (
-          <div
+          <motion.div
             ref={scrollContainerRef}
+            layout
             className="relative h-full w-full max-w-[720px]"
           >
-            <VList className="h-full no-scrollbar w-full" ref={virtualizerRef}>
-              {messageParts.map((part) => (
-                <motion.div key={part.id} layout>
-                  {part.type === "user-content" && (
-                    <UserMessagePartView content={part.content} />
-                  )}
-                  {part.type === "assistant-text" && (
-                    <AssistantTextPartView text={part.text} />
-                  )}
-                  {part.type === "tool-group" && (
-                    <ToolGroupView tools={part.tools} />
-                  )}
-                </motion.div>
-              ))}
-              {isGenerating && <BlinkingCursor />}
-            </VList>
+            <AnimatePresence>
+              <VList
+                className="h-full no-scrollbar w-full"
+                ref={virtualizerRef}
+              >
+                {messageParts.map((part) => (
+                  <motion.div key={part.id} layout layoutId={part.id}>
+                    {part.type === "user-content" && (
+                      <UserMessagePartView content={part.content} />
+                    )}
+                    {part.type === "assistant-text" && (
+                      <AssistantTextPartView text={part.text} />
+                    )}
+                    {part.type === "tool-group" && (
+                      <ToolGroupView tools={part.tools} />
+                    )}
+                  </motion.div>
+                ))}
+                {isGenerating && <BlinkingCursor />}
+              </VList>
+            </AnimatePresence>
 
             {/* Gradient Overlays */}
             {showTopGradient && (
@@ -382,9 +391,9 @@ export default function TaskWindow() {
                 <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
               </div>
             )}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       {/* Composer */}
       <motion.div

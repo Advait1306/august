@@ -5,6 +5,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 import { CodeBlock } from "./code-block";
 import { Spinner } from "../ui/spinner";
+import { motion, type HTMLMotionProps } from "motion/react";
 
 export type ToolProps = ComponentProps<"div">;
 
@@ -38,7 +39,7 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
   } as const;
 
   return (
-    <div
+    <motion.div
       className={cn(
         "gap-1.5 rounded-full text-xs",
         textColors[status],
@@ -46,7 +47,7 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
       )}
     >
       {icons[status]}
-    </div>
+    </motion.div>
   );
 };
 
@@ -57,7 +58,8 @@ export const ToolHeader = ({
   state,
   ...props
 }: ToolHeaderProps) => (
-  <div
+  <motion.div
+    layout
     className={cn(
       "flex w-full items-center justify-between gap-4 p-0.5 pr-2",
       className
@@ -74,14 +76,18 @@ export const ToolHeader = ({
       {getStatusBadge(state)}
     </div>
     {/* <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" /> */}
-  </div>
+  </motion.div>
 );
 
-export type ToolContentProps = ComponentProps<"div">;
+export type ToolContentProps = HTMLMotionProps<"div">;
 
 export const ToolContent = ({ className, ...props }: ToolContentProps) => (
-  <div
-    className={cn("text-popover-foreground outline-none", className)}
+  <motion.div
+    layout
+    className={cn(
+      "text-popover-foreground outline-none overflow-hidden",
+      className
+    )}
     {...props}
   />
 );
