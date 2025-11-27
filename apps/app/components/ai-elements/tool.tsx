@@ -1,32 +1,15 @@
-"use client";
-
-import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import type { ToolUIPart } from "ai";
-import {
-  CheckCircleIcon,
-  CheckIcon,
-  ChevronDownIcon,
-  CircleIcon,
-  ClockIcon,
-  WrenchIcon,
-  XCircleIcon,
-  XIcon,
-} from "lucide-react";
+import { CheckIcon, CircleIcon, WrenchIcon, XIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 import { CodeBlock } from "./code-block";
 import { Spinner } from "../ui/spinner";
 
-export type ToolProps = ComponentProps<typeof Collapsible>;
+export type ToolProps = ComponentProps<"div">;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
-  <Collapsible
+  <div
     className={cn("not-prose mb-4 w-full rounded-md", className)}
     {...props}
   />
@@ -74,7 +57,7 @@ export const ToolHeader = ({
   state,
   ...props
 }: ToolHeaderProps) => (
-  <CollapsibleTrigger
+  <div
     className={cn(
       "flex w-full items-center justify-between gap-4 p-0.5 pr-2",
       className
@@ -91,17 +74,14 @@ export const ToolHeader = ({
       {getStatusBadge(state)}
     </div>
     {/* <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" /> */}
-  </CollapsibleTrigger>
+  </div>
 );
 
-export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
+export type ToolContentProps = ComponentProps<"div">;
 
 export const ToolContent = ({ className, ...props }: ToolContentProps) => (
-  <CollapsibleContent
-    className={cn(
-      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
-      className
-    )}
+  <div
+    className={cn("text-popover-foreground outline-none", className)}
     {...props}
   />
 );
@@ -111,7 +91,10 @@ export type ToolInputProps = ComponentProps<"div"> & {
 };
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
-  <div className={cn("space-y-2 overflow-hidden p-4", className)} {...props}>
+  <div
+    className={cn("space-y-2 overflow-hidden py-4 px-4", className)}
+    {...props}
+  >
     <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
       Parameters
     </h4>
@@ -147,7 +130,7 @@ export const ToolOutput = ({
   }
 
   return (
-    <div className={cn("space-y-2 p-4", className)} {...props}>
+    <div className={cn("space-y-2 py-4 px-4", className)} {...props}>
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {errorText ? "Error" : "Result"}
       </h4>

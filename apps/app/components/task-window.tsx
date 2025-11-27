@@ -18,10 +18,7 @@ import { BlinkingCursor } from "./blinking-cursor";
 import { useSyncContext } from "@/src/components/sync_engine";
 import { motion, AnimatePresence } from "motion/react";
 import { VList, VListHandle } from "virtua";
-import {
-  UserMessagePartView,
-  AssistantTextPartView,
-} from "./message";
+import { UserMessagePartView, AssistantTextPartView } from "./message";
 import { ToolGroupView } from "./tool-group";
 import { AssistantContent, ToolResultPart } from "ai";
 import { XIcon, PlusIcon, FolderIcon, BotIcon } from "lucide-react";
@@ -359,7 +356,7 @@ export default function TaskWindow() {
           >
             <VList className="h-full no-scrollbar w-full" ref={virtualizerRef}>
               {messageParts.map((part) => (
-                <div key={part.id}>
+                <motion.div key={part.id} layout>
                   {part.type === "user-content" && (
                     <UserMessagePartView content={part.content} />
                   )}
@@ -369,7 +366,7 @@ export default function TaskWindow() {
                   {part.type === "tool-group" && (
                     <ToolGroupView tools={part.tools} />
                   )}
-                </div>
+                </motion.div>
               ))}
               {isGenerating && <BlinkingCursor />}
             </VList>
