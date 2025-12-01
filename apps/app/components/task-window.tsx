@@ -203,6 +203,7 @@ export default function TaskWindow() {
   const cwd = composerState?.cwd ?? "";
   const pendingPermissions = permissions[selectedTaskId] || [];
   const currentPermission = pendingPermissions[0];
+  // const currentPermission = false;
   const isGenerating = generationState.includes(selectedTaskId);
 
   const setPrompt = useCallback(
@@ -406,7 +407,7 @@ export default function TaskWindow() {
           y:
             selectedTaskId === "new-conversation"
               ? "0%"
-              : "calc(50vh - 50% - 3rem)",
+              : "calc(50vh - 50% - 1.5rem)",
           opacity: 1,
         }}
         transition={{
@@ -415,57 +416,24 @@ export default function TaskWindow() {
           damping: 200,
         }}
       >
-        <PromptInput
-          onSubmit={(_, e) => {
-            // If generating, stop the generation instead of submitting
-            if (isGenerating) {
-              e.preventDefault();
-              stopGeneration(selectedTaskId);
-              return;
-            }
-            sendMessage(prompt);
+        <motion.div
+          animate={{
+            scale: currentPermission ? 0.9 : 1,
           }}
-          className="rounded-3xl p-2"
         >
-          <PromptInputBody>
-            {currentPermission ? (
-              <div className="flex justify-between items-center h-full pr-1 pl-4 py-1">
-                <div>
-                  Allow <span>{currentPermission.toolName}</span> tool?
-                  {pendingPermissions.length > 1 && (
-                    <span className="text-muted-foreground ml-2">
-                      (1 of {pendingPermissions.length})
-                    </span>
-                  )}
-                </div>
-                <ButtonGroup>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      currentPermission.alwaysAllow();
-                    }}
-                  >
-                    Always Allow
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      currentPermission.grant();
-                    }}
-                  >
-                    Allow
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      currentPermission.deny();
-                    }}
-                  >
-                    Deny
-                  </Button>
-                </ButtonGroup>
-              </div>
-            ) : (
+          <PromptInput
+            onSubmit={(_, e) => {
+              // If generating, stop the generation instead of submitting
+              if (isGenerating) {
+                e.preventDefault();
+                stopGeneration(selectedTaskId);
+                return;
+              }
+              sendMessage(prompt);
+            }}
+            className="rounded-3xl p-2 mb-4"
+          >
+            <PromptInputBody>
               <PromptInputTextarea
                 onChange={(e) => setPrompt(e.target.value)}
                 disabled={isGenerating}
@@ -485,65 +453,33 @@ export default function TaskWindow() {
                     : undefined
                 }
               />
-            )}
-          </PromptInputBody>
-          <PromptInputToolbar>
-            <PromptInputTools>
-              {selectedTaskId === "new-conversation" && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-md"
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PromptMenu options={menuOptions} />
-                </Popover>
-              )}
-              {selectedTaskId === "new-conversation" && agent && (
-                <Badge
-                  variant="outline"
-                  className="flex items-center gap-1 py-2 rounded cursor-pointer"
-                  onMouseEnter={() => setIsAgentBadgeHovered(true)}
-                  onMouseLeave={() => setIsAgentBadgeHovered(false)}
-                  onClick={clearAgent}
-                >
-                  <AnimatePresence>
-                    {isAgentBadgeHovered && (
-                      <motion.div
-                        initial={{ width: 0, opacity: 0 }}
-                        animate={{ width: "auto", opacity: 1 }}
-                        exit={{ width: 0, opacity: 0 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 2000,
-                          damping: 200,
-                        }}
-                        layout
+            </PromptInputBody>
+            <PromptInputToolbar>
+              <PromptInputTools>
+                {selectedTaskId === "new-conversation" && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md"
                       >
-                        <XIcon className="w-4 h-4" />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  <BotIcon className="w-4 h-4" />
-                  <span>{agent?.name || "Agent"}</span>
-                </Badge>
-              )}
-              {selectedTaskId === "new-conversation" &&
-                cwd &&
-                cwd !== defaultCwd && (
+                        <PlusIcon className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PromptMenu options={menuOptions} />
+                  </Popover>
+                )}
+                {selectedTaskId === "new-conversation" && agent && (
                   <Badge
                     variant="outline"
                     className="flex items-center gap-1 py-2 rounded cursor-pointer"
-                    onMouseEnter={() => setIsCwdBadgeHovered(true)}
-                    onMouseLeave={() => setIsCwdBadgeHovered(false)}
-                    onClick={clearCwd}
+                    onMouseEnter={() => setIsAgentBadgeHovered(true)}
+                    onMouseLeave={() => setIsAgentBadgeHovered(false)}
+                    onClick={clearAgent}
                   >
                     <AnimatePresence>
-                      {isCwdBadgeHovered && (
+                      {isAgentBadgeHovered && (
                         <motion.div
                           initial={{ width: 0, opacity: 0 }}
                           animate={{ width: "auto", opacity: 1 }}
@@ -559,18 +495,105 @@ export default function TaskWindow() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <FolderIcon className="w-4 h-4" />
-                    <span>{cwd.match(/[^/\\]+$/)?.[0] || "Folder"}</span>
+                    <BotIcon className="w-4 h-4" />
+                    <span>{agent?.name || "Agent"}</span>
                   </Badge>
                 )}
-            </PromptInputTools>
-            <PromptInputSubmit
-              className="rounded-full"
-              disabled={!isGenerating && prompt.trim().length === 0}
-              status={isGenerating ? "streaming" : "ready"}
-            />
-          </PromptInputToolbar>
-        </PromptInput>
+                {selectedTaskId === "new-conversation" &&
+                  cwd &&
+                  cwd !== defaultCwd && (
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1 py-2 rounded cursor-pointer"
+                      onMouseEnter={() => setIsCwdBadgeHovered(true)}
+                      onMouseLeave={() => setIsCwdBadgeHovered(false)}
+                      onClick={clearCwd}
+                    >
+                      <AnimatePresence>
+                        {isCwdBadgeHovered && (
+                          <motion.div
+                            initial={{ width: 0, opacity: 0 }}
+                            animate={{ width: "auto", opacity: 1 }}
+                            exit={{ width: 0, opacity: 0 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 2000,
+                              damping: 200,
+                            }}
+                            layout
+                          >
+                            <XIcon className="w-4 h-4" />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      <FolderIcon className="w-4 h-4" />
+                      <span>{cwd.match(/[^/\\]+$/)?.[0] || "Folder"}</span>
+                    </Badge>
+                  )}
+              </PromptInputTools>
+              <PromptInputSubmit
+                className="rounded-full"
+                disabled={!isGenerating && prompt.trim().length === 0}
+                status={isGenerating ? "streaming" : "ready"}
+              />
+            </PromptInputToolbar>
+          </PromptInput>
+        </motion.div>
+        {currentPermission && (
+          <motion.div
+            className="absolute bottom-0 w-full flex justify-between items-center h-[100px] pr-1 pl-4 py-2 mb-4 bg-background rounded-2xl border border-border"
+            initial={{
+              y: 100,
+              opacity: 0,
+            }}
+            animate={{
+              y: 0,
+              opacity: 1,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 2000,
+              damping: 200,
+            }}
+          >
+            <>
+              <div>
+                Allow <span>{currentPermission.toolName}</span> tool?
+                {pendingPermissions.length > 1 && (
+                  <span className="text-muted-foreground ml-2">
+                    (1 of {pendingPermissions.length})
+                  </span>
+                )}
+              </div>
+              <ButtonGroup>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    currentPermission.alwaysAllow();
+                  }}
+                >
+                  Always Allow
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    currentPermission.grant();
+                  }}
+                >
+                  Allow
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    currentPermission.deny();
+                  }}
+                >
+                  Deny
+                </Button>
+              </ButtonGroup>
+            </>
+          </motion.div>
+        )}
       </motion.div>
     </motion.div>
   );
