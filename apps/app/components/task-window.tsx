@@ -21,7 +21,14 @@ import { VList, VListHandle } from "virtua";
 import { UserMessagePartView, AssistantTextPartView } from "./message";
 import { ToolGroupView } from "./tool-group";
 import { AssistantContent, ToolResultPart } from "ai";
-import { XIcon, PlusIcon, FolderIcon, BotIcon } from "lucide-react";
+import {
+  XIcon,
+  PlusIcon,
+  FolderIcon,
+  BotIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "lucide-react";
 import { Badge } from "./ui/badge";
 import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
@@ -397,7 +404,7 @@ export default function TaskWindow() {
         )}
       </motion.div>
 
-      {/* Composer */}
+      {/* Composer & Permission Container */}
       <motion.div
         className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
         initial={{
@@ -417,10 +424,11 @@ export default function TaskWindow() {
           damping: 200,
         }}
       >
+        {/* Composer */}
         <motion.div
           animate={{
             scale: currentPermission ? 0.9 : 1,
-            y: currentPermission ? -30 : 0,
+            y: currentPermission ? -50 : 0,
           }}
         >
           <PromptInput
@@ -433,7 +441,7 @@ export default function TaskWindow() {
               }
               sendMessage(prompt);
             }}
-            className="rounded-3xl p-2 mb-4"
+            className="rounded-2xl p-2 mb-4"
           >
             <PromptInputBody>
               <PromptInputTextarea
@@ -534,16 +542,18 @@ export default function TaskWindow() {
                   )}
               </PromptInputTools>
               <PromptInputSubmit
-                className="rounded-full"
+                className="rounded-lg"
                 disabled={!isGenerating && prompt.trim().length === 0}
                 status={isGenerating ? "streaming" : "ready"}
               />
             </PromptInputToolbar>
           </PromptInput>
         </motion.div>
+
+        {/* Permission */}
         {currentPermission && (
           <motion.div
-            className="absolute bottom-0 w-full flex justify-between items-center px-4 py-2 mb-4 bg-background rounded-3xl border border-border"
+            className="absolute bottom-0 w-full flex justify-between items-center p-4 mb-4 bg-background rounded-2xl border border-border"
             initial={{
               y: 100,
               opacity: 0,
@@ -559,15 +569,33 @@ export default function TaskWindow() {
             }}
           >
             <div className="w-full flex flex-col gap-2">
-              <div>
+              <div className="flex flex-col gap-2">
                 <div className="w-full flex justify-between items-center gap-2">
                   <span className="font-semibold">
                     {currentPermission.toolName}
                   </span>
                   {pendingPermissions.length === 1 && (
-                    <span className="text-muted-foreground ml-2">
-                      (1 of {pendingPermissions.length})
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground ml-2">
+                        (1 of {pendingPermissions.length})
+                      </span>
+                      <ButtonGroup>
+                        <Button
+                          variant="outline"
+                          onClick={() => {}}
+                          size={"xs"}
+                        >
+                          <ChevronLeftIcon className="w-2 h-2" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {}}
+                          size={"xs"}
+                        >
+                          <ChevronRightIcon className="w-2 h-2" />
+                        </Button>
+                      </ButtonGroup>
+                    </div>
                   )}
                 </div>
 
@@ -577,7 +605,7 @@ export default function TaskWindow() {
                   className="w-full border-none [&_pre]:!p-0"
                 />
               </div>
-              <div className="absolute bottom-2 right-2 w-full flex justify-end">
+              <div className="absolute bottom-4 right-4 w-full flex justify-end">
                 <ButtonGroup>
                   <Button
                     variant="outline"
