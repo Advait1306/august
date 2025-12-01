@@ -24,7 +24,7 @@ export const ToolGroupView = ({
   }>;
 }) => {
   return (
-    <motion.div className="w-full flex gap-2 flex-wrap" layout>
+    <motion.div className="w-full flex gap-2 flex-wrap pb-2" layout>
       {tools.map((tool) => (
         <Popover key={tool.partIndex}>
           <PopoverTrigger asChild>
@@ -33,9 +33,10 @@ export const ToolGroupView = ({
               className={cn(
                 "inline-flex items-center justify-center rounded-full",
                 "text-sm font-medium",
-                "transition-colors hover:bg-accent/80",
+                "transition-colors hover:bg-card/60",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                "bg-accent"
+                "bg-card border",
+                "data-[state=open]:bg-popover"
               )}
             >
               <ToolHeader
@@ -47,13 +48,13 @@ export const ToolGroupView = ({
           <PopoverContent
             className={cn(
               "w-[600px] max-h-[400px] overflow-auto",
-              "bg-accent rounded-lg p-0"
+              "rounded-xl p-0 bg-background"
             )}
-            align="start"
+            align="center"
             side="bottom"
           >
             <ToolContent>
-              <ToolInput input={tool.toolCall.input} />
+              <ToolInput input={tool.toolCall.input}/>
               {tool.toolResult && (
                 <ToolOutput
                   errorText={undefined}

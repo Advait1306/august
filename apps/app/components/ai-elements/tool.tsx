@@ -67,7 +67,7 @@ export const ToolHeader = ({
     {...props}
   >
     <div className="flex items-center gap-2">
-      <div className="p-2 bg-[black] rounded-full">
+      <div className="p-2 rounded-full bg-card-foreground/5">
         <WrenchIcon className="size-3 text-muted-foreground" />
       </div>
       <span className="font-medium text-xs">
@@ -97,15 +97,16 @@ export type ToolInputProps = ComponentProps<"div"> & {
 };
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
-  <div
-    className={cn("space-y-2 overflow-hidden py-4 px-4", className)}
-    {...props}
-  >
+  <div className={cn("space-y-2 overflow-hidden p-4", className)} {...props}>
     <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
       Parameters
     </h4>
-    <div className="rounded-md bg-muted/50">
-      <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
+    <div className="rounded-md [&_pre]:!p-0">
+      <CodeBlock
+        code={JSON.stringify(input, null, 2)}
+        language="json"
+        className="border-none "
+      />
     </div>
   </div>
 );
@@ -129,10 +130,20 @@ export const ToolOutput = ({
 
   if (typeof output === "object" && !isValidElement(output)) {
     Output = (
-      <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />
+      <CodeBlock
+        code={JSON.stringify(output, null, 2)}
+        language="json"
+        className="border-none  -mx-4"
+      />
     );
   } else if (typeof output === "string") {
-    Output = <CodeBlock code={output} language="json" />;
+    Output = (
+      <CodeBlock
+        code={output}
+        language="json"
+        className="border-none [&_pre]:!p-0"
+      />
+    );
   }
 
   return (
