@@ -25,7 +25,7 @@ function ToolGroupTabsList({
     <TabsPrimitive.List data-slot="tabs-list" {...props} asChild>
       <motion.div
         className={cn(
-          "text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-t-2xl",
+          "text-muted-foreground inline-flex h-9 w-fit items-center justify-center",
           className
         )}
       >

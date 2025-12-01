@@ -1,22 +1,19 @@
 import {
-  Tool,
   ToolContent,
   ToolHeader,
   ToolInput,
   ToolOutput,
 } from "@/components/ai-elements/tool";
 import {
-  ToolGroupTabs,
-  ToolGroupTabsContent,
-  ToolGroupTabsList,
-  ToolGroupTabsTrigger,
-} from "@/components/ui/tool-group-tabs";
-import { AnimatePresence, AnimateSharedLayout, motion } from "motion/react";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { motion } from "motion/react";
 import { ToolCallPart, ToolResultPart } from "ai";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-// Component to render a group of consecutive tools horizontally
+// Component to render a group of consecutive tools as chips with popovers
 export const ToolGroupView = ({
   tools,
 }: {
@@ -26,74 +23,47 @@ export const ToolGroupView = ({
     partIndex: number;
   }>;
 }) => {
-  const [selectedId, setSelectedId] = useState<string>("");
-
   return (
-    <ToolGroupTabs value={selectedId} asChild={true}>
-      <motion.div className="w-full" layout>
-        <ToolGroupTabsList>
-          {tools.map((tool) => {
-            const toolValue = `tool-${tool.partIndex}`;
-            const isSelected = selectedId === toolValue;
-            return (
-              <ToolGroupTabsTrigger
-                key={tool.partIndex}
-                value={toolValue}
-                isSelected={isSelected}
-                onClick={(e) => {
-                  // Toggle: if clicking the currently selected tab, deselect it
-                  if (isSelected) {
-                    e.preventDefault();
-                    setSelectedId("");
-                  } else {
-                    setSelectedId(toolValue);
-                  }
-                }}
-              >
-                <ToolHeader
-                  type={`tool-${tool.toolCall.toolName}`}
-                  state={
-                    tool.toolResult ? "output-available" : "input-available"
-                  }
-                />
-              </ToolGroupTabsTrigger>
-            );
-          })}
-        </ToolGroupTabsList>
-
-        <AnimatePresence>
-          {selectedId && (
-            <motion.div
+    <motion.div className="w-full flex gap-2 flex-wrap" layout>
+      {tools.map((tool) => (
+        <Popover key={tool.partIndex}>
+          <PopoverTrigger asChild>
+            <motion.button
               layout
               className={cn(
-                "flex-1 outline-none relative overflow-hidden bg-accent"
+                "inline-flex items-center justify-center rounded-full",
+                "text-sm font-medium",
+                "transition-colors hover:bg-accent/80",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "bg-accent"
               )}
-              initial={{ height: 0 }}
-              animate={{ height: "400px" }}
-              layoutId="tool-group-tabs-content"
-              id="tool-group-tabs-content"
-              key="tool-group-tabs-content"
             >
-              {tools.map((tool) => (
-                <ToolGroupTabsContent
-                  key={tool.partIndex}
-                  value={`tool-${tool.partIndex}`}
-                >
-                  <ToolContent>
-                    <ToolInput input={tool.toolCall.input} />
-                    {tool.toolResult && (
-                      <ToolOutput
-                        errorText={undefined}
-                        output={tool.toolResult.output}
-                      />
-                    )}
-                  </ToolContent>
-                </ToolGroupTabsContent>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </ToolGroupTabs>
+              <ToolHeader
+                type={`tool-${tool.toolCall.toolName}`}
+                state={tool.toolResult ? "output-available" : "input-available"}
+              />
+            </motion.button>
+          </PopoverTrigger>
+          <PopoverContent
+            className={cn(
+              "w-[600px] max-h-[400px] overflow-auto",
+              "bg-accent rounded-lg p-0"
+            )}
+            align="start"
+            side="bottom"
+          >
+            <ToolContent>
+              <ToolInput input={tool.toolCall.input} />
+              {tool.toolResult && (
+                <ToolOutput
+                  errorText={undefined}
+                  output={tool.toolResult.output}
+                />
+              )}
+            </ToolContent>
+          </PopoverContent>
+        </Popover>
+      ))}
+    </motion.div>
   );
 };
