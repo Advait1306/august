@@ -23,14 +23,17 @@ export type MessagePart =
     };
 
 // Transform messages into flat list of parts for virtualization
-export function flattenMessagesToParts(messages: readonly any[]): MessagePart[] {
+export function flattenMessagesToParts(
+  messages: readonly any[],
+  selectedTaskId: string
+): MessagePart[] {
   const parts: MessagePart[] = [];
 
   messages.forEach((message, messageIndex) => {
     if (message.role === "user") {
       parts.push({
         type: "user-content",
-        id: `user-${messageIndex}`,
+        id: `${selectedTaskId}-user-${messageIndex}`,
         content: message.content,
         messageIndex,
       });
@@ -38,7 +41,7 @@ export function flattenMessagesToParts(messages: readonly any[]): MessagePart[] 
       if (typeof message.content === "string") {
         parts.push({
           type: "assistant-text",
-          id: `assistant-${messageIndex}-0`,
+          id: `${selectedTaskId}-assistant-${messageIndex}-0`,
           text: message.content,
           messageIndex,
           partIndex: 0,
@@ -64,7 +67,7 @@ export function flattenMessagesToParts(messages: readonly any[]): MessagePart[] 
               if (currentToolGroup.length > 0) {
                 parts.push({
                   type: "tool-group",
-                  id: `assistant-${messageIndex}-group-${toolGroupStartIndex}`,
+                  id: `${selectedTaskId}-assistant-${messageIndex}-group-${toolGroupStartIndex}`,
                   tools: currentToolGroup,
                   messageIndex,
                   startPartIndex: toolGroupStartIndex,
@@ -76,7 +79,7 @@ export function flattenMessagesToParts(messages: readonly any[]): MessagePart[] 
               // Add the text part
               parts.push({
                 type: "assistant-text",
-                id: `assistant-${messageIndex}-${partIndex}`,
+                id: `${selectedTaskId}-assistant-${messageIndex}-${partIndex}`,
                 text: content.text,
                 messageIndex,
                 partIndex,
@@ -110,7 +113,7 @@ export function flattenMessagesToParts(messages: readonly any[]): MessagePart[] 
         if (currentToolGroup.length > 0) {
           parts.push({
             type: "tool-group",
-            id: `assistant-${messageIndex}-group-${toolGroupStartIndex}`,
+            id: `${selectedTaskId}-assistant-${messageIndex}-group-${toolGroupStartIndex}`,
             tools: currentToolGroup,
             messageIndex,
             startPartIndex: toolGroupStartIndex,

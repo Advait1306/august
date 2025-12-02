@@ -16,7 +16,7 @@ export function useMessageVirtualization({
 
   // Flatten messages into parts for virtualization
   const messageParts = useMemo(() => {
-    return messages ? flattenMessagesToParts(messages) : [];
+    return messages ? flattenMessagesToParts(messages, selectedTaskId) : [];
   }, [messages]);
 
   // Note: This effect may cause a jarring scroll when switching tasks, as it attempts to scroll to the end
