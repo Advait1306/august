@@ -133,7 +133,7 @@ export const ToolOutput = ({
       <CodeBlock
         code={JSON.stringify(output, null, 2)}
         language="json"
-        className="border-none  -mx-4"
+        className="border-none [&_pre]:!p-0"
       />
     );
   } else if (typeof output === "string") {
