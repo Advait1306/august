@@ -13,6 +13,8 @@ import { motion } from "motion/react";
 import { ToolCallPart, ToolResultPart } from "ai";
 import { cn } from "@/lib/utils";
 
+const filteredToolNames = ["TodoWrite"];
+
 // Component to render a group of consecutive tools as chips with popovers
 export const ToolGroupView = ({
   tools,
@@ -23,9 +25,17 @@ export const ToolGroupView = ({
     partIndex: number;
   }>;
 }) => {
+  const filteredTools = tools.filter(
+    (tool) => !filteredToolNames.includes(tool.toolCall.toolName)
+  );
+
+  if (filteredTools.length === 0) {
+    return null;
+  }
+
   return (
     <motion.div className="w-full flex gap-2 flex-wrap pb-2" layout>
-      {tools.map((tool) => (
+      {filteredTools.map((tool) => (
         <Popover key={tool.partIndex}>
           <PopoverTrigger asChild>
             <motion.button
@@ -54,7 +64,7 @@ export const ToolGroupView = ({
             side="bottom"
           >
             <ToolContent>
-              <ToolInput input={tool.toolCall.input}/>
+              <ToolInput input={tool.toolCall.input} />
               {tool.toolResult && (
                 <ToolOutput
                   errorText={undefined}

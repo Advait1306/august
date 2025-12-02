@@ -53,8 +53,8 @@ export function TaskComposer({
   return (
     <motion.div
       animate={{
-        scale: currentPermission ? 0.9 : 1,
-        y: currentPermission ? -50 : 0,
+        scale: currentPermission ? 0.95 : 1,
+        y: currentPermission ? -30 : 0,
       }}
     >
       <PromptInput
@@ -67,7 +67,7 @@ export function TaskComposer({
           }
           sendMessage(prompt);
         }}
-        className="rounded-2xl p-2 mb-4"
+        className="p-2 mb-4 rounded-2xl"
       >
         <PromptInputBody>
           <PromptInputTextarea
