@@ -7,15 +7,23 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 interface PermissionDialogProps {
   currentPermission: any;
   pendingPermissions: any[];
+  currentIndex: number;
+  onNext: () => void;
+  onPrevious: () => void;
 }
 
 export function PermissionDialog({
   currentPermission,
   pendingPermissions,
+  currentIndex,
+  onNext,
+  onPrevious,
 }: PermissionDialogProps) {
+  const isAtStart = currentIndex === 0;
+  const isAtEnd = currentIndex === pendingPermissions.length - 1;
   return (
     <motion.div
-      className="absolute bottom-0 w-full flex justify-between items-center p-4 mb-4 bg-background rounded-2xl border border-border"
+      className="absolute bottom-0 w-full flex justify-between items-center p-4 mb-4 bg-background rounded-2xl border border-border min-h-[120px]"
       initial={{
         y: 100,
         opacity: 0,
@@ -30,25 +38,29 @@ export function PermissionDialog({
         damping: 200,
       }}
     >
-      <div className="w-full flex flex-col gap-2">
-        <div className="flex flex-col gap-2">
+      <>
+        {/* Permission Details */}
+        <div className="w-full min-h-[70px] flex flex-col justify-between items-start gap-2">
+          {/* Header */}
           <div className="w-full flex justify-between items-center gap-2">
             <span className="font-semibold">{currentPermission.toolName}</span>
             {pendingPermissions.length > 1 && (
               <ButtonGroup>
                 <Button
                   variant="outline"
-                  onClick={() => {}}
+                  onClick={onPrevious}
                   size={"xs"}
                   hotkey="ArrowLeft"
+                  disabled={isAtStart}
                 >
                   <ChevronLeftIcon className="w-2 h-2" />
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => {}}
+                  onClick={onNext}
                   size={"xs"}
                   hotkey="ArrowRight"
+                  disabled={isAtEnd}
                 >
                   <ChevronRightIcon className="w-2 h-2" />
                 </Button>
@@ -56,8 +68,10 @@ export function PermissionDialog({
             )}
           </div>
 
+          {/* Input */}
           <JsonViewer data={currentPermission.input} className="w-full" />
         </div>
+        {/* Action Buttons */}
         <div className="absolute bottom-4 right-4 w-full flex justify-end">
           <ButtonGroup>
             <Button
@@ -101,7 +115,7 @@ export function PermissionDialog({
             </Button>
           </ButtonGroup>
         </div>
-      </div>
+      </>
     </motion.div>
   );
 }

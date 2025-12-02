@@ -26,6 +26,9 @@ export default function TaskWindow() {
     composerStates,
     setComposerStates,
     permissions,
+    permissionIndices,
+    nextPermission,
+    previousPermission,
     generationState,
     defaultCwd,
   } = useTaskRuntime();
@@ -77,7 +80,8 @@ export default function TaskWindow() {
         );
 
   const pendingPermissions = permissions[selectedTaskId] || [];
-  const currentPermission = pendingPermissions[0];
+  const currentPermissionIndex = permissionIndices[selectedTaskId] || 0;
+  const currentPermission = pendingPermissions[currentPermissionIndex];
   const isGenerating = generationState.includes(selectedTaskId);
 
   // Recalculate gradients when messages or task changes
@@ -150,6 +154,9 @@ export default function TaskWindow() {
           <PermissionDialog
             currentPermission={currentPermission}
             pendingPermissions={pendingPermissions}
+            currentIndex={currentPermissionIndex}
+            onNext={() => nextPermission(selectedTaskId)}
+            onPrevious={() => previousPermission(selectedTaskId)}
           />
         )}
       </motion.div>
