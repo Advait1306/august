@@ -26,7 +26,7 @@ const buttonVariants = cva(
         sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
         lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
         icon: "size-9",
-        xs: "size-6",
+        xs: "h-6 px-2",
       },
     },
     defaultVariants: {
@@ -42,11 +42,13 @@ function Button({
   size,
   asChild = false,
   hotkey,
+  modifierKey,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
     hotkey?: string;
+    modifierKey?: "meta" | "ctrl" | "alt";
   }) {
   const Comp = asChild ? Slot : "button";
   const buttonRef = React.useRef<HTMLButtonElement>(null);
@@ -71,9 +73,10 @@ function Button({
 
       if (
         event.key.toLowerCase() === hotkey.toLowerCase() &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey
+        // !a === !b is equivalent to a XNOR b
+        !event.ctrlKey === !(modifierKey === "ctrl") &&
+        !event.metaKey === !(modifierKey === "meta") &&
+        !event.altKey === !(modifierKey === "alt")
       ) {
         event.preventDefault();
         buttonRef.current?.click();
@@ -82,7 +85,7 @@ function Button({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [hotkey]);
+  }, [hotkey, modifierKey]);
 
   return (
     <Comp

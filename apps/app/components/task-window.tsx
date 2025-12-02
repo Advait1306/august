@@ -31,13 +31,21 @@ export default function TaskWindow() {
   } = useTaskRuntime();
 
   // Custom hooks for state management
-  const { prompt, agent, cwd, setPrompt, setAgent, selectFolder, clearAgent, clearCwd } =
-    useComposerState({
-      selectedTaskId,
-      composerStates,
-      setComposerStates,
-      defaultCwd,
-    });
+  const {
+    prompt,
+    agent,
+    cwd,
+    setPrompt,
+    setAgent,
+    selectFolder,
+    clearAgent,
+    clearCwd,
+  } = useComposerState({
+    selectedTaskId,
+    composerStates,
+    setComposerStates,
+    defaultCwd,
+  });
 
   const { messageParts, virtualizerRef, scrollContainerRef } =
     useMessageVirtualization({
@@ -138,10 +146,12 @@ export default function TaskWindow() {
         />
 
         {/* Permission */}
-        <PermissionDialog
-          currentPermission={currentPermission}
-          pendingPermissions={pendingPermissions}
-        />
+        {currentPermission && (
+          <PermissionDialog
+            currentPermission={currentPermission}
+            pendingPermissions={pendingPermissions}
+          />
+        )}
       </motion.div>
     </motion.div>
   );
