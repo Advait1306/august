@@ -12,8 +12,6 @@ interface TaskThreadProps {
   isGenerating: boolean;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   virtualizerRef: React.RefObject<VListHandle | null>;
-  showTopGradient: boolean;
-  showBottomGradient: boolean;
 }
 
 export function TaskThread({
@@ -22,15 +20,11 @@ export function TaskThread({
   isGenerating,
   scrollContainerRef,
   virtualizerRef,
-  showTopGradient,
-  showBottomGradient,
 }: TaskThreadProps) {
   if (selectedTaskId === "new-conversation") {
     return (
       <ConversationEmptyState
-        icon={
-          <div className="h-[40px] w-[40px] rounded-[20px] bg-primary" />
-        }
+        icon={<div className="h-[40px] w-[40px] rounded-[20px] bg-primary" />}
         className="-translate-y-1/5"
         title="Start a task"
         description="Share an idea with your artificial helper"
@@ -62,18 +56,6 @@ export function TaskThread({
           {isGenerating && <BlinkingCursor />}
         </VList>
       </AnimatePresence>
-
-      {/* Gradient Overlays */}
-      {showTopGradient && (
-        <div className="absolute top-0 left-0 right-0 h-16 pointer-events-none z-10">
-          <div className="absolute inset-0 bg-gradient-to-b from-background via-background/50 to-transparent" />
-        </div>
-      )}
-      {showBottomGradient && (
-        <div className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none z-10">
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-        </div>
-      )}
     </motion.div>
   );
 }

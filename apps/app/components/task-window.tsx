@@ -1,10 +1,8 @@
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
-import { useEffect } from "react";
 import { useQuery } from "@rocicorp/zero/react";
 import { getAgents } from "@jupiter/sync/queries/data";
 import { useSyncContext } from "@/src/components/sync_engine";
 import { motion } from "motion/react";
-import { useScrollGradients } from "@/hooks/use-scroll-gradients";
 import { useComposerState } from "@/hooks/use-composer-state";
 import { useMessageVirtualization } from "@/hooks/use-message-virtualization";
 import { usePromptMenu } from "@/hooks/use-prompt-menu";
@@ -31,6 +29,7 @@ export default function TaskWindow() {
     previousPermission,
     generationState,
     defaultCwd,
+    todoState,
   } = useTaskRuntime();
 
   // Custom hooks for state management
@@ -62,13 +61,6 @@ export default function TaskWindow() {
     selectFolder,
   });
 
-  // Scroll gradients
-  const { showTopGradient, showBottomGradient, recalculate } =
-    useScrollGradients(scrollContainerRef, {
-      drillToScrollElement: true,
-      initDelay: 100,
-    });
-
   // Derived state
   const taskAgent =
     selectedTaskId === "new-conversation"
@@ -84,16 +76,16 @@ export default function TaskWindow() {
   const currentPermission = pendingPermissions[currentPermissionIndex];
   const isGenerating = generationState.includes(selectedTaskId);
 
-  // Recalculate gradients when messages or task changes
-  useEffect(() => {
-    recalculate();
-  }, [messages, selectedTaskId, recalculate]);
-
   return (
     <motion.div className="flex-1 relative" layout>
       {/* Header */}
       {selectedTaskId !== "new-conversation" && (
-        <TaskHeader agent={taskAgent} cwd={cwd} defaultCwd={defaultCwd} />
+        <TaskHeader
+          agent={taskAgent}
+          cwd={cwd}
+          defaultCwd={defaultCwd}
+          todoState={todoState}
+        />
       )}
 
       {/* Thread */}
@@ -107,8 +99,6 @@ export default function TaskWindow() {
           isGenerating={isGenerating}
           scrollContainerRef={scrollContainerRef}
           virtualizerRef={virtualizerRef}
-          showTopGradient={showTopGradient}
-          showBottomGradient={showBottomGradient}
         />
       </motion.div>
 
