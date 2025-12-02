@@ -20,6 +20,7 @@ import { useAuth } from "@clerk/clerk-react";
 
 type PermissionState = Record<string, Permission[]>;
 type GenerationState = string[];
+type PermissionIndexState = Record<string, number>;
 
 type TaskRuntimeState = {
   tasks: Task[];
@@ -36,6 +37,9 @@ type TaskRuntimeState = {
       | ((prev: Record<string, ComposerState>) => Record<string, ComposerState>)
   ) => void;
   permissions: PermissionState;
+  permissionIndices: PermissionIndexState;
+  nextPermission: (threadId: string) => void;
+  previousPermission: (threadId: string) => void;
   generationState: GenerationState;
   installations: ClaudeInstallation[];
   defaultCwd: string;
@@ -68,6 +72,9 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   composerStates: {},
   setComposerStates: () => {},
   permissions: {},
+  permissionIndices: {},
+  nextPermission: () => {},
+  previousPermission: () => {},
   generationState: [],
   installations: [],
   defaultCwd: "",
@@ -98,6 +105,7 @@ export const TaskRuntimeProvider = ({
     },
   });
   const [permissions, setPermissions] = useState<PermissionState>({});
+  const [permissionIndices, setPermissionIndices] = useState<PermissionIndexState>({});
   const alwaysAllowTasks = useRef<string[]>([]);
   const [generationState, setGenerationState] = useState<GenerationState>([]);
   const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
@@ -247,6 +255,16 @@ export const TaskRuntimeProvider = ({
 
       setPermissions((prev) => {
         const existingPermissions = prev[request.threadId] || [];
+        const isFirstPermission = existingPermissions.length === 0;
+
+        // Initialize index for first permission
+        if (isFirstPermission) {
+          setPermissionIndices((prevIndices) => ({
+            ...prevIndices,
+            [request.threadId]: 0,
+          }));
+        }
+
         return {
           ...prev,
           [request.threadId]: [
@@ -265,6 +283,12 @@ export const TaskRuntimeProvider = ({
                   delete newPermissions[request.threadId];
                   return newPermissions;
                 });
+                // Clear permission index
+                setPermissionIndices((prevIndices) => {
+                  const newIndices = { ...prevIndices };
+                  delete newIndices[request.threadId];
+                  return newIndices;
+                });
               },
               grant: () => {
                 window.api.agent.grantPermission(request.id);
@@ -281,6 +305,26 @@ export const TaskRuntimeProvider = ({
                   }
                   return newPermissions;
                 });
+                // Adjust index if needed
+                setPermissionIndices((prevIndices) => {
+                  const threadPermissions = permissions[request.threadId] || [];
+                  const currentIndex = prevIndices[request.threadId] || 0;
+                  const updatedPermissions = threadPermissions.filter(
+                    (perm) => perm.id !== request.id
+                  );
+
+                  if (updatedPermissions.length === 0) {
+                    const newIndices = { ...prevIndices };
+                    delete newIndices[request.threadId];
+                    return newIndices;
+                  } else if (currentIndex >= updatedPermissions.length) {
+                    return {
+                      ...prevIndices,
+                      [request.threadId]: updatedPermissions.length - 1,
+                    };
+                  }
+                  return prevIndices;
+                });
               },
               deny: () => {
                 window.api.agent.denyPermission(request.id);
@@ -296,6 +340,26 @@ export const TaskRuntimeProvider = ({
                     newPermissions[request.threadId] = updatedPermissions;
                   }
                   return newPermissions;
+                });
+                // Adjust index if needed
+                setPermissionIndices((prevIndices) => {
+                  const threadPermissions = permissions[request.threadId] || [];
+                  const currentIndex = prevIndices[request.threadId] || 0;
+                  const updatedPermissions = threadPermissions.filter(
+                    (perm) => perm.id !== request.id
+                  );
+
+                  if (updatedPermissions.length === 0) {
+                    const newIndices = { ...prevIndices };
+                    delete newIndices[request.threadId];
+                    return newIndices;
+                  } else if (currentIndex >= updatedPermissions.length) {
+                    return {
+                      ...prevIndices,
+                      [request.threadId]: updatedPermissions.length - 1,
+                    };
+                  }
+                  return prevIndices;
                 });
               },
             },
@@ -327,7 +391,50 @@ export const TaskRuntimeProvider = ({
         delete newPermissions[taskId];
         return newPermissions;
       });
+
+      // Clear permission index
+      setPermissionIndices((prev) => {
+        const newIndices = { ...prev };
+        delete newIndices[taskId];
+        return newIndices;
+      });
     }
+  };
+
+  const nextPermission = (threadId: string) => {
+    setPermissionIndices((prev) => {
+      const threadPermissions = permissions[threadId] || [];
+      if (threadPermissions.length === 0) return prev;
+
+      const currentIndex = prev[threadId] || 0;
+      // Don't wrap around - stop at the end
+      if (currentIndex >= threadPermissions.length - 1) return prev;
+
+      const nextIndex = currentIndex + 1;
+
+      return {
+        ...prev,
+        [threadId]: nextIndex,
+      };
+    });
+  };
+
+  const previousPermission = (threadId: string) => {
+    setPermissionIndices((prev) => {
+      const threadPermissions = permissions[threadId] || [];
+      if (threadPermissions.length === 0) return prev;
+
+      const currentIndex = prev[threadId] || 0;
+      // Don't wrap around - stop at the beginning
+      if (currentIndex === 0) return prev;
+
+      const previousIndex = currentIndex - 1;
+
+      return {
+        ...prev,
+        [threadId]: previousIndex,
+      };
+    });
   };
 
   const sendMessage = async (message: string) => {
@@ -539,6 +646,9 @@ export const TaskRuntimeProvider = ({
         composerStates,
         setComposerStates,
         permissions,
+        permissionIndices,
+        nextPermission,
+        previousPermission,
         generationState,
         installations,
         defaultCwd,
