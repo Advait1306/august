@@ -1,4 +1,3 @@
-import { motion, AnimatePresence } from "motion/react";
 import { VList, VListHandle } from "virtua";
 import { ConversationEmptyState } from "@/components/ai-elements/conversation";
 import { UserMessagePartView, AssistantTextPartView } from "./message";
@@ -33,29 +32,24 @@ export function TaskThread({
   }
 
   return (
-    <motion.div
+    <div
       ref={scrollContainerRef}
-      layout
       className="relative h-full w-full max-w-[720px]"
     >
-      <AnimatePresence>
-        <VList className="h-full no-scrollbar w-full" ref={virtualizerRef}>
-          {messageParts.map((part) => (
-            <motion.div key={part.id} layout layoutId={part.id}>
-              {part.type === "user-content" && (
-                <UserMessagePartView content={part.content} />
-              )}
-              {part.type === "assistant-text" && (
-                <AssistantTextPartView text={part.text} />
-              )}
-              {part.type === "tool-group" && (
-                <ToolGroupView tools={part.tools} />
-              )}
-            </motion.div>
-          ))}
-          {isGenerating && <BlinkingCursor />}
-        </VList>
-      </AnimatePresence>
-    </motion.div>
+      <VList className="h-full no-scrollbar w-full" ref={virtualizerRef}>
+        {messageParts.map((part) => (
+          <div>
+            {part.type === "user-content" && (
+              <UserMessagePartView content={part.content} />
+            )}
+            {part.type === "assistant-text" && (
+              <AssistantTextPartView text={part.text} />
+            )}
+            {part.type === "tool-group" && <ToolGroupView tools={part.tools} />}
+          </div>
+        ))}
+        {isGenerating && <BlinkingCursor />}
+      </VList>
+    </div>
   );
 }

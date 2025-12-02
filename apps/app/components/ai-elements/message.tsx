@@ -42,7 +42,7 @@ const messageContentVariants = cva(
   }
 );
 
-export type MessageContentProps = HTMLMotionProps<"div"> &
+export type MessageContentProps = ComponentProps<"div"> &
   VariantProps<typeof messageContentVariants>;
 
 export const MessageContent = ({
@@ -51,12 +51,12 @@ export const MessageContent = ({
   variant,
   ...props
 }: MessageContentProps) => (
-  <motion.div
+  <div
     className={cn(messageContentVariants({ variant, className }))}
     {...props}
   >
     {children}
-  </motion.div>
+  </div>
 );
 
 export type MessageAvatarProps = ComponentProps<typeof Avatar> & {

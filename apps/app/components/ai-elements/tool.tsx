@@ -59,7 +59,6 @@ export const ToolHeader = ({
   ...props
 }: ToolHeaderProps) => (
   <motion.div
-    layout
     className={cn(
       "flex w-full items-center justify-between gap-4 p-0.5 pr-2",
       className

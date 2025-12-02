@@ -2,7 +2,6 @@ import { Message, MessageContent } from "@/components/ai-elements/message";
 import { Response } from "@/components/ai-elements/response";
 import { UserModelMessage } from "ai";
 import { Separator } from "./ui/separator";
-import { motion } from "motion/react";
 
 interface UserMessageProps {
   message: UserModelMessage;
@@ -89,68 +88,44 @@ export const UserMessagePartView = ({ content }: { content: any }) => {
   return <Message from="user">{...contents}</Message>;
 };
 
-const MotionResponse = motion.create(Response);
-
 // Component to render assistant text part for virtualized lists
 export const AssistantTextPartView = ({ text }: { text: string }) => {
   return (
-    <MotionResponse
-      layout
+    <Response
       className="text-sm leading-7 max-w-[80%]"
       components={{
         h1: ({ children }) => (
-          <motion.h1 className="text-3xl font-semibold pt-4 pb-1" layout>
-            {children}
-          </motion.h1>
+          <h1 className="text-3xl font-semibold pt-4 pb-1">{children}</h1>
         ),
         h2: ({ children }) => (
-          <motion.h2 className="text-xl font-semibold pt-2 pb-1" layout>
-            {children}
-          </motion.h2>
+          <h2 className="text-xl font-semibold pt-2 pb-1">{children}</h2>
         ),
         h3: ({ children }) => (
-          <motion.h3 className="text-base font-semibold pt-2 pb-1/2" layout>
-            {children}
-          </motion.h3>
+          <h3 className="text-base font-semibold pt-2 pb-1/2">{children}</h3>
         ),
         h4: ({ children }) => (
-          <motion.h4 className="text-sm font-semibold pt-2 pb-1/2" layout>
-            {children}
-          </motion.h4>
+          <h4 className="text-sm font-semibold pt-2 pb-1/2">{children}</h4>
         ),
         h5: ({ children }) => (
-          <motion.h5 className="text-xs font-semibold pt-2 pb-1/2" layout>
-            {children}
-          </motion.h5>
+          <h5 className="text-xs font-semibold pt-2 pb-1/2">{children}</h5>
         ),
         h6: ({ children }) => (
-          <motion.h6 className="text-xs font-semibold pt-2 pb-1/2" layout>
-            {children}
-          </motion.h6>
+          <h6 className="text-xs font-semibold pt-2 pb-1/2">{children}</h6>
         ),
         p: ({ children }) => (
-          <motion.p
-            className="text-sm leading-[1.7] -tracking-[0.0125em] pt-1 pb-2"
-            layout
-          >
+          <p className="text-sm leading-[1.7] -tracking-[0.0125em] pt-1 pb-2">
             {children}
-          </motion.p>
+          </p>
         ),
         ul: ({ children }) => (
-          <motion.ul
-            className="list-disc list-outside pl-5 leading-[1.7]"
-            layout
-          >
+          <ul className="list-disc list-outside pl-5 leading-[1.7]">
             {children}
-          </motion.ul>
+          </ul>
         ),
         ol: ({ children }) => (
-          <motion.ol
-            className="list-decimal list-outside pl-5 leading-[1.7] [&_ol]:list-[lower-alpha] [&_ol_ol]:list-[lower-roman]"
-            layout
-          >
+          <ol className="list-decimal list-outside pl-5 leading-[1.7] [&_ol]:list-[lower-alpha] [&_ol_ol]:list-[lower-roman]">
             {children}
-          </motion.ol>
+          </ol>
         ),
         hr: () => (
           <Separator className="my-5 border-0 h-[1.5px] bg-gradient-to-r from-border via-border/70 to-transparent" />
@@ -160,14 +135,14 @@ export const AssistantTextPartView = ({ text }: { text: string }) => {
         },
         code: ({ children }) => {
           return (
-            <motion.code className="text-[0.85em] rounded-sm px-1.5 py-1 mx-1/2 bg-neutral-200 dark:bg-neutral-800">
+            <code className="text-[0.85em] rounded-sm px-1.5 py-1 mx-1/2 bg-neutral-200 dark:bg-neutral-800">
               {children}
-            </motion.code>
+            </code>
           );
         },
       }}
     >
       {text}
-    </MotionResponse>
+    </Response>
   );
 };
