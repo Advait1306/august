@@ -101,11 +101,11 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
     <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
       Parameters
     </h4>
-    <div className="rounded-md [&_pre]:!p-0">
+    <div className="rounded-md">
       <CodeBlock
         code={JSON.stringify(input, null, 2)}
         language="json"
-        className="border-none "
+        className="border-none [&_pre]:!p-0"
       />
     </div>
   </div>
@@ -147,7 +147,7 @@ export const ToolOutput = ({
   }
 
   return (
-    <div className={cn("space-y-2 py-4 px-4", className)} {...props}>
+    <div className={cn("space-y-2 p-4", className)} {...props}>
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {errorText ? "Error" : "Result"}
       </h4>
