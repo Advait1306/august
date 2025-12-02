@@ -14,6 +14,7 @@ import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";
 import { ComposerBadge } from "./composer-badge";
 import { PlusIcon, FolderIcon, BotIcon } from "lucide-react";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
+import { Permission } from "@jupiter/shared/types";
 
 interface TaskComposerProps {
   prompt: string;
@@ -28,7 +29,7 @@ interface TaskComposerProps {
   menuOptions: PromptMenuOption[];
   clearAgent: () => void;
   clearCwd: () => void;
-  currentPermission: any;
+  currentPermission: Permission | undefined;
 }
 
 export function TaskComposer({

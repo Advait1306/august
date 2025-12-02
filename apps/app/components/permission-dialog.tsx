@@ -3,10 +3,11 @@ import { Button } from "./ui/button";
 import { ButtonGroup } from "./ui/button-group";
 import { JsonViewer } from "./ui/json-viewer";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { Permission } from "@jupiter/shared/types";
 
 interface PermissionDialogProps {
-  currentPermission: any;
-  pendingPermissions: any[];
+  currentPermission: Permission;
+  pendingPermissions: Permission[];
   currentIndex: number;
   onNext: () => void;
   onPrevious: () => void;
