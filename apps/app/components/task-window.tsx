@@ -113,7 +113,7 @@ export default function TaskWindow() {
           y:
             selectedTaskId === "new-conversation"
               ? "0%"
-              : "calc(50vh - 50% - 1.5rem)",
+              : "calc(50vh - 50% - 3rem)",
           opacity: 1,
         }}
         transition={{

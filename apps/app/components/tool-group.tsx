@@ -34,12 +34,12 @@ export const ToolGroupView = ({
   }
 
   return (
-    <motion.div className="w-full flex gap-2 flex-wrap pb-2" layout>
+    <div className="w-full flex gap-2 flex-wrap pb-2">
       {filteredTools.map((tool) => (
         <Popover key={tool.partIndex}>
           <PopoverTrigger asChild>
             <motion.button
-              layout
+              
               className={cn(
                 "inline-flex items-center justify-center rounded-full",
                 "text-sm font-medium",
@@ -75,6 +75,6 @@ export const ToolGroupView = ({
           </PopoverContent>
         </Popover>
       ))}
-    </motion.div>
+    </div>
   );
 };

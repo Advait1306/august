@@ -66,7 +66,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   };
 
   // Use scroll gradients hook
-  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(scrollContainerRef);
+  const { showTopGradient, showBottomGradient, recalculate } =
+    useScrollGradients(scrollContainerRef);
 
   // Scroll selected task into view
   useEffect(() => {
@@ -132,15 +133,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <div className="text-[10px] font-semibold text-muted-foreground px-2 py-1">
                     TASKS
                   </div>
-                  <div
-                    ref={(el) => {
-                      if (el) {
-                        taskRefs.current.set("new-conversation", el);
-                      } else {
-                        taskRefs.current.delete("new-conversation");
-                      }
-                    }}
-                    className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground cursor-pointer mb-1"
+                  <Button
+                    variant="ghost"
+                    hotkey="n"
+                    modifierKey="meta"
+                    className="w-full justify-start text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground cursor-pointer mb-1"
                     data-selected={selectedTaskId === "new-conversation"}
                     onClick={() => {
                       navigate({ to: "/tasks" });
@@ -150,7 +147,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <span className="pointer-events-none select-text flex flex-row items-center gap-2">
                       <PlusIcon className="w-4 h-4" /> New Task
                     </span>
-                  </div>
+                  </Button>
                 </div>
 
                 {/* Scrollable Task List with Gradients */}

@@ -6,21 +6,6 @@ export const Route = createFileRoute("/tasks")({
 });
 
 function Tasks() {
-  // const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
-  // const { project, agent } = Route.useSearch();
-
-  // // Extract URL parameters for pre-selection
-  // const preselectedProjectId = project;
-  // const preselectedAgent = agent;
-
-  // const focusComposer = () => {
-  //   if (composerInputRef.current) {
-  //     composerInputRef.current.focus();
-  //   }
-  // };
-
-  // Keyboard navigation is now handled in the sidebar
-
   return (
     <div className="flex h-[calc(100vh-var(--header-height))] w-full">
       {/* Main Chat Area - Full Width */}
