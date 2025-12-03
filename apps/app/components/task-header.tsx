@@ -1,9 +1,5 @@
 import { Button } from "./ui/button";
-import {
-  CheckCircle2Icon,
-  CircleIcon,
-  Loader2Icon,
-} from "lucide-react";
+import { CheckCircle2Icon, CircleIcon, Loader2Icon } from "lucide-react";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
 import { TodoState } from "@/src/contexts/task-runtime";
 import {
@@ -18,6 +14,7 @@ interface TaskHeaderProps {
   cwd: string;
   defaultCwd: string;
   todoState: TodoState;
+  isGenerating: boolean;
 }
 
 export function TaskHeader({
@@ -25,6 +22,7 @@ export function TaskHeader({
   cwd,
   defaultCwd,
   todoState,
+  isGenerating,
 }: TaskHeaderProps) {
   const isTodoAvailable = todoState.length > 0;
   const completedCount = todoState.filter(
@@ -38,7 +36,7 @@ export function TaskHeader({
     totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <div className="px-4 py-2 w-full h-[54px] border-b border-border flex items-center justify-between">
+    <div className="absolute bg-accent/70 z-20 backdrop-blur-md px-4 py-2 w-full h-[54px] border-b border-border flex items-center justify-between">
       <div>
         {agent ? <span className="">{agent?.name}</span> : <div />}
         {cwd && cwd !== defaultCwd && (
@@ -57,7 +55,7 @@ export function TaskHeader({
                   <span
                     className={cn(
                       "max-w-[300px] truncate",
-                      inProgressTodo && "animate-pulse"
+                      inProgressTodo && isGenerating && "animate-pulse"
                     )}
                   >
                     {inProgressTodo
