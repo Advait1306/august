@@ -1,5 +1,12 @@
 import { IPC, Permission } from "@jupiter/shared/types";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   getAgents,
   getMCPs,
@@ -43,6 +50,7 @@ type TaskRuntimeState = {
   generationState: GenerationState;
   installations: ClaudeInstallation[];
   defaultCwd: string;
+  todoState: TodoState;
 };
 
 // Helper function to get default cwd (will be populated async)
@@ -61,6 +69,14 @@ type ComposerState = {
   cwd: string;
 };
 
+export type Todo = {
+  status: "pending" | "in_progress" | "completed";
+  content: string;
+  activeForm: string;
+};
+
+export type TodoState = Todo[];
+
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
   tasks: [],
   messages: [],
@@ -78,6 +94,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   generationState: [],
   installations: [],
   defaultCwd: "",
+  todoState: [],
 });
 
 export const TaskRuntimeProvider = ({
@@ -105,7 +122,8 @@ export const TaskRuntimeProvider = ({
     },
   });
   const [permissions, setPermissions] = useState<PermissionState>({});
-  const [permissionIndices, setPermissionIndices] = useState<PermissionIndexState>({});
+  const [permissionIndices, setPermissionIndices] =
+    useState<PermissionIndexState>({});
   const alwaysAllowTasks = useRef<string[]>([]);
   const [generationState, setGenerationState] = useState<GenerationState>([]);
   const [installations, setInstallations] = useState<ClaudeInstallation[]>([]);
@@ -195,6 +213,27 @@ export const TaskRuntimeProvider = ({
       }
     }
   }, [selectedTaskId, selectedTasksMessages, selectedTask, agents]);
+
+  const todoState: TodoState = useMemo(() => {
+    const lastAssistantMessageWithTodo =
+      selectedTasksMessages[0]?.messages.findLast(
+        (message) =>
+          message.role === "assistant" &&
+          (message.content as any[]).some(
+            (content) =>
+              content.type === "tool-call" && content.toolName === "TodoWrite"
+          )
+      );
+
+    const todos = (lastAssistantMessageWithTodo?.content as any[])
+      .filter(
+        (content) =>
+          content.type === "tool-call" && content.toolName === "TodoWrite"
+      )
+      .at(-1)?.input.todos as Todo[];
+
+    return todos || [];
+  }, [selectedTasksMessages, selectedTaskId]);
 
   // Load Claude Code installations on mount
   useEffect(() => {
@@ -652,6 +691,7 @@ export const TaskRuntimeProvider = ({
         generationState,
         installations,
         defaultCwd,
+        todoState,
       }}
     >
       {children}

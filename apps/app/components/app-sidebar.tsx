@@ -66,7 +66,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   };
 
   // Use scroll gradients hook
-  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(scrollContainerRef);
+  const { showTopGradient, showBottomGradient, recalculate } =
+    useScrollGradients(scrollContainerRef);
 
   // Scroll selected task into view
   useEffect(() => {
@@ -132,15 +133,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <div className="text-[10px] font-semibold text-muted-foreground px-2 py-1">
                     TASKS
                   </div>
-                  <div
-                    ref={(el) => {
-                      if (el) {
-                        taskRefs.current.set("new-conversation", el);
-                      } else {
-                        taskRefs.current.delete("new-conversation");
-                      }
-                    }}
-                    className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground cursor-pointer mb-1"
+                  <Button
+                    variant="ghost"
+                    hotkey="n"
+                    modifierKey="meta"
+                    className="w-full justify-start text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center data-[selected=true]:bg-muted data-[selected=true]:text-foreground cursor-pointer mb-1"
                     data-selected={selectedTaskId === "new-conversation"}
                     onClick={() => {
                       navigate({ to: "/tasks" });
@@ -150,7 +147,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <span className="pointer-events-none select-text flex flex-row items-center gap-2">
                       <PlusIcon className="w-4 h-4" /> New Task
                     </span>
-                  </div>
+                  </Button>
                 </div>
 
                 {/* Scrollable Task List with Gradients */}
@@ -230,7 +227,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <AnimatePresence>
         {dialog && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-xs"
             onClick={() => setDialog(null)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -238,7 +235,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             transition={{ duration: 0.2 }}
           >
             <motion.div
-              className="relative w-[80%] h-[80%] bg-background border border-border rounded-lg overflow-hidden"
+              className="relative w-[80%] h-[80%] bg-background border border-black/20 dark:border-white/20 shadow-[0px_4px_14px_0px_rgba(0,_0,_0,_0.1)] rounded-xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

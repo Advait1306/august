@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import {
   PromptInput,
@@ -53,8 +53,8 @@ export function TaskComposer({
   return (
     <motion.div
       animate={{
-        scale: currentPermission ? 0.9 : 1,
-        y: currentPermission ? -50 : 0,
+        scale: currentPermission ? 0.95 : 1,
+        y: currentPermission ? -30 : 0,
       }}
     >
       <PromptInput
@@ -67,7 +67,7 @@ export function TaskComposer({
           }
           sendMessage(prompt);
         }}
-        className="rounded-2xl p-2 mb-4"
+        className="p-2 mb-4 rounded-2xl shadow-[0px_6px_52px_-14px_rgba(0,_0,_0,_0.1)] "
       >
         <PromptInputBody>
           <PromptInputTextarea
@@ -91,42 +91,55 @@ export function TaskComposer({
           />
         </PromptInputBody>
         <PromptInputToolbar>
-          <PromptInputTools>
-            {selectedTaskId === "new-conversation" && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-md"
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PromptMenu options={menuOptions} />
-              </Popover>
-            )}
-            {selectedTaskId === "new-conversation" && agent && (
-              <ComposerBadge
-                icon={<BotIcon className="w-4 h-4" />}
-                label={agent?.name || "Agent"}
-                onClear={clearAgent}
-                isHovered={isAgentBadgeHovered}
-                setIsHovered={setIsAgentBadgeHovered}
-              />
-            )}
-            {selectedTaskId === "new-conversation" &&
-              cwd &&
-              cwd !== defaultCwd && (
-                <ComposerBadge
-                  icon={<FolderIcon className="w-4 h-4" />}
-                  label={cwd.match(/[^/\\]+$/)?.[0] || "Folder"}
-                  onClear={clearCwd}
-                  isHovered={isCwdBadgeHovered}
-                  setIsHovered={setIsCwdBadgeHovered}
-                />
-              )}
-          </PromptInputTools>
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{
+                type: "spring",
+                stiffness: 2000,
+                damping: 200,
+              }}
+            >
+              <PromptInputTools>
+                {selectedTaskId === "new-conversation" && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-md"
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PromptMenu options={menuOptions} />
+                  </Popover>
+                )}
+                {selectedTaskId === "new-conversation" && agent && (
+                  <ComposerBadge
+                    icon={<BotIcon className="w-4 h-4" />}
+                    label={agent?.name || "Agent"}
+                    onClear={clearAgent}
+                    isHovered={isAgentBadgeHovered}
+                    setIsHovered={setIsAgentBadgeHovered}
+                  />
+                )}
+                {selectedTaskId === "new-conversation" &&
+                  cwd &&
+                  cwd !== defaultCwd && (
+                    <ComposerBadge
+                      icon={<FolderIcon className="w-4 h-4" />}
+                      label={cwd.match(/[^/\\]+$/)?.[0] || "Folder"}
+                      onClear={clearCwd}
+                      isHovered={isCwdBadgeHovered}
+                      setIsHovered={setIsCwdBadgeHovered}
+                    />
+                  )}
+              </PromptInputTools>
+            </motion.div>
+          </AnimatePresence>
           <PromptInputSubmit
             className="rounded-lg"
             disabled={!isGenerating && prompt.trim().length === 0}
