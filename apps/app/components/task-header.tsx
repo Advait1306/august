@@ -14,6 +14,7 @@ interface TaskHeaderProps {
   cwd: string;
   defaultCwd: string;
   todoState: TodoState;
+  isGenerating: boolean;
 }
 
 export function TaskHeader({
@@ -21,6 +22,7 @@ export function TaskHeader({
   cwd,
   defaultCwd,
   todoState,
+  isGenerating,
 }: TaskHeaderProps) {
   const isTodoAvailable = todoState.length > 0;
   const completedCount = todoState.filter(
@@ -53,7 +55,7 @@ export function TaskHeader({
                   <span
                     className={cn(
                       "max-w-[300px] truncate",
-                      inProgressTodo && "animate-pulse"
+                      inProgressTodo && isGenerating && "animate-pulse"
                     )}
                   >
                     {inProgressTodo

@@ -227,7 +227,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <AnimatePresence>
         {dialog && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-xs"
             onClick={() => setDialog(null)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -235,7 +235,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             transition={{ duration: 0.2 }}
           >
             <motion.div
-              className="relative w-[80%] h-[80%] bg-background border border-border rounded-lg overflow-hidden"
+              className="relative w-[80%] h-[80%] bg-background border border-black/20 dark:border-white/20 shadow-[0px_4px_14px_0px_rgba(0,_0,_0,_0.1)] rounded-xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

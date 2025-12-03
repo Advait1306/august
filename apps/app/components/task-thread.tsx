@@ -62,7 +62,7 @@ export function TaskThread({
   return (
     <div
       ref={scrollContainerRef}
-      className="relative flex flex-col w-full max-w-[720px] h-[calc(100vh-190px)]"
+      className="relative flex flex-col w-full max-w-[720px] h-[calc(100vh-204px)]"
     >
       <VList className="grow-1 no-scrollbar w-full" ref={virtualizerRef}>
         {/* Used to offset the header */}
@@ -78,7 +78,12 @@ export function TaskThread({
             {part.type === "tool-group" && <ToolGroupView tools={part.tools} />}
           </div>
         ))}
-        {isGenerating && <BlinkingCursor />}
+        {isGenerating && (
+          <div className="flex flex-row text-sm text-muted-foreground items-center gap-2">
+            Working...
+            <BlinkingCursor />
+          </div>
+        )}
       </VList>
     </div>
   );

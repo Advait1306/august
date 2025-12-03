@@ -85,6 +85,7 @@ export default function TaskWindow() {
           cwd={cwd}
           defaultCwd={defaultCwd}
           todoState={todoState}
+          isGenerating={isGenerating}
         />
       )}
 
