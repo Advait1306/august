@@ -1,9 +1,5 @@
 import { Button } from "./ui/button";
-import {
-  CheckCircle2Icon,
-  CircleIcon,
-  Loader2Icon,
-} from "lucide-react";
+import { CheckCircle2Icon, CircleIcon, Loader2Icon } from "lucide-react";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
 import { TodoState } from "@/src/contexts/task-runtime";
 import {
@@ -38,7 +34,7 @@ export function TaskHeader({
     totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <div className="px-4 py-2 w-full h-[54px] border-b border-border flex items-center justify-between">
+    <div className="absolute bg-accent/70 z-20 backdrop-blur-md px-4 py-2 w-full h-[54px] border-b border-border flex items-center justify-between">
       <div>
         {agent ? <span className="">{agent?.name}</span> : <div />}
         {cwd && cwd !== defaultCwd && (

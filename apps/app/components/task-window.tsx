@@ -77,7 +77,7 @@ export default function TaskWindow() {
   const isGenerating = generationState.includes(selectedTaskId);
 
   return (
-    <motion.div className="flex-1 relative" layout>
+    <motion.div className="flex flex-1 relative" layout>
       {/* Header */}
       {selectedTaskId !== "new-conversation" && (
         <TaskHeader
@@ -89,10 +89,7 @@ export default function TaskWindow() {
       )}
 
       {/* Thread */}
-      <motion.div
-        layout
-        className="absolute w-full h-[calc(100%-210px)] px-8 bottom-40 flex justify-center"
-      >
+      <motion.div layout className="grow-1 w-full flex justify-center">
         <TaskThread
           selectedTaskId={selectedTaskId}
           messageParts={messageParts}
@@ -104,16 +101,13 @@ export default function TaskWindow() {
 
       {/* Composer & Permission Container */}
       <motion.div
-        className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
         initial={{
           y: 40,
           opacity: 0,
         }}
         animate={{
-          y:
-            selectedTaskId === "new-conversation"
-              ? "0%"
-              : "calc(50vh - 50% - 3rem)",
+          y: selectedTaskId === "new-conversation" ? 0 : "0%",
           opacity: 1,
         }}
         transition={{
