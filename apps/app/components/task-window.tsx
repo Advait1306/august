@@ -101,22 +101,7 @@ export default function TaskWindow() {
       </motion.div>
 
       {/* Composer & Permission Container */}
-      <motion.div
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl"
-        initial={{
-          y: 40,
-          opacity: 0,
-        }}
-        animate={{
-          y: selectedTaskId === "new-conversation" ? 0 : "0%",
-          opacity: 1,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 2000,
-          damping: 200,
-        }}
-      >
+      <motion.div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[80%] max-w-3xl">
         {/* Composer */}
         <TaskComposer
           prompt={prompt}
