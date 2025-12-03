@@ -12,6 +12,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
 
 interface TaskThreadProps {
   selectedTaskId: string;
@@ -52,6 +53,13 @@ export function TaskThread({
               loop: false,
             }}
             className="w-full select-none"
+            plugins={[
+              Autoplay({
+                delay: 4000,
+                stopOnInteraction: true,
+                stopOnMouseEnter: true,
+              }),
+            ]}
           >
             <CarouselContent className="-ml-2">
               <CarouselItem className="pl-2 basis-1/3">
