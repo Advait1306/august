@@ -5,6 +5,13 @@ import { ToolGroupView } from "./tool-group";
 import { BlinkingCursor } from "./blinking-cursor";
 import { MessagePart } from "@/lib/message-utils";
 import { EducationCard } from "./education-card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface TaskThreadProps {
   selectedTaskId: string;
@@ -38,22 +45,44 @@ export function TaskThread({
             <div className="h-[40px] w-[40px] rounded-full bg-primary" />
           </div>
         </div>
-        <div className="relative flex grow-1 max-h-[300px]">
-          <div className="absolute w-full h-full pointer-events-none bg-[linear-gradient(90deg,var(--background)_0%,transparent_15%,transparent_90%,var(--background)_100%)]" />
-          <div className="w-full max-w-[800px] overflow-x-scroll no-scrollbar">
-            <div className="w-fit h-full flex flex-row gap-2 overflow-x-scroll">
-              <div className="h-full w-[300px] border rounded-xl overflow-hidden">
-                <EducationCard title="Structuring meeting transcripts into tables" />
-              </div>
-              <div className="h-full w-[300px] border rounded-xl overflow-hidden">
-                <EducationCard title="Daily report from Google Sheets and Shiprocket" />
-              </div>
-              <div className="h-full w-[300px] border rounded-xl overflow-hidden">
-                <EducationCard title="Analysing YouTube Analytics data for better videos" />
-              </div>
-              <div className="h-full w-[300px] border rounded-xl overflow-hidden"></div>
-            </div>
-          </div>
+        <div className="relative flex grow-1 max-h-[300px] w-full max-w-[800px]">
+          <Carousel
+            opts={{
+              align: "start",
+              loop: false,
+            }}
+            className="w-full select-none"
+          >
+            <CarouselContent className="-ml-2">
+              <CarouselItem className="pl-2 basis-1/3">
+                <div className="h-[300px] border rounded-xl overflow-hidden">
+                  <EducationCard title="Structuring meeting transcripts into tables" />
+                </div>
+              </CarouselItem>
+              <CarouselItem className="pl-2 basis-1/3">
+                <div className="h-[300px] border rounded-xl overflow-hidden">
+                  <EducationCard title="Daily report from Google Sheets and Shiprocket" />
+                </div>
+              </CarouselItem>
+              <CarouselItem className="pl-2 basis-1/3">
+                <div className="h-[300px] border rounded-xl overflow-hidden">
+                  <EducationCard title="Analysing YouTube Analytics data for better videos" />
+                </div>
+              </CarouselItem>
+              <CarouselItem className="pl-2 basis-1/3">
+                <div className="h-[300px] border rounded-xl overflow-hidden">
+                  <EducationCard title="Analysing YouTube Analytics data for better videos" />
+                </div>
+              </CarouselItem>
+              <CarouselItem className="pl-2 basis-1/3">
+                <div className="h-[300px] border rounded-xl overflow-hidden">
+                  <EducationCard title="Analysing YouTube Analytics data for better videos" />
+                </div>
+              </CarouselItem>
+            </CarouselContent>
+            <CarouselPrevious />
+            <CarouselNext />
+          </Carousel>
         </div>
       </ConversationEmptyState>
     );
