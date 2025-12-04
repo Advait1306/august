@@ -227,7 +227,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <AnimatePresence>
         {dialog && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-xs"
+            className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
             onClick={() => setDialog(null)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -235,24 +235,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             transition={{ duration: 0.2 }}
           >
             <motion.div
-              className="relative w-[80%] h-[80%] bg-background border border-black/20 dark:border-white/20 shadow-[0px_4px_14px_0px_rgba(0,_0,_0,_0.1)] rounded-xl overflow-hidden"
+              className="relative w-[80%] max-w-[1600px] h-[80%] bg-background border border-black/20 dark:border-white/20 shadow-[0px_4px_14px_0px_rgba(0,_0,_0,_0.1)] rounded-xl overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="absolute top-6 right-6 z-10">
+              {/* Title Bar */}
+              <div className="flex-shrink-0 flex items-center justify-between pl-2 pr-4 py-2 border-b border-border">
+                <h2 className="text-xs font-semibold text-muted-foreground/60 px-2">
+                  {dialog === "agents" ? "Agents" : "MCP"}
+                </h2>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setDialog(null)}
-                  className="rounded-full"
+                  className="rounded-full h-6 w-6"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3 w-3" />
                 </Button>
               </div>
-              <div className="h-full w-full">
+
+              {/* Content */}
+              <div className="flex-1 overflow-hidden">
                 {dialog === "agents" ? <AgentsContent /> : <MCPContent />}
               </div>
             </motion.div>
