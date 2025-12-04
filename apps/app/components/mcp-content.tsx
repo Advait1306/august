@@ -78,9 +78,9 @@ export function MCPContent() {
           {/* Active Connections Section */}
           {userMcps.length > 0 && (
             <div className="w-full">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3 block">
                 Active Connections
-              </p>
+              </span>
               <div className="flex flex-wrap gap-2">
                 {userMcps.map((mcp) => {
                   const storeItem = mcpStore.find(
@@ -120,9 +120,9 @@ export function MCPContent() {
                         align="center"
                       >
                         <div className="space-y-4">
-                          <p className="text-sm">
+                          <span className="text-sm block">
                             Are you sure you want to disconnect {mcp.name}?
-                          </p>
+                          </span>
                           <div className="flex gap-2 justify-end">
                             <PopoverTrigger asChild>
                               <Button variant="outline" size="sm">
@@ -167,9 +167,9 @@ export function MCPContent() {
         <div className="w-full max-w-[1000px] mx-auto flex flex-col gap-6">
           {/* All Connections Section */}
           <div className="w-full">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3 block">
               All Connections
-            </p>
+            </span>
             {mcpStore.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <p>No integrations available yet.</p>
