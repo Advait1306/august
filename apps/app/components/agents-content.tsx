@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, Plus, Trash2 } from "lucide-react";
+import { PencilIcon, Plus, Trash2, Check } from "lucide-react";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
@@ -34,9 +34,8 @@ export function AgentsContent() {
   const agents = useQuery(getAgents(syncContext.authData))[0];
 
   // Form states
-  const [selectedAgentId, setSelectedAgentId] = useState<
-    string | "new-agent" | null
-  >(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newAgentName, setNewAgentName] = useState("");
 
   // Local editing state to prevent cursor jumping
@@ -48,10 +47,7 @@ export function AgentsContent() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Derive selected agent from agents array
-  const selectedAgent =
-    selectedAgentId === "new-agent"
-      ? null
-      : agents.find((a) => a.id === selectedAgentId) || null;
+  const selectedAgent = agents.find((a) => a.id === selectedAgentId) || null;
 
   const { showTopGradient, showBottomGradient, recalculate } =
     useScrollGradients(scrollContainerRef);
@@ -82,6 +78,7 @@ export function AgentsContent() {
       // Immediately open the newly created agent
       setSelectedAgentId(agentId);
       setNewAgentName("");
+      setIsCreatingNew(false);
     } catch (error) {
       console.error("Failed to create agent:", error);
     }
@@ -141,7 +138,7 @@ export function AgentsContent() {
   };
 
   const startCreate = () => {
-    setSelectedAgentId("new-agent");
+    setIsCreatingNew(true);
     setNewAgentName("");
   };
 
@@ -174,17 +171,49 @@ export function AgentsContent() {
     <div className="flex h-full w-full">
       <div className="flex flex-row w-full">
         {/* Agent List Sidebar */}
-        <div className="flex-1 min-w-[200px] max-w-[300px] bg-sidebar border-r border-border flex flex-col">
+        <div className="flex-1 min-w-[200px] max-w-[300px] bg-sidebar border-r border-border flex flex-col gap-2">
           {/* Fixed Header */}
-          <div className="flex-shrink-0 px-2 pt-2">
-            <div
-              className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer mb-1"
+          <div className="flex flex-col gap-2 flex-shrink-0 px-3 pt-2">
+            <Button
+              className="grow-1 mt-2"
+              size={"sm"}
               onClick={startCreate}
+              variant={"outline"}
             >
-              <span className="pointer-events-none select-text flex flex-row items-center gap-2">
+              <span className="pointer-events-none select-text flex flex-row items-center justify-start gap-2 text-start">
                 <Plus className="w-4 h-4" /> New Agent
               </span>
-            </div>
+            </Button>
+
+            {/* Inline New Agent Input */}
+            {isCreatingNew && (
+              <div className="flex items-center gap-1">
+                <Input
+                  value={newAgentName}
+                  onChange={(e) => setNewAgentName(e.target.value)}
+                  placeholder="Agent name"
+                  className="h-8 text-sm flex-1"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleCreateAgent();
+                    } else if (e.key === "Escape") {
+                      setIsCreatingNew(false);
+                      setNewAgentName("");
+                    }
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={handleCreateAgent}
+                  disabled={!newAgentName.trim()}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Scrollable Agent List with Gradients */}
@@ -286,63 +315,7 @@ export function AgentsContent() {
             </div>
           )}
 
-          {selectedAgentId === "new-agent" ? (
-            <div className="flex-1 overflow-auto">
-              <div className="max-w-3xl mx-auto px-16 py-6">
-                <div className="mb-8">
-                  <h2 className="text-2xl font-semibold mb-2">
-                    Create New Agent
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Give your agent a name to get started
-                  </p>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label
-                      htmlFor="newAgentName"
-                      className="text-base mb-2 block"
-                    >
-                      Agent Name
-                    </Label>
-                    <Input
-                      id="newAgentName"
-                      value={newAgentName}
-                      onChange={(e) => setNewAgentName(e.target.value)}
-                      placeholder="Enter agent name"
-                      className="text-lg"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleCreateAgent();
-                        } else if (e.key === "Escape") {
-                          setSelectedAgentId(null);
-                          setNewAgentName("");
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleCreateAgent}
-                      disabled={!newAgentName.trim()}
-                    >
-                      Create Agent
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedAgentId(null);
-                        setNewAgentName("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : selectedAgent ? (
+          {selectedAgent ? (
             <div className="flex-1 overflow-auto">
               <div className="max-w-3xl mx-auto px-16 py-6">
                 <Input
