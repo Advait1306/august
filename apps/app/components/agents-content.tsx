@@ -1,21 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, Plus, Trash2 } from "lucide-react";
+import { PencilIcon, Plus, Trash2, Check } from "lucide-react";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
 import { useSyncContext } from "../src/components/sync_engine";
@@ -38,12 +32,9 @@ export function AgentsContent() {
 
   const agents = useQuery(getAgents(syncContext.authData))[0];
 
-  // Dialog states
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
   // Form states
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newAgentName, setNewAgentName] = useState("");
 
   // Local editing state to prevent cursor jumping
@@ -57,7 +48,8 @@ export function AgentsContent() {
   // Derive selected agent from agents array
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) || null;
 
-  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(scrollContainerRef);
+  const { showTopGradient, showBottomGradient, recalculate } =
+    useScrollGradients(scrollContainerRef);
 
   // Sync local state when selected agent changes
   useEffect(() => {
@@ -84,9 +76,8 @@ export function AgentsContent() {
 
       // Immediately open the newly created agent
       setSelectedAgentId(agentId);
-
-      setShowCreateDialog(false);
       setNewAgentName("");
+      setIsCreatingNew(false);
     } catch (error) {
       console.error("Failed to create agent:", error);
     }
@@ -140,14 +131,14 @@ export function AgentsContent() {
       await result.client;
 
       setSelectedAgentId(nextAgentId);
-      setShowDeleteDialog(false);
     } catch (error) {
       console.error("Failed to delete agent:", error);
     }
   };
 
   const startCreate = () => {
-    setShowCreateDialog(true);
+    setIsCreatingNew(true);
+    setNewAgentName("");
   };
 
   // Keyboard navigation with arrow keys
@@ -179,17 +170,49 @@ export function AgentsContent() {
     <div className="flex h-full w-full">
       <div className="flex flex-row w-full">
         {/* Agent List Sidebar */}
-        <div className="flex-1 min-w-[200px] max-w-[300px] bg-[#E8E8E8] border-r border-border dark:bg-[#141414] flex flex-col">
+        <div className="flex-1 min-w-[200px] max-w-[300px] bg-sidebar border-r border-border flex flex-col gap-2">
           {/* Fixed Header */}
-          <div className="flex-shrink-0 px-2 pt-2">
-            <div
-              className="text-sm h-8 p-2 text-muted-foreground hover:bg-muted rounded-md hover:text-foreground flex items-center cursor-pointer mb-1"
+          <div className="flex flex-col gap-2 flex-shrink-0 px-3 pt-2">
+            <Button
+              className="grow-1 mt-2"
+              size={"sm"}
               onClick={startCreate}
+              variant={"outline"}
             >
-              <span className="pointer-events-none select-text flex flex-row items-center gap-2">
+              <span className="pointer-events-none select-text flex flex-row items-center justify-start gap-2 text-start">
                 <Plus className="w-4 h-4" /> New Agent
               </span>
-            </div>
+            </Button>
+
+            {/* Inline New Agent Input */}
+            {isCreatingNew && (
+              <div className="flex items-center gap-1">
+                <Input
+                  value={newAgentName}
+                  onChange={(e) => setNewAgentName(e.target.value)}
+                  placeholder="Agent name"
+                  className="h-8 text-sm flex-1"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleCreateAgent();
+                    } else if (e.key === "Escape") {
+                      setIsCreatingNew(false);
+                      setNewAgentName("");
+                    }
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={handleCreateAgent}
+                  disabled={!newAgentName.trim()}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Scrollable Agent List with Gradients */}
@@ -215,12 +238,12 @@ export function AgentsContent() {
             {/* Gradient Overlays */}
             {showTopGradient && (
               <div className="absolute top-0 left-0 right-0 h-12 pointer-events-none z-10">
-                <div className="absolute inset-0 bg-gradient-to-b from-[#E8E8E8] via-[#E8E8E8]/50 to-transparent dark:from-[#141414] dark:via-[#141414]/50" />
+                <div className="absolute inset-0 bg-gradient-to-b from-sidebar via-sidebar/50 to-transparent" />
               </div>
             )}
             {showBottomGradient && (
               <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none z-10">
-                <div className="absolute inset-0 bg-gradient-to-t from-[#E8E8E8] via-[#E8E8E8]/50 to-transparent dark:from-[#141414] dark:via-[#141414]/50" />
+                <div className="absolute inset-0 bg-gradient-to-t from-sidebar via-sidebar/50 to-transparent" />
               </div>
             )}
           </div>
@@ -253,14 +276,41 @@ export function AgentsContent() {
 
           {selectedAgent && (
             <div className="absolute bottom-6 right-6 z-50">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowDeleteDialog(true)}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <Popover modal={false}>
+                <PopoverAnchor>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                </PopoverAnchor>
+
+                <PopoverContent className="w-80" side="top" align="end">
+                  <div className="space-y-4">
+                    <p className="text-sm">
+                      Are you sure you want to delete this agent?
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          Cancel
+                        </Button>
+                      </PopoverTrigger>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDeleteAgent}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
@@ -321,10 +371,10 @@ export function AgentsContent() {
                   </CardHeader>
                   <CardContent className="text-sm leading-relaxed pb-2 text-white/80">
                     <p>
-                      Agents are customizable AI assistants that you can
-                      tailor to your specific workflows and requirements. Each
-                      agent is built on a special system prompt that defines
-                      its behavior.
+                      Agents are customizable AI assistants that you can tailor
+                      to your specific workflows and requirements. Each agent is
+                      built on a special system prompt that defines its
+                      behavior.
                     </p>
                   </CardContent>
                 </div>
@@ -333,58 +383,6 @@ export function AgentsContent() {
           )}
         </div>
       </div>
-
-      {/* Create Agent Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent showCloseButton={false}>
-          <div className="grid gap-4">
-            <Label htmlFor="agentName">Name</Label>
-            <Input
-              id="agentName"
-              value={newAgentName}
-              onChange={(e) => setNewAgentName(e.target.value)}
-              placeholder="Enter agent name"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCreateAgent();
-                }
-              }}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowCreateDialog(false);
-                setNewAgentName("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleCreateAgent}>Create Agent</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              agent and all its configuration.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAgent}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
