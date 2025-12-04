@@ -209,7 +209,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   onClick={() => setDialog("mcp")}
                 >
                   <MCPIcon className="h-4 w-4 mr-2" />
-                  MCP
+                  Connections
                 </Button>
               </div>
             </div>
@@ -235,7 +235,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <FullPageDialog
         open={dialog === "mcp"}
         onOpenChange={(open) => setDialog(open ? "mcp" : null)}
-        title="MCP"
+        title="Connections"
       >
         <MCPContent />
       </FullPageDialog>
