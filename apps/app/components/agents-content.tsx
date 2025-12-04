@@ -4,21 +4,12 @@ import { PencilIcon, Plus, Trash2 } from "lucide-react";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,12 +34,10 @@ export function AgentsContent() {
 
   const agents = useQuery(getAgents(syncContext.authData))[0];
 
-  // Dialog states
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
   // Form states
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [selectedAgentId, setSelectedAgentId] = useState<
+    string | "new-agent" | null
+  >(null);
   const [newAgentName, setNewAgentName] = useState("");
 
   // Local editing state to prevent cursor jumping
@@ -60,7 +49,10 @@ export function AgentsContent() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Derive selected agent from agents array
-  const selectedAgent = agents.find((a) => a.id === selectedAgentId) || null;
+  const selectedAgent =
+    selectedAgentId === "new-agent"
+      ? null
+      : agents.find((a) => a.id === selectedAgentId) || null;
 
   const { showTopGradient, showBottomGradient, recalculate } =
     useScrollGradients(scrollContainerRef);
@@ -90,8 +82,6 @@ export function AgentsContent() {
 
       // Immediately open the newly created agent
       setSelectedAgentId(agentId);
-
-      setShowCreateDialog(false);
       setNewAgentName("");
     } catch (error) {
       console.error("Failed to create agent:", error);
@@ -146,14 +136,14 @@ export function AgentsContent() {
       await result.client;
 
       setSelectedAgentId(nextAgentId);
-      setShowDeleteDialog(false);
     } catch (error) {
       console.error("Failed to delete agent:", error);
     }
   };
 
   const startCreate = () => {
-    setShowCreateDialog(true);
+    setSelectedAgentId("new-agent");
+    setNewAgentName("");
   };
 
   // Keyboard navigation with arrow keys
@@ -259,18 +249,101 @@ export function AgentsContent() {
 
           {selectedAgent && (
             <div className="absolute bottom-6 right-6 z-50">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowDeleteDialog(true)}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <Popover modal={false}>
+                <PopoverAnchor>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                </PopoverAnchor>
+
+                <PopoverContent className="w-80" side="top" align="end">
+                  <div className="space-y-4">
+                    <p className="text-sm">
+                      Are you sure you want to delete this agent?
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          Cancel
+                        </Button>
+                      </PopoverTrigger>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDeleteAgent}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
-          {selectedAgent ? (
+          {selectedAgentId === "new-agent" ? (
+            <div className="flex-1 overflow-auto">
+              <div className="max-w-3xl mx-auto px-16 py-6">
+                <div className="mb-8">
+                  <h2 className="text-2xl font-semibold mb-2">
+                    Create New Agent
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Give your agent a name to get started
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label
+                      htmlFor="newAgentName"
+                      className="text-base mb-2 block"
+                    >
+                      Agent Name
+                    </Label>
+                    <Input
+                      id="newAgentName"
+                      value={newAgentName}
+                      onChange={(e) => setNewAgentName(e.target.value)}
+                      placeholder="Enter agent name"
+                      className="text-lg"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleCreateAgent();
+                        } else if (e.key === "Escape") {
+                          setSelectedAgentId(null);
+                          setNewAgentName("");
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleCreateAgent}
+                      disabled={!newAgentName.trim()}
+                    >
+                      Create Agent
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedAgentId(null);
+                        setNewAgentName("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : selectedAgent ? (
             <div className="flex-1 overflow-auto">
               <div className="max-w-3xl mx-auto px-16 py-6">
                 <Input
@@ -339,52 +412,6 @@ export function AgentsContent() {
           )}
         </div>
       </div>
-
-      {/* Create Agent Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="rounded-xl">
-          <DialogTitle className="sr-only">Agent Name</DialogTitle>
-          <div className="grid gap-4">
-            <Label htmlFor="agentName">Name</Label>
-            <Input
-              id="agentName"
-              value={newAgentName}
-              onChange={(e) => setNewAgentName(e.target.value)}
-              placeholder="Enter agent name"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCreateAgent();
-                }
-              }}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button onClick={handleCreateAgent} className="w-full">
-              Create Agent
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              agent and all its configuration.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAgent}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
