@@ -10,7 +10,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
 import { useSyncContext } from "../src/components/sync_engine";
