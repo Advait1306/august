@@ -3,7 +3,12 @@ import { Button } from "@/components/ui/button";
 import { PencilIcon, Plus, Trash2 } from "lucide-react";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,7 +62,8 @@ export function AgentsContent() {
   // Derive selected agent from agents array
   const selectedAgent = agents.find((a) => a.id === selectedAgentId) || null;
 
-  const { showTopGradient, showBottomGradient, recalculate } = useScrollGradients(scrollContainerRef);
+  const { showTopGradient, showBottomGradient, recalculate } =
+    useScrollGradients(scrollContainerRef);
 
   // Sync local state when selected agent changes
   useEffect(() => {
@@ -179,7 +185,7 @@ export function AgentsContent() {
     <div className="flex h-full w-full">
       <div className="flex flex-row w-full">
         {/* Agent List Sidebar */}
-        <div className="flex-1 min-w-[200px] max-w-[300px] bg-[#E8E8E8] border-r border-border dark:bg-[#141414] flex flex-col">
+        <div className="flex-1 min-w-[200px] max-w-[300px] bg-sidebar border-r border-border flex flex-col">
           {/* Fixed Header */}
           <div className="flex-shrink-0 px-2 pt-2">
             <div
@@ -215,12 +221,12 @@ export function AgentsContent() {
             {/* Gradient Overlays */}
             {showTopGradient && (
               <div className="absolute top-0 left-0 right-0 h-12 pointer-events-none z-10">
-                <div className="absolute inset-0 bg-gradient-to-b from-[#E8E8E8] via-[#E8E8E8]/50 to-transparent dark:from-[#141414] dark:via-[#141414]/50" />
+                <div className="absolute inset-0 bg-gradient-to-b from-sidebar via-sidebar/50 to-transparent" />
               </div>
             )}
             {showBottomGradient && (
               <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none z-10">
-                <div className="absolute inset-0 bg-gradient-to-t from-[#E8E8E8] via-[#E8E8E8]/50 to-transparent dark:from-[#141414] dark:via-[#141414]/50" />
+                <div className="absolute inset-0 bg-gradient-to-t from-sidebar via-sidebar/50 to-transparent" />
               </div>
             )}
           </div>
@@ -321,10 +327,10 @@ export function AgentsContent() {
                   </CardHeader>
                   <CardContent className="text-sm leading-relaxed pb-2 text-white/80">
                     <p>
-                      Agents are customizable AI assistants that you can
-                      tailor to your specific workflows and requirements. Each
-                      agent is built on a special system prompt that defines
-                      its behavior.
+                      Agents are customizable AI assistants that you can tailor
+                      to your specific workflows and requirements. Each agent is
+                      built on a special system prompt that defines its
+                      behavior.
                     </p>
                   </CardContent>
                 </div>
@@ -336,7 +342,8 @@ export function AgentsContent() {
 
       {/* Create Agent Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent showCloseButton={false}>
+        <DialogContent className="rounded-xl">
+          <DialogTitle className="sr-only">Agent Name</DialogTitle>
           <div className="grid gap-4">
             <Label htmlFor="agentName">Name</Label>
             <Input
@@ -353,16 +360,9 @@ export function AgentsContent() {
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowCreateDialog(false);
-                setNewAgentName("");
-              }}
-            >
-              Cancel
+            <Button onClick={handleCreateAgent} className="w-full">
+              Create Agent
             </Button>
-            <Button onClick={handleCreateAgent}>Create Agent</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

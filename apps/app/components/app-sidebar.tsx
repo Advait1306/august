@@ -243,7 +243,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               transition={{ duration: 0.2 }}
             >
               {/* Title Bar */}
-              <div className="flex-shrink-0 flex items-center justify-between pl-2 pr-4 py-2 border-b border-border">
+              <div className="flex-shrink-0 flex items-center justify-between pl-2 pr-4 py-2 border-b border-border bg-sidebar">
                 <h2 className="text-xs font-semibold text-muted-foreground/60 px-2">
                   {dialog === "agents" ? "Agents" : "MCP"}
                 </h2>
