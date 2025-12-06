@@ -39,13 +39,12 @@ export const ToolGroupView = ({
         <Popover key={tool.partIndex}>
           <PopoverTrigger asChild>
             <motion.button
-              
               className={cn(
                 "inline-flex items-center justify-center rounded-full",
                 "text-sm font-medium",
                 "transition-colors hover:bg-card/60",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                "bg-card border",
+                "bg-background border",
                 "data-[state=open]:bg-popover"
               )}
             >
@@ -58,7 +57,7 @@ export const ToolGroupView = ({
           <PopoverContent
             className={cn(
               "w-[600px] max-h-[400px] overflow-auto",
-              "rounded-xl p-0 bg-background"
+              "rounded-xl p-0 bg-popover"
             )}
             align="center"
             side="bottom"

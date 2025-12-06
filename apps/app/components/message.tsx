@@ -52,7 +52,7 @@ export const UserMessagePartView = ({ content }: { content: any }) => {
   const contents =
     typeof content === "string"
       ? [
-          <MessageContent className="rounded-3xl max-w-[80%]" key="0">
+          <MessageContent className="rounded-3xl max-w-[80%]">
             {content}
           </MessageContent>,
         ]
