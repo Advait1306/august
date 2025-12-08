@@ -205,7 +205,7 @@ export function AgentsContent() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 flex-shrink-0"
+                  className="h-8 w-8 shrink-0"
                   onClick={handleCreateAgent}
                   disabled={!newAgentName.trim()}
                 >
@@ -238,12 +238,12 @@ export function AgentsContent() {
             {/* Gradient Overlays */}
             {showTopGradient && (
               <div className="absolute top-0 left-0 right-0 h-12 pointer-events-none z-10">
-                <div className="absolute inset-0 bg-gradient-to-b from-sidebar via-sidebar/50 to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-b from-sidebar via-sidebar/50 to-transparent" />
               </div>
             )}
             {showBottomGradient && (
               <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none z-10">
-                <div className="absolute inset-0 bg-gradient-to-t from-sidebar via-sidebar/50 to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-sidebar via-sidebar/50 to-transparent" />
               </div>
             )}
           </div>
@@ -328,7 +328,7 @@ export function AgentsContent() {
                     setIsEditing(false);
                   }}
                   placeholder="Enter agent name"
-                  className="!bg-background !text-4xl font-semibold mb-8 border-none px-0 shadow-none focus-visible:ring-0 tracking-tight"
+                  className="bg-background! text-4xl! font-semibold mb-8 border-none px-0 shadow-none focus-visible:ring-0 tracking-tight"
                 />
                 <Textarea
                   value={localSystemPrompt}
@@ -341,7 +341,7 @@ export function AgentsContent() {
                     setIsEditing(false);
                   }}
                   placeholder="Enter the system prompt that defines your agent's behavior..."
-                  className="!bg-background min-h-[300px] resize-none border-none px-0 shadow-none focus-visible:ring-0 !text-base/7 whitespace-pre-wrap text-muted-foreground"
+                  className="bg-background! min-h-[300px] resize-none border-none px-0 shadow-none focus-visible:ring-0 text-base/7! whitespace-pre-wrap text-muted-foreground"
                 />
               </div>
             </div>

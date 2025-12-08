@@ -38,7 +38,7 @@ export function FullPageDialog({
                 <DialogPrimitive.Content asChild>
                   <motion.div
                     className={cn(
-                      "relative w-[80%] max-w-[1600px] h-[80%] bg-background border border-black/20 dark:border-white/10 shadow-[0px_4px_14px_0px_rgba(0,_0,_0,_0.1)] rounded-xl overflow-hidden flex flex-col",
+                      "relative w-[80%] max-w-[1600px] h-[80%] bg-background border border-black/20 dark:border-white/10 shadow-[0px_4px_14px_0px_rgba(0,0,0,0.1)] rounded-xl overflow-hidden flex flex-col",
                       className
                     )}
                     onClick={(e) => e.stopPropagation()}
