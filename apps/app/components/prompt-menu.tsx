@@ -317,7 +317,10 @@ export function PromptMenu({
   return (
     <PopoverContent
       ref={popoverContentRef}
-      className={cn("p-0 w-64 overflow-hidden relative", className)}
+      className={cn(
+        "p-0 w-64 relative shadow-[0px_2px_8px] shadow-neutral-900/15 dark:shadow-neutral-900/75",
+        className
+      )}
       align="start"
       side="bottom"
       onOpenAutoFocus={(e) => e.preventDefault()}
@@ -340,7 +343,7 @@ export function PromptMenu({
         }
       }}
     >
-      <Command>
+      <Command className="border-none">
         <CommandList>
           <CommandGroup>
             <AnimatePresence

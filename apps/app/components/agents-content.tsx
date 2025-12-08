@@ -170,11 +170,11 @@ export function AgentsContent() {
     <div className="flex h-full w-full">
       <div className="flex flex-row w-full">
         {/* Agent List Sidebar */}
-        <div className="flex-1 min-w-[200px] max-w-[300px] bg-sidebar border-r border-border flex flex-col gap-2">
+        <div className="flex-1 min-w-[200px] max-w-[300px] bg-sidebar border-r border-border flex flex-col gap-2 pt-7">
           {/* Fixed Header */}
-          <div className="flex flex-col gap-2 flex-shrink-0 px-3 pt-2">
+          <div className="flex flex-col gap-2 shrink-0 px-3 pt-2">
             <Button
-              className="grow-1 mt-2"
+              className="grow mt-2"
               size={"sm"}
               onClick={startCreate}
               variant={"outline"}

@@ -67,7 +67,7 @@ export function TaskComposer({
           }
           sendMessage(prompt);
         }}
-        className="p-2 mb-4 rounded-2xl shadow-[0px_6px_52px_-14px_rgba(0,_0,_0,_0.1)] "
+        className="p-2 mb-4 rounded-2xl shadow-[0px_6px_52px_-14px_rgba(0,0,0,0.1)] "
       >
         <PromptInputBody>
           <PromptInputTextarea

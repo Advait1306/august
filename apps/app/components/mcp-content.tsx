@@ -54,7 +54,7 @@ export function MCPContent() {
   return (
     <div className="flex flex-col justify-start items-start h-full w-full overflow-auto">
       {/* Content with padding */}
-      <div className="w-full px-6 py-6">
+      <div className="w-full px-6 py-6 pt-10">
         <div className="w-full max-w-[1000px] mx-auto flex flex-col gap-6">
           {/* Banner */}
           {userMcps.length === 0 && (
@@ -74,82 +74,8 @@ export function MCPContent() {
               />
             </div>
           )}
-
-          {/* Active Connections Section */}
-          {userMcps.length > 0 && (
-            <div className="w-full">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3 block">
-                Active Connections
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {userMcps.map((mcp) => {
-                  const storeItem = mcpStore.find(
-                    (item) => item.id === mcp.mcp_store_id
-                  );
-                  return (
-                    <Popover key={mcp.id} modal={false}>
-                      <PopoverAnchor>
-                        <motion.div
-                          initial={false}
-                          whileHover="hover"
-                          className="inline-flex"
-                        >
-                          <PopoverTrigger asChild>
-                            <Badge
-                              variant="outline"
-                              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-background cursor-pointer"
-                            >
-                              {storeItem?.logo_url && (
-                                <img
-                                  src={storeItem.logo_url}
-                                  alt={mcp.name}
-                                  className="w-4 h-4"
-                                />
-                              )}
-                              <span className="text-sm font-medium">
-                                {mcp.name}
-                              </span>
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            </Badge>
-                          </PopoverTrigger>
-                        </motion.div>
-                      </PopoverAnchor>
-                      <PopoverContent
-                        className="w-80"
-                        side="bottom"
-                        align="center"
-                      >
-                        <div className="space-y-4">
-                          <span className="text-sm block">
-                            Are you sure you want to disconnect {mcp.name}?
-                          </span>
-                          <div className="flex gap-2 justify-end">
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                Cancel
-                              </Button>
-                            </PopoverTrigger>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteMcp(mcp.id, mcp.name)}
-                            >
-                              Disconnect
-                            </Button>
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Full-width divider */}
-      {userMcps.length > 0 && <div className="w-full border-t border-border" />}
 
       {/* Search bar section with fixed height */}
       <div className="w-full h-[200px] flex items-center justify-center px-6">
@@ -158,9 +84,76 @@ export function MCPContent() {
           placeholder="Search connections"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full max-w-[800px] rounded-xl"
+          className="w-full max-w-[800px] rounded-xl p-4 h-16 border border-neutral-300 dark:border-neutral-700"
         />
       </div>
+
+      {/* Active Connections Section */}
+      {userMcps.length > 0 && (
+        <div className="w-full max-w-[1000px] mx-auto flex flex-col mb-10">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-3 block">
+            Active Connections
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {userMcps.map((mcp) => {
+              const storeItem = mcpStore.find(
+                (item) => item.id === mcp.mcp_store_id
+              );
+              return (
+                <Popover key={mcp.id} modal={false}>
+                  <PopoverAnchor>
+                    <motion.div
+                      initial={false}
+                      whileHover="hover"
+                      className="inline-flex"
+                    >
+                      <PopoverTrigger asChild>
+                        <Badge
+                          variant="outline"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-background cursor-pointer"
+                        >
+                          {storeItem?.logo_url && (
+                            <img
+                              src={storeItem.logo_url}
+                              alt={mcp.name}
+                              className="w-4 h-4"
+                            />
+                          )}
+                          <span className="text-sm font-medium">
+                            {mcp.name}
+                          </span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        </Badge>
+                      </PopoverTrigger>
+                    </motion.div>
+                  </PopoverAnchor>
+                  <PopoverContent className="w-80" side="bottom" align="center">
+                    <div className="space-y-4">
+                      <span className="text-sm block">
+                        Are you sure you want to disconnect {mcp.name}?
+                      </span>
+                      <div className="flex gap-2 justify-end">
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            Cancel
+                          </Button>
+                        </PopoverTrigger>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteMcp(mcp.id, mcp.name)}
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Content with padding */}
       <div className="w-full px-6 pb-6">
