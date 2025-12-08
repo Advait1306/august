@@ -34,7 +34,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@rocicorp/zero": "0.24.2025100400",
-    "@serwist/window": "^9.2.1",
+    "@serwist/window": "^9.2.3",
     "@tanstack/react-router": "1.139.14",
     "@tanstack/react-router-devtools": "^1.139.14",
     "ai": "^5.0.60",
