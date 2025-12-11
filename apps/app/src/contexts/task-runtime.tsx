@@ -226,11 +226,11 @@ export const TaskRuntimeProvider = ({
       );
 
     const todos = (lastAssistantMessageWithTodo?.content as any[])
-      .filter(
+      ?.filter(
         (content) =>
           content.type === "tool-call" && content.toolName === "TodoWrite"
       )
-      .at(-1)?.input.todos as Todo[];
+      ?.at(-1)?.input.todos as Todo[];
 
     return todos || [];
   }, [selectedTasksMessages, selectedTaskId]);
