@@ -54,6 +54,9 @@ const RootLayout = () => {
                 signUpUrl={SIGN_UP_URL}
                 appearance={{
                   baseTheme: shadcn,
+                  variables: {
+                    colorBackground: "var(--popover)",
+                  },
                 }}
               >
                 <Analytics>
