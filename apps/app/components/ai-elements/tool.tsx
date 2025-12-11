@@ -1,30 +1,17 @@
-"use client";
-
-import { Badge } from "@/components/ui/badge";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import type { ToolUIPart } from "ai";
-import {
-  CheckCircleIcon,
-  ChevronDownIcon,
-  CircleIcon,
-  ClockIcon,
-  WrenchIcon,
-  XCircleIcon,
-} from "lucide-react";
+import { CheckIcon, CircleIcon, WrenchIcon, XIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 import { CodeBlock } from "./code-block";
+import { Spinner } from "../ui/spinner";
+import { motion, type HTMLMotionProps } from "motion/react";
 
-export type ToolProps = ComponentProps<typeof Collapsible>;
+export type ToolProps = ComponentProps<"div">;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
-  <Collapsible
-    className={cn("not-prose mb-4 w-full rounded-md border", className)}
+  <div
+    className={cn("not-prose mb-4 w-full rounded-md", className)}
     {...props}
   />
 );
@@ -37,13 +24,6 @@ export type ToolHeaderProps = {
 };
 
 const getStatusBadge = (status: ToolUIPart["state"]) => {
-  const colors = {
-    "input-streaming": "bg-[#dbd493]",
-    "input-available": "bg-[#93acdb]",
-    "output-available": "bg-[#97db93]",
-    "output-error": "bg-[#db9393]",
-  } as const;
-
   const textColors = {
     "input-streaming": "text-white",
     "input-available": "text-white",
@@ -51,34 +31,23 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
     "output-error": "text-white",
   } as const;
 
-  const labels = {
-    "input-streaming": "Pending",
-    "input-available": "Running",
-    "output-available": "Completed",
-    "output-error": "Error",
-  } as const;
-
   const icons = {
     "input-streaming": <CircleIcon className="size-4" />,
-    "input-available": (
-      <ClockIcon className="size-4 animate-pulse text-white" />
-    ),
-    "output-available": <CheckCircleIcon className="size-4 text-green-600" />,
-    "output-error": <XCircleIcon className="size-4 text-red-600" />,
+    "input-available": <Spinner className="size-4 animate-spin text-white" />,
+    "output-available": <CheckIcon className="size-4 text-green-500" />,
+    "output-error": <XIcon className="size-4 text-red-500" />,
   } as const;
 
   return (
-    <Badge
+    <motion.div
       className={cn(
         "gap-1.5 rounded-full text-xs",
-        colors[status],
-        textColors[status]
+        textColors[status],
+        "opacity-70"
       )}
-      variant="secondary"
     >
       {icons[status]}
-      {labels[status]}
-    </Badge>
+    </motion.div>
   );
 };
 
@@ -89,30 +58,33 @@ export const ToolHeader = ({
   state,
   ...props
 }: ToolHeaderProps) => (
-  <CollapsibleTrigger
+  <motion.div
     className={cn(
-      "flex w-full items-center justify-between gap-4 p-3",
+      "flex w-full items-center justify-between gap-4 p-0.5 pr-2",
       className
     )}
     {...props}
   >
     <div className="flex items-center gap-2">
-      <WrenchIcon className="size-4 text-muted-foreground" />
-      <span className="font-medium text-sm">
+      <div className="p-2 rounded-full bg-card-foreground/5">
+        <WrenchIcon className="size-3 text-muted-foreground" />
+      </div>
+      <span className="font-medium text-xs">
         {title ?? type.split("-").slice(1).join("-")}
       </span>
       {getStatusBadge(state)}
     </div>
-    <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-  </CollapsibleTrigger>
+    {/* <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" /> */}
+  </motion.div>
 );
 
-export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
+export type ToolContentProps = HTMLMotionProps<"div">;
 
 export const ToolContent = ({ className, ...props }: ToolContentProps) => (
-  <CollapsibleContent
+  <motion.div
+    layout
     className={cn(
-      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
+      "text-popover-foreground outline-none overflow-hidden",
       className
     )}
     {...props}
@@ -128,8 +100,12 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
     <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
       Parameters
     </h4>
-    <div className="rounded-md bg-muted/50">
-      <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
+    <div className="rounded-md">
+      <CodeBlock
+        code={JSON.stringify(input, null, 2)}
+        language="json"
+        className="border-none [&_pre]:!p-0"
+      />
     </div>
   </div>
 );
@@ -153,10 +129,20 @@ export const ToolOutput = ({
 
   if (typeof output === "object" && !isValidElement(output)) {
     Output = (
-      <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />
+      <CodeBlock
+        code={JSON.stringify(output, null, 2)}
+        language="json"
+        className="border-none [&_pre]:!p-0"
+      />
     );
   } else if (typeof output === "string") {
-    Output = <CodeBlock code={output} language="json" />;
+    Output = (
+      <CodeBlock
+        code={output}
+        language="json"
+        className="border-none [&_pre]:!p-0"
+      />
+    );
   }
 
   return (

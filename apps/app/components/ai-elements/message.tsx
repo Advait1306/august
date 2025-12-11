@@ -1,19 +1,16 @@
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { UIMessage } from "ai";
 import { cva, type VariantProps } from "class-variance-authority";
-import type { ComponentProps, HTMLAttributes } from "react";
+import { motion, type HTMLMotionProps } from "motion/react";
+import type { ComponentProps } from "react";
 
-export type MessageProps = HTMLAttributes<HTMLDivElement> & {
+export type MessageProps = HTMLMotionProps<"div"> & {
   from: UIMessage["role"];
 };
 
 export const Message = ({ className, from, ...props }: MessageProps) => (
-  <div
+  <motion.div
     className={cn(
       "group flex w-full items-end justify-end gap-2 py-4",
       from === "user" ? "is-user" : "is-assistant flex-row-reverse justify-end",
@@ -30,7 +27,7 @@ const messageContentVariants = cva(
       variant: {
         contained: [
           "max-w-[80%] px-4 py-3",
-          "group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground",
+          "group-[.is-user]:bg-background group-[.is-user]:text-foreground group-[.is-user]:border group-[.is-user]:border-border",
           "group-[.is-assistant]:bg-secondary group-[.is-assistant]:text-foreground",
         ],
         flat: [
@@ -45,7 +42,7 @@ const messageContentVariants = cva(
   }
 );
 
-export type MessageContentProps = HTMLAttributes<HTMLDivElement> &
+export type MessageContentProps = ComponentProps<"div"> &
   VariantProps<typeof messageContentVariants>;
 
 export const MessageContent = ({

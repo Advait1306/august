@@ -34,7 +34,6 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
-import { MCPIcon } from "@/components/icons/MCPIcon";
 import { Kbd, KbdKey } from "@/components/ui/kibo-ui/kbd";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 
@@ -172,24 +171,6 @@ function CommandMenuDialog({
               });
             },
             shortcut: ["G", "T"],
-          },
-          {
-            id: "agents",
-            title: "Agents",
-            icon: Bot,
-            action: () => {
-              navigate({ to: "/agents" });
-            },
-            shortcut: ["G", "A"],
-          },
-          {
-            id: "mcp",
-            title: "MCP",
-            icon: MCPIcon,
-            action: () => {
-              navigate({ to: "/mcp" });
-            },
-            shortcut: ["G", "M"],
           },
         ],
       },

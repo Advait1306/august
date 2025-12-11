@@ -49,6 +49,9 @@ export function useKeyboardNavigation<T>({
         ...(items || []).map(getItemId),
       ];
 
+      // Don't navigate if there are no items
+      if (allItemIds.length === 0) return;
+
       // Find current index
       const currentIndex = allItemIds.indexOf(selectedId);
 
@@ -60,8 +63,8 @@ export function useKeyboardNavigation<T>({
         nextIndex = Math.max(currentIndex - 1, 0);
       }
 
-      // Only update if index changed
-      if (nextIndex !== currentIndex) {
+      // Only update if index changed and next index is valid
+      if (nextIndex !== currentIndex && allItemIds[nextIndex]) {
         onSelect(allItemIds[nextIndex]);
       }
     };

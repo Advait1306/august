@@ -1,20 +1,16 @@
 import { Button } from "@/components/ui/button";
-import { useImageColor } from "@/src/hooks/useImageColor";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
 import { useZero } from "@/src/hooks/useZero";
 import { useAuth } from "@clerk/clerk-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
@@ -34,10 +30,7 @@ interface MCPCardProps {
 }
 
 export function MCPCard({ mcpStoreItem, connectedMcp }: MCPCardProps) {
-  const { darkerColor, lighterColor } = useImageColor(mcpStoreItem.logo_url!);
-  const [isHovered, setIsHovered] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
   const z = useZero();
   const { getToken } = useAuth();
@@ -83,7 +76,7 @@ export function MCPCard({ mcpStoreItem, connectedMcp }: MCPCardProps) {
 
       toast.success("Opening authorization page...");
     } catch (error) {
-      console.error("Error connecting to MCP:", error);
+      console.error("Error connecting to connection:", error);
       if (error instanceof Error) {
         toast.error(error.message);
       } else {
@@ -94,119 +87,96 @@ export function MCPCard({ mcpStoreItem, connectedMcp }: MCPCardProps) {
     }
   };
 
-  const handleDisconnectClick = () => {
-    setShowDisconnectDialog(true);
-  };
-
   const handleConfirmDisconnect = async () => {
     if (!connectedMcp) return;
 
     try {
       await z.mutate.mcps.delete({ mcp_id: connectedMcp.id });
-      setShowDisconnectDialog(false);
       toast.success("Integration disconnected successfully");
     } catch (error) {
-      console.error("Failed to delete MCP:", error);
+      console.error("Failed to delete connection:", error);
       toast.error("Failed to disconnect integration");
     }
   };
 
   return (
     <>
-      <div
-        className="h-[72px] flex flex-col justify-center relative border-1 rounded-xl bg-card hover:shadow-md transition-all overflow-hidden"
-        style={{ borderColor: lighterColor ?? undefined }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-      >
-        {/* Blurred background effect */}
-        <div
-          className="w-full h-full absolute top-0 left-0 opacity-20 blur-xl"
-          style={{
-            backgroundColor: darkerColor ?? undefined,
-            scale: "4",
-          }}
-        />
-
-        <div className="flex items-center justify-between gap-3 relative z-10 px-4 py-3">
-          <div className="flex items-center gap-3">
-            {mcpStoreItem.logo_url && (
+      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-border">
+        <div className="flex items-center gap-2.5 flex-1 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center flex-shrink-0">
+            {mcpStoreItem.logo_url ? (
               <img
                 src={mcpStoreItem.logo_url}
                 alt={mcpStoreItem.name}
-                className="w-10 h-10 rounded"
+                className="w-5 h-5"
               />
+            ) : (
+              <span className="text-sm">{mcpStoreItem.name.charAt(0)}</span>
             )}
-            <div className="flex-1 min-w-0 flex flex-col">
-              <h3 className="font-semibold truncate">{mcpStoreItem.name}</h3>
-              {mcpStoreItem.category && (
-                <span className="text-xs line-clamp-1">
-                  {mcpStoreItem.description}
-                </span>
-              )}
-            </div>
           </div>
-
-          <div>
-            <Button
-              variant={
-                isConnected && isHovered
-                  ? "destructive"
-                  : isConnected
-                    ? "ghost"
-                    : "secondary"
-              }
-              size="sm"
-              className="rounded-full text-[12px] !py-3 h-[28px] border"
-              style={
-                isConnected && !isHovered
-                  ? { borderColor: lighterColor ?? undefined }
-                  : undefined
-              }
-              onClick={isConnected ? handleDisconnectClick : handleConnect}
-              disabled={isConnecting}
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                  Connecting...
-                </>
-              ) : isConnected && isHovered ? (
-                "Disconnect"
-              ) : isConnected ? (
-                "Connected"
-              ) : (
-                "Connect"
-              )}
-            </Button>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{mcpStoreItem.name}</p>
           </div>
         </div>
-      </div>
 
-      {/* Confirmation Dialog for Disconnect */}
-      <AlertDialog
-        open={showDisconnectDialog}
-        onOpenChange={setShowDisconnectDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will disconnect and remove the MCP integration "
-              {connectedMcp?.name}". This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDisconnect}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        <div className="flex-shrink-0">
+          {isConnecting ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-lg text-xs h-7 px-3"
+              disabled
             >
-              Disconnect
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+              Connecting...
+            </Button>
+          ) : isConnected ? (
+            <Popover modal={false}>
+              <PopoverAnchor>
+                <PopoverTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 cursor-pointer hover:bg-emerald-500/20"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    Connected
+                  </Badge>
+                </PopoverTrigger>
+              </PopoverAnchor>
+              <PopoverContent className="w-80" side="top" align="center">
+                <div className="space-y-4">
+                  <p className="text-sm">
+                    Are you sure you want to disconnect {connectedMcp?.name}?
+                  </p>
+                  <div className="flex gap-2 justify-end">
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        Cancel
+                      </Button>
+                    </PopoverTrigger>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleConfirmDisconnect}
+                    >
+                      Disconnect
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-lg text-xs h-7 px-4 bg-background hover:bg-muted"
+              onClick={handleConnect}
+            >
+              Connect
+            </Button>
+          )}
+        </div>
+      </div>
     </>
   );
 }
