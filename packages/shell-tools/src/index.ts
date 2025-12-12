@@ -14,4 +14,12 @@ export {
   type GlobInput,
   type GlobOutput,
 } from "./glob";
+export {
+  ls,
+  lsToolDefinition,
+  LsInputSchema,
+  LsOutputSchema,
+  type LsInput,
+  type LsOutput,
+} from "./ls";
 export { rgPath } from "@vscode/ripgrep";
