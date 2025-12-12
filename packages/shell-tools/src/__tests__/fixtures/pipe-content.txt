@@ -1,5 +1,0 @@
-Regular line without pipes
-Line with single | pipe character
-Line with multiple | pipe | characters | here
-const result = a | b | c;
-grep pattern | head -10
