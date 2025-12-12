@@ -43,25 +43,29 @@ export function countChanges(
   before: string,
   after: string
 ): { additions: number; deletions: number } {
-  const beforeLines = before.split("\n");
-  const afterLines = after.split("\n");
+  // Generate a unified diff and parse it to count actual changes
+  const diff = createTwoFilesPatch(
+    "file",
+    "file",
+    before,
+    after,
+    "original",
+    "modified"
+  );
 
-  // Simple line-based diff counting
-  const beforeSet = new Set(beforeLines);
-  const afterSet = new Set(afterLines);
-
-  let deletions = 0;
   let additions = 0;
+  let deletions = 0;
 
-  for (const line of beforeLines) {
-    if (!afterSet.has(line)) {
-      deletions++;
-    }
-  }
-
-  for (const line of afterLines) {
-    if (!beforeSet.has(line)) {
+  // Parse the unified diff output
+  const lines = diff.split("\n");
+  for (const line of lines) {
+    // Lines starting with + (but not +++) are additions
+    if (line.startsWith("+") && !line.startsWith("+++")) {
       additions++;
+    }
+    // Lines starting with - (but not ---) are deletions
+    else if (line.startsWith("-") && !line.startsWith("---")) {
+      deletions++;
     }
   }
 
