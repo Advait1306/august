@@ -92,7 +92,7 @@ export async function grep(input: GrepInput): Promise<GrepOutput> {
       }
 
       if (exitCode !== 0 && exitCode !== null) {
-        reject(new Error(`ripgrep failed: ${stderr}`));
+        reject(new Error(`ripgrep failed with exit code ${exitCode}: ${stderr}`));
         return;
       }
 
