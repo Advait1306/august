@@ -192,12 +192,13 @@ describe("glob", () => {
       expect(result.output).toBe("No files found");
     });
 
-    it("should handle non-existent directory gracefully", async () => {
-      const result = await glob({
-        pattern: "**/*",
-        path: "/non/existent/path/that/does/not/exist",
-      });
-      expect(result.metadata.count).toBe(0);
+    it("should throw error for non-existent directory", async () => {
+      await expect(
+        glob({
+          pattern: "**/*",
+          path: "/non/existent/path/that/does/not/exist",
+        })
+      ).rejects.toThrow(/ripgrep error/);
     });
   });
 
@@ -455,8 +456,14 @@ describe("glob", () => {
         });
         expect(result).toBeDefined();
         expect(result.metadata.count).toBeGreaterThan(0);
-      } catch {
-        // Symlink creation may fail on some systems - skip test
+      } catch (error) {
+        // Symlink creation may fail on some systems (e.g., permissions, Windows)
+        // If symlink creation fails, that's expected - skip the test
+        // If glob call fails, that's an actual error
+        if (error instanceof Error && error.message.includes("ripgrep")) {
+          throw error;
+        }
+        // Otherwise, silently skip due to symlink creation failure
       }
     });
 

@@ -81,13 +81,18 @@ export async function glob(input: GlobInput): Promise<GlobOutput> {
 
     rg.on("close", async (exitCode) => {
       // Exit code 1 = no matches (not an error)
-      // Exit code 2 = error (e.g., non-existent path) - treat as no files found
-      if (exitCode === 1 || exitCode === 2) {
+      if (exitCode === 1) {
         resolve({
           title: options.pattern,
           metadata: { count: 0, truncated: false },
           output: "No files found",
         });
+        return;
+      }
+
+      // Exit code 2 = error (invalid pattern, permission denied, etc.)
+      if (exitCode === 2) {
+        reject(new Error(`ripgrep error: ${stderr || 'unknown error'}`));
         return;
       }
 
@@ -124,7 +129,9 @@ export async function glob(input: GlobInput): Promise<GlobOutput> {
         resolve({
           title: options.pattern,
           metadata: { count: 0, truncated: false },
-          output: "No files found",
+          output: lines.length > 0
+            ? "Files found but could not be accessed"
+            : "No files found",
         });
         return;
       }
