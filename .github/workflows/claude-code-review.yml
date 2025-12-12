@@ -21,7 +21,7 @@ jobs:
       - name: Get PR branch
         id: get-pr
         run: |
-          PR_DATA=$(gh pr view ${{ github.event.issue.number }} --json headRefName,headRefOid)
+          PR_DATA=$(gh pr view ${{ github.event.issue.number }} --repo ${{ github.repository }} --json headRefName,headRefOid)
           echo "branch=$(echo $PR_DATA | jq -r .headRefName)" >> $GITHUB_OUTPUT
           echo "sha=$(echo $PR_DATA | jq -r .headRefOid)" >> $GITHUB_OUTPUT
         env:
