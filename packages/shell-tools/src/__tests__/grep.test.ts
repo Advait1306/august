@@ -1,10 +1,88 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { grep, GrepInputSchema, GrepOutputSchema } from "../grep";
 import { join } from "path";
 import { ZodError } from "zod";
-import { utimes } from "fs/promises";
+import { utimes, mkdir, writeFile, rm } from "fs/promises";
 
-const fixturesPath = join(__dirname, "fixtures");
+const fixturesPath = join(__dirname, "fixtures-grep-test");
+
+// Create all fixtures before tests run
+beforeAll(async () => {
+  await mkdir(fixturesPath, { recursive: true });
+
+  // sample.txt - basic test file with various case variants of "Hello"
+  await writeFile(
+    join(fixturesPath, "sample.txt"),
+    `Hello world
+This is a test file
+Hello again
+Another line here
+Testing grep functionality
+hello lowercase
+HELLO UPPERCASE`
+  );
+
+  // code.ts - TypeScript file with functions
+  await writeFile(
+    join(fixturesPath, "code.ts"),
+    `function greet(name: string) {
+  return \`Hello, \${name}!\`;
+}
+
+function farewell(name: string) {
+  return \`Goodbye, \${name}!\`;
+}
+
+export { greet, farewell };`
+  );
+
+  // long-line.txt - file with a line exceeding 2000 characters
+  const longContent =
+    "This is a very long line that exceeds the maximum line length limit of 2000 characters and should be truncated when displayed in the grep output. " +
+    "a".repeat(1850) +
+    " END_MARKER";
+  await writeFile(
+    join(fixturesPath, "long-line.txt"),
+    `Short line here
+${longContent}
+Another short line`
+  );
+
+  // many-matches.txt - 150 lines for truncation testing
+  const manyMatchesContent = Array.from(
+    { length: 150 },
+    (_, i) => `match line ${i + 1}`
+  ).join("\n");
+  await writeFile(join(fixturesPath, "many-matches.txt"), manyMatchesContent);
+
+  // pipe-content.txt - file with pipe characters
+  await writeFile(
+    join(fixturesPath, "pipe-content.txt"),
+    `Regular line without pipes
+Line with single | pipe character
+Line with multiple | pipe | characters | here
+const result = a | b | c;
+grep pattern | head -10`
+  );
+
+  // special-chars.txt - file with special regex characters
+  await writeFile(
+    join(fixturesPath, "special-chars.txt"),
+    `File with special.dot characters
+Square [brackets] here
+Parentheses (round) ones
+Stars * and plus +
+Question mark? here
+Curly {braces} too
+Backslash \\ character
+Caret ^ and dollar $`
+  );
+});
+
+// Clean up fixtures after tests complete
+afterAll(async () => {
+  await rm(fixturesPath, { recursive: true, force: true });
+});
 
 describe("grep", () => {
   it("should find matches in a file", async () => {

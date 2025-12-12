@@ -1,7 +1,0 @@
-Hello world
-This is a test file
-Hello again
-Another line here
-Testing grep functionality
-hello lowercase
-HELLO UPPERCASE

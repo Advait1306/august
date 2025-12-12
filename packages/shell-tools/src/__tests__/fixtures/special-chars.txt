@@ -1,8 +1,0 @@
-File with special.dot characters
-Square [brackets] here
-Parentheses (round) ones
-Stars * and plus +
-Question mark? here
-Curly {braces} too
-Backslash \ character
-Caret ^ and dollar $
