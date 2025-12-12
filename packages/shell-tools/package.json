@@ -6,6 +6,7 @@
   "dependencies": {
     "@jupiter/typescript-config": "*",
     "@vscode/ripgrep": "^1.15.9",
+    "diff": "^7.0.0",
     "typescript": "latest",
     "zod": "^4.1.13"
   },
