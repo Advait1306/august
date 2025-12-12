@@ -216,6 +216,24 @@ line 3`;
       expect(result.metadata.deletions).toBeGreaterThan(0);
       expect(result.metadata.additions).toBeGreaterThan(0);
     });
+
+    it("should correctly count changes when file contains duplicate lines", async () => {
+      // Regression test for line count accuracy bug
+      // The Set-based approach failed when files contained duplicate lines
+      const content = "line1\nline1\nline2";
+      const filePath = await createTestFile("duplicate-lines.txt", content);
+      const result = await edit({
+        filePath,
+        oldString: "line1\nline1",
+        newString: "line1\nline3",
+      });
+
+      // Should replace first two lines, reporting 1 deletion and 1 addition
+      expect(result.metadata.replacements).toBe(1);
+      expect(result.metadata.deletions).toBe(1);
+      expect(result.metadata.additions).toBe(1);
+      expect(await readTestFile(filePath)).toBe("line1\nline3\nline2");
+    });
   });
 
   describe("error handling", () => {
