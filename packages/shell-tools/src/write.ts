@@ -33,7 +33,11 @@ export const WriteOutputSchema = z.object({
   metadata: z.object({
     filePath: z.string().describe("Path to the written file"),
     created: z.boolean().describe("Whether a new file was created"),
-    linesWritten: z.number().describe("Number of lines written"),
+    linesWritten: z
+      .number()
+      .describe(
+        "Number of lines written (empty file = 0, content with trailing newline counts as extra line)"
+      ),
   }),
   output: z.string().describe("Unified diff showing the changes"),
 });
@@ -83,8 +87,12 @@ export async function write(input: WriteInput): Promise<WriteOutput> {
   if (fileExists) {
     try {
       originalContent = await readFile(filePath, "utf-8");
-    } catch {
-      // If we can't read it, treat as empty for diff purposes
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code === "EACCES") {
+        throw createPermissionDeniedError(filePath);
+      }
+      // For other read errors (e.g., EISDIR already checked), treat as empty
       originalContent = "";
     }
   }

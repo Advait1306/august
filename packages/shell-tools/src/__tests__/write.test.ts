@@ -168,6 +168,11 @@ describe("write", () => {
   });
 
   describe("error handling", () => {
+    // Note: PERMISSION_DENIED and NO_SPACE errors are difficult to test reliably
+    // in unit tests as they require platform-specific setup (e.g., read-only files,
+    // full disk). These error paths are covered by the code logic and should be
+    // tested manually or in integration tests with appropriate environment setup.
+
     it("should throw INVALID_PATH for relative path", async () => {
       await expect(
         write({
