@@ -7,13 +7,24 @@ import type {
   BetaMessageParam,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { systemPrompt } from "./system";
+import type { ZodObject } from "zod";
+import { toJSONSchema } from "zod/v4/core";
+
+/**
+ * Zod-based tool definition (as exported by @august/shell-tools)
+ */
+export interface ZodToolDefinition {
+  name: string;
+  description: string;
+  inputSchema: ZodObject;
+}
 
 /**
  * Agent loop configuration
  */
 export interface AgentLoopConfig {
   messages: BetaMessageParam[];
-  tools?: Tool[];
+  tools?: (Tool | ZodToolDefinition)[];
   mcpServers?: BetaRequestMCPServerURLDefinition[];
   model?: string;
   maxTokens?: number;
@@ -38,14 +49,28 @@ export async function* agentLoop(
 
   const client = new Anthropic();
 
+  // Convert tools to Anthropic format (handle both Tool and ZodToolDefinition)
+  const convertedTools: Tool[] = tools.map((tool) => {
+    if ("input_schema" in tool) {
+      // Already in Anthropic Tool format
+      return tool;
+    }
+    // ZodToolDefinition - convert inputSchema to JSON schema
+    return {
+      name: tool.name,
+      description: tool.description,
+      input_schema: toJSONSchema(tool.inputSchema) as Tool["input_schema"],
+    };
+  });
+
   // Build MCP toolsets for each server
   const mcpToolsets: BetaMCPToolset[] = mcpServers.map((server) => ({
     type: "mcp_toolset" as const,
     mcp_server_name: server.name,
   }));
 
-  const allTools = [...tools, ...mcpToolsets];
-  const betas = mcpServers.length > 0 ? ["mcp-client-2025-11-20"] : [];
+  const allTools = [...convertedTools, ...mcpToolsets];
+  const hasMcp = mcpServers.length > 0;
 
   const stream = await client.beta.messages.create({
     model,
@@ -53,8 +78,8 @@ export async function* agentLoop(
     system: systemPrompt,
     tools: allTools.length > 0 ? allTools : undefined,
     messages,
-    mcp_servers: mcpServers.length > 0 ? mcpServers : undefined,
-    betas,
+    mcp_servers: hasMcp ? mcpServers : undefined,
+    betas: hasMcp ? ["mcp-client-2025-11-20"] : undefined,
     stream: true,
   });
 

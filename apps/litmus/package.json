@@ -1,0 +1,23 @@
+{
+  "name": "@august/litmus",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@august/harness": "*",
+    "@august/shell-tools": "*",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@jupiter/typescript-config": "*",
+    "tsx": "^4.20.6",
+    "typescript": "latest"
+  }
+}

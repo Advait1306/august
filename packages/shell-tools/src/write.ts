@@ -16,8 +16,8 @@ import {
   createPermissionDeniedError,
   createNoSpaceError,
   createWriteFailedError,
-} from "./write/validation";
-import { generateDiff } from "./edit/diff";
+} from "./write-helpers/validation";
+import { generateDiff } from "./edit-helpers/diff";
 
 // Input schema for the write tool
 export const WriteInputSchema = z.object({
@@ -120,10 +120,7 @@ export async function write(input: WriteInput): Promise<WriteOutput> {
     if (error.code === "ENOSPC") {
       throw createNoSpaceError(filePath);
     }
-    throw createWriteFailedError(
-      filePath,
-      error.message || String(err)
-    );
+    throw createWriteFailedError(filePath, error.message || String(err));
   }
 
   // Generate diff and calculate stats

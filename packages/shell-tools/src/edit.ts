@@ -18,7 +18,7 @@ import {
   createNoChangeError,
   createWriteFailedError,
   createInvalidPathError,
-} from "./edit/validation";
+} from "./edit-helpers/validation";
 import {
   detectLineEnding,
   normalizeLineEndings,
@@ -26,9 +26,9 @@ import {
   safeLiteralReplace,
   safeLiteralReplaceAll,
   countOccurrences,
-} from "./edit/utils";
-import { findMatch } from "./edit/replacers";
-import { generateDiff, countChanges } from "./edit/diff";
+} from "./edit-helpers/utils";
+import { findMatch } from "./edit-helpers/replacers";
+import { generateDiff, countChanges } from "./edit-helpers/diff";
 
 // Input schema for the edit tool
 export const EditInputSchema = z.object({
@@ -108,7 +108,11 @@ export async function edit(input: EditInput): Promise<EditOutput> {
   const normalizedNewString = normalizeLineEndings(newString);
 
   // Find a match using cascading strategies
-  const matchResult = findMatch(normalizedContent, normalizedOldString, replaceAll);
+  const matchResult = findMatch(
+    normalizedContent,
+    normalizedOldString,
+    replaceAll
+  );
 
   if (!matchResult) {
     // Check if there are multiple matches for better error message
@@ -129,9 +133,17 @@ export async function edit(input: EditInput): Promise<EditOutput> {
   // Perform the replacement
   let newContent: string;
   if (replaceAll) {
-    newContent = safeLiteralReplaceAll(normalizedContent, match, normalizedNewString);
+    newContent = safeLiteralReplaceAll(
+      normalizedContent,
+      match,
+      normalizedNewString
+    );
   } else {
-    newContent = safeLiteralReplace(normalizedContent, match, normalizedNewString);
+    newContent = safeLiteralReplace(
+      normalizedContent,
+      match,
+      normalizedNewString
+    );
   }
 
   // Restore original line endings
