@@ -17,7 +17,7 @@ import {
   createNoSpaceError,
   createWriteFailedError,
 } from "./write/validation";
-import { generateDiff, countChanges } from "./edit/diff";
+import { generateDiff } from "./edit/diff";
 
 // Input schema for the write tool
 export const WriteInputSchema = z.object({
@@ -120,9 +120,6 @@ export async function write(input: WriteInput): Promise<WriteOutput> {
 
   // Generate diff and calculate stats
   const diff = generateDiff(filePath, originalContent, content);
-  const { additions } = countChanges(originalContent, content);
-
-  // Calculate lines written (use additions from diff which shows actual new lines)
   const linesWritten = content === "" ? 0 : content.split("\n").length;
 
   return {
