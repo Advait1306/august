@@ -216,6 +216,26 @@ const z = 30;`);
       });
     });
 
+    it("should throw for zero matches without replaceAll", async () => {
+      const content = "hello world";
+      const filePath = await createTestFile("zero-match.txt", content);
+
+      await expect(
+        multiedit({
+          filePath,
+          edits: [
+            { oldString: "notfound", newString: "replaced", replaceAll: false },
+          ],
+        })
+      ).rejects.toMatchObject({
+        editIndex: 0,
+        type: MultiEditErrorType.NO_MATCH_FOUND,
+      });
+
+      // File should be unchanged
+      expect(await readTestFile(filePath)).toBe(content);
+    });
+
     it("should throw with edit index for no match in middle edit", async () => {
       const content = "line 1\nline 2\nline 3";
       const filePath = await createTestFile("no-match-middle.txt", content);

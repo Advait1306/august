@@ -9,17 +9,7 @@
 import { z } from "zod";
 import { readFile, writeFile, stat } from "fs/promises";
 import { isAbsolute } from "path";
-import {
-  EditError,
-  EditErrorType,
-  createFileNotFoundError,
-  createPathIsDirectoryError,
-  createNoMatchError,
-  createMultipleMatchesError,
-  createNoChangeError,
-  createWriteFailedError,
-  createInvalidPathError,
-} from "./edit/validation";
+import { EditError, EditErrorType } from "./edit/validation";
 import {
   detectLineEnding,
   normalizeLineEndings,
