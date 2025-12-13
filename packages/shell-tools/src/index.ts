@@ -32,4 +32,16 @@ export {
   type EditInput,
   type EditOutput,
 } from "./edit";
+export {
+  multiedit,
+  multieditToolDefinition,
+  MultiEditInputSchema,
+  MultiEditOutputSchema,
+  MultiEditOperationSchema,
+  MultiEditError,
+  MultiEditErrorType,
+  type MultiEditInput,
+  type MultiEditOutput,
+  type MultiEditOperation,
+} from "./multiedit";
 export { rgPath } from "@vscode/ripgrep";
