@@ -1,5 +1,4 @@
 import "dotenv/config";
-import * as readline from "readline";
 import Anthropic from "@anthropic-ai/sdk";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import {
@@ -19,7 +18,7 @@ import {
 import { agentLoop, type ZodToolDefinition } from "@august/harness";
 
 // All available tools
-const tools: ZodToolDefinition[] = [
+export const tools: ZodToolDefinition[] = [
   lsToolDefinition,
   globToolDefinition,
   grepToolDefinition,
@@ -29,7 +28,7 @@ const tools: ZodToolDefinition[] = [
 ];
 
 // Map tool names to their implementations
-const toolExecutors: Record<string, (input: unknown) => Promise<unknown>> = {
+export const toolExecutors: Record<string, (input: unknown) => Promise<unknown>> = {
   ls: (input) => ls(input as Parameters<typeof ls>[0]),
   glob: (input) => glob(input as Parameters<typeof glob>[0]),
   grep: (input) => grep(input as Parameters<typeof grep>[0]),
@@ -38,19 +37,35 @@ const toolExecutors: Record<string, (input: unknown) => Promise<unknown>> = {
   write: (input) => write(input as Parameters<typeof write>[0]),
 };
 
-const messages: MessageParam[] = [];
+export interface ToolCall {
+  name: string;
+  input: unknown;
+  result: string;
+  isError: boolean;
+}
 
-async function runAgentLoop(userMessage: string): Promise<void> {
-  messages.push({ role: "user", content: userMessage });
+export interface AgentResult {
+  messages: MessageParam[];
+  toolCalls: ToolCall[];
+  finalResponse: string;
+}
+
+export interface RunAgentOptions {
+  messages: MessageParam[];
+  onText?: (text: string) => void;
+  onToolStart?: (name: string) => void;
+  onToolResult?: (name: string, result: string, isError: boolean) => void;
+}
+
+export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResult> {
+  const { messages, onText, onToolStart, onToolResult } = options;
+  const toolCalls: ToolCall[] = [];
+  let finalResponse = "";
 
   while (true) {
-    process.stdout.write("\n\x1b[34mAssistant:\x1b[0m ");
-
     const contentBlocks: Anthropic.ContentBlock[] = [];
-    // Accumulate partial JSON strings for tool_use blocks (keyed by index)
     const partialJsonByIndex: Map<number, string> = new Map();
 
-    // Stream the response
     for await (const event of agentLoop({ messages, tools })) {
       if (event.type === "content_block_start") {
         if (event.content_block.type === "text") {
@@ -62,15 +77,13 @@ async function runAgentLoop(userMessage: string): Promise<void> {
       } else if (event.type === "content_block_delta") {
         const block = contentBlocks[event.index];
         if (event.delta.type === "text_delta" && block?.type === "text") {
-          process.stdout.write(event.delta.text);
+          onText?.(event.delta.text);
           block.text += event.delta.text;
         } else if (event.delta.type === "input_json_delta" && block?.type === "tool_use") {
-          // Accumulate partial JSON string - don't parse yet
           const current = partialJsonByIndex.get(event.index) ?? "";
           partialJsonByIndex.set(event.index, current + event.delta.partial_json);
         }
       } else if (event.type === "content_block_stop") {
-        // Parse accumulated JSON when block is complete
         const block = contentBlocks[event.index];
         if (block?.type === "tool_use") {
           const jsonStr = partialJsonByIndex.get(event.index) ?? "{}";
@@ -80,6 +93,14 @@ async function runAgentLoop(userMessage: string): Promise<void> {
     }
 
     messages.push({ role: "assistant", content: contentBlocks });
+
+    // Extract final text response
+    const textBlocks = contentBlocks.filter(
+      (block): block is Anthropic.TextBlock => block.type === "text"
+    );
+    if (textBlocks.length > 0) {
+      finalResponse = textBlocks.map((b) => b.text).join("\n");
+    }
 
     // Check if we need to execute tools
     const toolUseBlocks = contentBlocks.filter(
@@ -94,14 +115,22 @@ async function runAgentLoop(userMessage: string): Promise<void> {
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
     for (const toolUse of toolUseBlocks) {
-      console.log(`\n\x1b[33m[Tool: ${toolUse.name}]\x1b[0m`);
+      onToolStart?.(toolUse.name);
 
       const executor = toolExecutors[toolUse.name];
       if (!executor) {
+        const errorMsg = `Unknown tool: ${toolUse.name}`;
+        toolCalls.push({
+          name: toolUse.name,
+          input: toolUse.input,
+          result: errorMsg,
+          isError: true,
+        });
+        onToolResult?.(toolUse.name, errorMsg, true);
         toolResults.push({
           type: "tool_result",
           tool_use_id: toolUse.id,
-          content: `Unknown tool: ${toolUse.name}`,
+          content: errorMsg,
           is_error: true,
         });
         continue;
@@ -110,7 +139,13 @@ async function runAgentLoop(userMessage: string): Promise<void> {
       try {
         const result = await executor(toolUse.input);
         const resultStr = typeof result === "string" ? result : JSON.stringify(result, null, 2);
-        console.log(`\x1b[90m${resultStr.slice(0, 500)}${resultStr.length > 500 ? "..." : ""}\x1b[0m`);
+        toolCalls.push({
+          name: toolUse.name,
+          input: toolUse.input,
+          result: resultStr,
+          isError: false,
+        });
+        onToolResult?.(toolUse.name, resultStr, false);
         toolResults.push({
           type: "tool_result",
           tool_use_id: toolUse.id,
@@ -118,7 +153,13 @@ async function runAgentLoop(userMessage: string): Promise<void> {
         });
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.log(`\x1b[31mError: ${errorMsg}\x1b[0m`);
+        toolCalls.push({
+          name: toolUse.name,
+          input: toolUse.input,
+          result: errorMsg,
+          isError: true,
+        });
+        onToolResult?.(toolUse.name, errorMsg, true);
         toolResults.push({
           type: "tool_result",
           tool_use_id: toolUse.id,
@@ -130,53 +171,6 @@ async function runAgentLoop(userMessage: string): Promise<void> {
 
     messages.push({ role: "user", content: toolResults });
   }
+
+  return { messages, toolCalls, finalResponse };
 }
-
-async function main() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    terminal: false,
-  });
-
-  console.log("\x1b[36mLitmus Agent\x1b[0m");
-  console.log("Type your message and press Enter. Type 'exit' to quit.\n");
-
-  const prompt = () => {
-    process.stdout.write("\x1b[32mYou:\x1b[0m ");
-    rl.question("", async (input) => {
-      const trimmed = input.trim();
-
-      if (trimmed.toLowerCase() === "exit") {
-        console.log("Goodbye!");
-        rl.close();
-        return;
-      }
-
-      if (!trimmed) {
-        prompt();
-        return;
-      }
-
-      // Echo the input and show processing indicator
-      console.log(`\x1b[90m> ${trimmed}\x1b[0m`);
-      process.stdout.write("\x1b[33mProcessing...\x1b[0m");
-
-      try {
-        // Clear the "Processing..." text before showing response
-        process.stdout.write("\r\x1b[K");
-        await runAgentLoop(trimmed);
-      } catch (error) {
-        process.stdout.write("\r\x1b[K");
-        console.error("\x1b[31mError:\x1b[0m", error);
-      }
-
-      console.log();
-      prompt();
-    });
-  };
-
-  prompt();
-}
-
-main().catch(console.error);
