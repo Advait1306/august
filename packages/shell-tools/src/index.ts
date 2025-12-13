@@ -22,4 +22,14 @@ export {
   type LsInput,
   type LsOutput,
 } from "./ls";
+export {
+  edit,
+  editToolDefinition,
+  EditInputSchema,
+  EditOutputSchema,
+  EditError,
+  EditErrorType,
+  type EditInput,
+  type EditOutput,
+} from "./edit";
 export { rgPath } from "@vscode/ripgrep";
