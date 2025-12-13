@@ -44,4 +44,14 @@ export {
   type MultiEditOutput,
   type MultiEditOperation,
 } from "./multiedit";
+export {
+  write,
+  writeToolDefinition,
+  WriteInputSchema,
+  WriteOutputSchema,
+  WriteError,
+  WriteErrorType,
+  type WriteInput,
+  type WriteOutput,
+} from "./write";
 export { rgPath } from "@vscode/ripgrep";
