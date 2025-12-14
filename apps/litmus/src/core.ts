@@ -4,16 +4,22 @@ import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import {
   ls,
   lsToolDefinition,
+  LsInputSchema,
   glob,
   globToolDefinition,
+  GlobInputSchema,
   grep,
   grepToolDefinition,
+  GrepInputSchema,
   edit,
   editToolDefinition,
+  EditInputSchema,
   multiedit,
   multieditToolDefinition,
+  MultiEditInputSchema,
   write,
   writeToolDefinition,
+  WriteInputSchema,
 } from "@august/shell-tools";
 import { agentLoop, type ZodToolDefinition } from "@august/harness";
 
@@ -27,14 +33,32 @@ export const tools: ZodToolDefinition[] = [
   writeToolDefinition,
 ];
 
-// Map tool names to their implementations
+// Map tool names to their implementations with runtime validation
 export const toolExecutors: Record<string, (input: unknown) => Promise<unknown>> = {
-  ls: (input) => ls(input as Parameters<typeof ls>[0]),
-  glob: (input) => glob(input as Parameters<typeof glob>[0]),
-  grep: (input) => grep(input as Parameters<typeof grep>[0]),
-  edit: (input) => edit(input as Parameters<typeof edit>[0]),
-  multiedit: (input) => multiedit(input as Parameters<typeof multiedit>[0]),
-  write: (input) => write(input as Parameters<typeof write>[0]),
+  ls: async (input) => {
+    const parsed = LsInputSchema.parse(input);
+    return ls(parsed);
+  },
+  glob: async (input) => {
+    const parsed = GlobInputSchema.parse(input);
+    return glob(parsed);
+  },
+  grep: async (input) => {
+    const parsed = GrepInputSchema.parse(input);
+    return grep(parsed);
+  },
+  edit: async (input) => {
+    const parsed = EditInputSchema.parse(input);
+    return edit(parsed);
+  },
+  multiedit: async (input) => {
+    const parsed = MultiEditInputSchema.parse(input);
+    return multiedit(parsed);
+  },
+  write: async (input) => {
+    const parsed = WriteInputSchema.parse(input);
+    return write(parsed);
+  },
 };
 
 export interface ToolCall {
@@ -55,14 +79,17 @@ export interface RunAgentOptions {
   onText?: (text: string) => void;
   onToolStart?: (name: string) => void;
   onToolResult?: (name: string, result: string, isError: boolean) => void;
+  maxIterations?: number;
 }
 
 export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResult> {
-  const { messages, onText, onToolStart, onToolResult } = options;
+  const { messages, onText, onToolStart, onToolResult, maxIterations = 50 } = options;
   const toolCalls: ToolCall[] = [];
   let finalResponse = "";
+  let iterations = 0;
 
-  while (true) {
+  while (iterations < maxIterations) {
+    iterations++;
     const contentBlocks: Anthropic.ContentBlock[] = [];
     const partialJsonByIndex: Map<number, string> = new Map();
 
@@ -87,7 +114,12 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
         const block = contentBlocks[event.index];
         if (block?.type === "tool_use") {
           const jsonStr = partialJsonByIndex.get(event.index) ?? "{}";
-          (block as { input: Record<string, unknown> }).input = JSON.parse(jsonStr);
+          try {
+            (block as { input: Record<string, unknown> }).input = JSON.parse(jsonStr);
+          } catch (error) {
+            console.error(`Failed to parse tool input JSON: ${jsonStr}`);
+            (block as { input: Record<string, unknown> }).input = {};
+          }
         }
       }
     }
@@ -170,6 +202,10 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
     }
 
     messages.push({ role: "user", content: toolResults });
+  }
+
+  if (iterations >= maxIterations) {
+    throw new Error(`Agent loop exceeded maximum iterations (${maxIterations})`);
   }
 
   return { messages, toolCalls, finalResponse };
