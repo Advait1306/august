@@ -9,7 +9,7 @@
 import { z } from "zod";
 import { readFile, writeFile, stat } from "fs/promises";
 import { isAbsolute } from "path";
-import { EditError, EditErrorType } from "./edit/validation";
+import { EditError, EditErrorType } from "./edit-helpers/validation";
 import {
   detectLineEnding,
   normalizeLineEndings,
@@ -17,9 +17,9 @@ import {
   safeLiteralReplace,
   safeLiteralReplaceAll,
   countOccurrences,
-} from "./edit/utils";
-import { findMatch } from "./edit/replacers";
-import { generateDiff, countChanges } from "./edit/diff";
+} from "./edit-helpers/utils";
+import { findMatch } from "./edit-helpers/replacers";
+import { generateDiff, countChanges } from "./edit-helpers/diff";
 
 // Individual edit operation schema
 export const MultiEditOperationSchema = z.object({
@@ -128,7 +128,9 @@ Parameters:
  * If validation passes, all edits are applied in order and the
  * result is written to disk.
  */
-export async function multiedit(input: MultiEditInput): Promise<MultiEditOutput> {
+export async function multiedit(
+  input: MultiEditInput
+): Promise<MultiEditOutput> {
   const options = MultiEditInputSchema.parse(input);
   const { filePath, edits } = options;
 

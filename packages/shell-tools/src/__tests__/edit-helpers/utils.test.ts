@@ -8,7 +8,7 @@ import {
   countOccurrences,
   levenshteinDistance,
   similarity,
-} from "../../edit/utils";
+} from "../../edit-helpers/utils";
 
 describe("utils", () => {
   describe("detectLineEnding", () => {
@@ -57,7 +57,9 @@ describe("utils", () => {
   describe("restoreLineEndings", () => {
     it("should convert LF to CRLF", () => {
       const content = "line1\nline2\nline3";
-      expect(restoreLineEndings(content, "\r\n")).toBe("line1\r\nline2\r\nline3");
+      expect(restoreLineEndings(content, "\r\n")).toBe(
+        "line1\r\nline2\r\nline3"
+      );
     });
 
     it("should leave LF unchanged when LF is target", () => {
@@ -68,7 +70,9 @@ describe("utils", () => {
 
   describe("safeLiteralReplace", () => {
     it("should replace first occurrence", () => {
-      expect(safeLiteralReplace("foo bar foo", "foo", "baz")).toBe("baz bar foo");
+      expect(safeLiteralReplace("foo bar foo", "foo", "baz")).toBe(
+        "baz bar foo"
+      );
     });
 
     it("should handle $ in replacement", () => {

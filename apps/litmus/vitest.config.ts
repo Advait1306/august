@@ -5,9 +5,4 @@ export default defineConfig({
     globals: true,
     exclude: ["**/node_modules/**", "**/dist/**"],
   },
-  server: {
-    watch: {
-      ignored: ["**/node_modules/**", "**/dist/**", "**/fixtures-*-test/**"],
-    },
-  },
 });
