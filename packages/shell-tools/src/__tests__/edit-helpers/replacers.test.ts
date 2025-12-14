@@ -7,7 +7,7 @@ import {
   blockAnchorReplacer,
   escapeNormalizedReplacer,
   findMatch,
-} from "../../edit/replacers";
+} from "../../edit-helpers/replacers";
 
 describe("replacers", () => {
   describe("exactReplacer", () => {
