@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { BetaRawMessageStreamEvent } from "@anthropic-ai/sdk/resources/beta/messages/messages";
-import { runAgentLoop } from "../core";
+import { runAgentLoop, type ToolExecutorMap } from "../core";
 
 /**
  * Creates a mock stream that yields events as an async iterable
@@ -291,6 +291,137 @@ describe("runAgentLoop", () => {
 
       // The tool should still be called with empty input
       expect(result.toolCalls).toHaveLength(1);
+    });
+  });
+
+  describe("custom executors", () => {
+    it("should call custom executor with correct input", async () => {
+      const mockExecutor = vi.fn().mockResolvedValue({ files: ["a.txt", "b.txt"] });
+      const executors: ToolExecutorMap = {
+        ls: mockExecutor,
+      };
+
+      const firstResponse = createToolUseEvents("tool-1", "ls", { path: "/test" });
+      const secondResponse = createTextEvents("Listed files.");
+      const mockClient = createMockClient([firstResponse, secondResponse]);
+
+      await runAgentLoop({
+        messages: [{ role: "user", content: "List files" }],
+        client: mockClient,
+        executors,
+      });
+
+      expect(mockExecutor).toHaveBeenCalledTimes(1);
+      expect(mockExecutor).toHaveBeenCalledWith({ path: "/test" });
+    });
+
+    it("should use custom executor result in tool calls", async () => {
+      const mockResult = { entries: ["file1.txt", "file2.txt"], count: 2 };
+      const executors: ToolExecutorMap = {
+        ls: vi.fn().mockResolvedValue(mockResult),
+      };
+
+      const firstResponse = createToolUseEvents("tool-1", "ls", { path: "/test" });
+      const secondResponse = createTextEvents("Done.");
+      const mockClient = createMockClient([firstResponse, secondResponse]);
+
+      const result = await runAgentLoop({
+        messages: [{ role: "user", content: "List files" }],
+        client: mockClient,
+        executors,
+      });
+
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.toolCalls[0]!.result).toBe(JSON.stringify(mockResult, null, 2));
+      expect(result.toolCalls[0]!.isError).toBe(false);
+    });
+
+    it("should handle custom executor errors", async () => {
+      const executors: ToolExecutorMap = {
+        ls: vi.fn().mockRejectedValue(new Error("Custom error")),
+      };
+
+      const firstResponse = createToolUseEvents("tool-1", "ls", { path: "/test" });
+      const secondResponse = createTextEvents("Error handled.");
+      const mockClient = createMockClient([firstResponse, secondResponse]);
+
+      const result = await runAgentLoop({
+        messages: [{ role: "user", content: "List files" }],
+        client: mockClient,
+        executors,
+      });
+
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.toolCalls[0]!.isError).toBe(true);
+      expect(result.toolCalls[0]!.result).toBe("Custom error");
+    });
+
+    it("should call multiple custom executors in order", async () => {
+      const callOrder: string[] = [];
+      const executors: ToolExecutorMap = {
+        ls: vi.fn().mockImplementation(async () => {
+          callOrder.push("ls");
+          return { files: [] };
+        }),
+        glob: vi.fn().mockImplementation(async () => {
+          callOrder.push("glob");
+          return { matches: [] };
+        }),
+      };
+
+      const firstResponse = [
+        ...createToolUseEvents("tool-1", "ls", { path: "/test" }, 0),
+        ...createToolUseEvents("tool-2", "glob", { pattern: "*.ts" }, 1),
+      ];
+      const secondResponse = createTextEvents("Done.");
+      const mockClient = createMockClient([firstResponse, secondResponse]);
+
+      await runAgentLoop({
+        messages: [{ role: "user", content: "List and glob" }],
+        client: mockClient,
+        executors,
+      });
+
+      expect(callOrder).toEqual(["ls", "glob"]);
+      expect(executors.ls).toHaveBeenCalledTimes(1);
+      expect(executors.glob).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return string result directly without JSON serialization", async () => {
+      const executors: ToolExecutorMap = {
+        ls: vi.fn().mockResolvedValue("plain string result"),
+      };
+
+      const firstResponse = createToolUseEvents("tool-1", "ls", { path: "/test" });
+      const secondResponse = createTextEvents("Done.");
+      const mockClient = createMockClient([firstResponse, secondResponse]);
+
+      const result = await runAgentLoop({
+        messages: [{ role: "user", content: "List files" }],
+        client: mockClient,
+        executors,
+      });
+
+      expect(result.toolCalls[0]!.result).toBe("plain string result");
+    });
+
+    it("should treat missing executor as unknown tool", async () => {
+      // Empty executors map - no tools available
+      const executors: ToolExecutorMap = {};
+
+      const firstResponse = createToolUseEvents("tool-1", "ls", { path: "/test" });
+      const secondResponse = createTextEvents("Tool not found.");
+      const mockClient = createMockClient([firstResponse, secondResponse]);
+
+      const result = await runAgentLoop({
+        messages: [{ role: "user", content: "List files" }],
+        client: mockClient,
+        executors,
+      });
+
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.toolCalls[0]!.isError).toBe(true);
+      expect(result.toolCalls[0]!.result).toBe("Unknown tool: ls");
     });
   });
 });

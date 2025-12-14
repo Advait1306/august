@@ -33,8 +33,14 @@ export const tools: ZodToolDefinition[] = [
   writeToolDefinition,
 ];
 
+/** Tool executor function type */
+export type ToolExecutor = (input: unknown) => Promise<unknown>;
+
+/** Map of tool names to their executor functions */
+export type ToolExecutorMap = Record<string, ToolExecutor>;
+
 // Map tool names to their implementations with runtime validation
-export const toolExecutors: Record<string, (input: unknown) => Promise<unknown>> = {
+export const toolExecutors: ToolExecutorMap = {
   ls: async (input) => {
     const parsed = LsInputSchema.parse(input);
     return ls(parsed);
@@ -82,10 +88,12 @@ export interface RunAgentOptions {
   maxIterations?: number;
   /** Optional Anthropic client instance for testing. If not provided, a new client will be created. */
   client?: Anthropic;
+  /** Optional tool executors for testing. If not provided, uses default executors. */
+  executors?: ToolExecutorMap;
 }
 
 export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResult> {
-  const { messages, onText, onToolStart, onToolResult, maxIterations = 50, client } = options;
+  const { messages, onText, onToolStart, onToolResult, maxIterations = 50, client, executors = toolExecutors} = options;
   const toolCalls: ToolCall[] = [];
   let finalResponse = "";
   let iterations = 0;
@@ -151,7 +159,7 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
     for (const toolUse of toolUseBlocks) {
       onToolStart?.(toolUse.name);
 
-      const executor = toolExecutors[toolUse.name];
+      const executor = executors[toolUse.name];
       if (!executor) {
         const errorMsg = `Unknown tool: ${toolUse.name}`;
         toolCalls.push({
