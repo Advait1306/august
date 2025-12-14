@@ -36,3 +36,7 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# MCP credentials and server configs (contains OAuth tokens)
+auth-credentials.json
+mcp-servers.json

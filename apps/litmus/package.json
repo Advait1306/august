@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/tui.ts",
+    "dev": "tsx src/tui.ts",
     "eval": "tsx src/eval.ts",
     "build": "tsc",
     "start": "node dist/tui.js",
@@ -16,7 +16,9 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@august/harness": "*",
     "@august/shell-tools": "*",
-    "dotenv": "^17.2.3"
+    "@inquirer/prompts": "^8.1.0",
+    "dotenv": "^17.2.3",
+    "open": "^10.0.3"
   },
   "devDependencies": {
     "@jupiter/typescript-config": "*",
