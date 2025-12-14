@@ -80,10 +80,12 @@ export interface RunAgentOptions {
   onToolStart?: (name: string) => void;
   onToolResult?: (name: string, result: string, isError: boolean) => void;
   maxIterations?: number;
+  /** Optional Anthropic client instance for testing. If not provided, a new client will be created. */
+  client?: Anthropic;
 }
 
 export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResult> {
-  const { messages, onText, onToolStart, onToolResult, maxIterations = 50 } = options;
+  const { messages, onText, onToolStart, onToolResult, maxIterations = 50, client } = options;
   const toolCalls: ToolCall[] = [];
   let finalResponse = "";
   let iterations = 0;
@@ -93,7 +95,7 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
     const contentBlocks: Anthropic.ContentBlock[] = [];
     const partialJsonByIndex: Map<number, string> = new Map();
 
-    for await (const event of agentLoop({ messages, tools })) {
+    for await (const event of agentLoop({ messages, tools, client })) {
       if (event.type === "content_block_start") {
         if (event.content_block.type === "text") {
           contentBlocks.push({ ...event.content_block, text: "" });

@@ -8,7 +8,9 @@
     "eval": "tsx src/eval.ts",
     "build": "tsc",
     "start": "node dist/tui.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
@@ -19,6 +21,7 @@
   "devDependencies": {
     "@jupiter/typescript-config": "*",
     "tsx": "^4.20.6",
-    "typescript": "latest"
+    "typescript": "latest",
+    "vitest": "^4.0.15"
   }
 }

@@ -28,6 +28,8 @@ export interface AgentLoopConfig {
   mcpServers?: BetaRequestMCPServerURLDefinition[];
   model?: string;
   maxTokens?: number;
+  /** Optional Anthropic client instance. If not provided, a new client will be created. */
+  client?: Anthropic;
 }
 
 /**
@@ -45,9 +47,8 @@ export async function* agentLoop(
     mcpServers = [],
     model = "claude-sonnet-4-20250514",
     maxTokens = 8192,
+    client = new Anthropic(),
   } = config;
-
-  const client = new Anthropic();
 
   // Convert tools to Anthropic format (handle both Tool and ZodToolDefinition)
   const convertedTools: Tool[] = tools.map((tool) => {
