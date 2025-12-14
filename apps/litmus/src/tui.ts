@@ -92,12 +92,29 @@ async function chat(): Promise<void> {
         messages,
         mcpServers,
         onText: (text) => process.stdout.write(text),
-        onToolStart: (name) => console.log(`\n\x1b[33m[Tool: ${name}]\x1b[0m`),
+        onToolStart: (name, input) => {
+          console.log(`\n\x1b[33m[Tool: ${name}]\x1b[0m`);
+          const inputStr = JSON.stringify(input, null, 2);
+          console.log(`\x1b[90mInput: ${inputStr.slice(0, 500)}${inputStr.length > 500 ? "..." : ""}\x1b[0m`);
+        },
         onToolResult: (name, result, isError) => {
           if (isError) {
             console.log(`\x1b[31mError: ${result}\x1b[0m`);
           } else {
-            console.log(`\x1b[90m${result.slice(0, 500)}${result.length > 500 ? "..." : ""}\x1b[0m`);
+            console.log(`\x1b[90mOutput: ${result.slice(0, 500)}${result.length > 500 ? "..." : ""}\x1b[0m`);
+          }
+        },
+        onMcpToolUse: (name, serverName, input) => {
+          console.log(`\n\x1b[35m[MCP Tool: ${name} @ ${serverName}]\x1b[0m`);
+          const inputStr = JSON.stringify(input, null, 2);
+          console.log(`\x1b[90mInput: ${inputStr.slice(0, 500)}${inputStr.length > 500 ? "..." : ""}\x1b[0m`);
+        },
+        onMcpToolResult: (_toolUseId, content, isError) => {
+          const contentStr = typeof content === "string" ? content : JSON.stringify(content, null, 2);
+          if (isError) {
+            console.log(`\x1b[31mMCP Error: ${contentStr.slice(0, 500)}${contentStr.length > 500 ? "..." : ""}\x1b[0m`);
+          } else {
+            console.log(`\x1b[90mMCP Output: ${contentStr.slice(0, 500)}${contentStr.length > 500 ? "..." : ""}\x1b[0m`);
           }
         },
       });
