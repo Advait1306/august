@@ -102,27 +102,44 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
     iterations++;
     const contentBlocks: Anthropic.ContentBlock[] = [];
     const partialJsonByIndex: Map<number, string> = new Map();
+    let stopReason: string | null = null;
 
     for await (const event of agentLoop({ messages, tools, client })) {
       if (event.type === "content_block_start") {
-        if (event.content_block.type === "text") {
-          contentBlocks.push({ ...event.content_block, text: "" });
-        } else if (event.content_block.type === "tool_use") {
-          contentBlocks.push({ ...event.content_block, input: {} });
+        const block = event.content_block;
+        if (block.type === "text") {
+          contentBlocks.push({ ...block, text: "" });
+        } else if (block.type === "tool_use") {
+          // Client-side tool use - needs input parsing
+          contentBlocks.push({ ...block, input: {} });
           partialJsonByIndex.set(event.index, "");
+        } else if (block.type === "server_tool_use") {
+          // Server-side tool use (e.g., web search) - needs input parsing
+          contentBlocks.push({ ...block, input: {} } as Anthropic.ContentBlock);
+          partialJsonByIndex.set(event.index, "");
+        } else {
+          // Handle other block types (web_search_tool_result, mcp_tool_use, mcp_tool_result, etc.)
+          // These are passed through as-is since they don't require client-side processing
+          contentBlocks.push(block as Anthropic.ContentBlock);
         }
       } else if (event.type === "content_block_delta") {
         const block = contentBlocks[event.index];
-        if (event.delta.type === "text_delta" && block?.type === "text") {
+        if (!block) continue;
+
+        if (event.delta.type === "text_delta" && block.type === "text") {
           onText?.(event.delta.text);
-          block.text += event.delta.text;
-        } else if (event.delta.type === "input_json_delta" && block?.type === "tool_use") {
-          const current = partialJsonByIndex.get(event.index) ?? "";
-          partialJsonByIndex.set(event.index, current + event.delta.partial_json);
+          (block as Anthropic.TextBlock).text += event.delta.text;
+        } else if (event.delta.type === "input_json_delta") {
+          // Handle input JSON delta for both tool_use and server_tool_use
+          if (block.type === "tool_use" || block.type === "server_tool_use") {
+            const current = partialJsonByIndex.get(event.index) ?? "";
+            partialJsonByIndex.set(event.index, current + event.delta.partial_json);
+          }
         }
       } else if (event.type === "content_block_stop") {
         const block = contentBlocks[event.index];
-        if (block?.type === "tool_use") {
+        // Parse JSON input for tool_use and server_tool_use blocks
+        if (block?.type === "tool_use" || block?.type === "server_tool_use") {
           const jsonStr = partialJsonByIndex.get(event.index) ?? "{}";
           try {
             (block as { input: Record<string, unknown> }).input = JSON.parse(jsonStr);
@@ -131,6 +148,9 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
             (block as { input: Record<string, unknown> }).input = {};
           }
         }
+      } else if (event.type === "message_delta") {
+        // Track the stop reason from the message delta
+        stopReason = event.delta.stop_reason;
       }
     }
 
@@ -144,16 +164,27 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
       finalResponse = textBlocks.map((b) => b.text).join("\n");
     }
 
-    // Check if we need to execute tools
+    // Handle stop reasons:
+    // - pause_turn: Continue the loop (e.g., web search paused a long-running turn)
+    // - tool_use: Execute client-side tools
+    // - end_turn, max_tokens, etc.: Break out of the loop
+    if (stopReason === "pause_turn") {
+      // Server paused a long-running turn (e.g., during web search)
+      // Continue the loop without adding a user message - the assistant message is already added
+      continue;
+    }
+
+    // Check if we need to execute client-side tools
     const toolUseBlocks = contentBlocks.filter(
       (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
     );
 
     if (toolUseBlocks.length === 0) {
+      // No client-side tools to execute - we're done
       break;
     }
 
-    // Execute tools and collect results
+    // Execute client-side tools and collect results
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
     for (const toolUse of toolUseBlocks) {
