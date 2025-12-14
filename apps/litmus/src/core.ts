@@ -1,6 +1,7 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
+import type { BetaRequestMCPServerURLDefinition } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import {
   ls,
   lsToolDefinition,
@@ -80,6 +81,13 @@ export interface AgentResult {
   finalResponse: string;
 }
 
+/** MCP server definition for runAgentLoop */
+export interface MCPServerDefinition {
+  name: string;
+  url: string;
+  authToken?: string;
+}
+
 export interface RunAgentOptions {
   messages: MessageParam[];
   onText?: (text: string) => void;
@@ -90,13 +98,23 @@ export interface RunAgentOptions {
   client?: Anthropic;
   /** Optional tool executors for testing. If not provided, uses default executors. */
   executors?: ToolExecutorMap;
+  /** Optional MCP servers to connect to */
+  mcpServers?: MCPServerDefinition[];
 }
 
 export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResult> {
-  const { messages, onText, onToolStart, onToolResult, maxIterations = 50, client, executors = toolExecutors} = options;
+  const { messages, onText, onToolStart, onToolResult, maxIterations = 50, client, executors = toolExecutors, mcpServers = [] } = options;
   const toolCalls: ToolCall[] = [];
   let finalResponse = "";
   let iterations = 0;
+
+  // Convert MCP server definitions to Anthropic format
+  const mcpServerDefs: BetaRequestMCPServerURLDefinition[] = mcpServers.map((server) => ({
+    type: "url" as const,
+    name: server.name,
+    url: server.url,
+    authorization_token: server.authToken,
+  }));
 
   while (iterations < maxIterations) {
     iterations++;
@@ -104,7 +122,7 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
     const partialJsonByIndex: Map<number, string> = new Map();
     let stopReason: string | null = null;
 
-    for await (const event of agentLoop({ messages, tools, client })) {
+    for await (const event of agentLoop({ messages, tools, mcpServers: mcpServerDefs, client })) {
       if (event.type === "content_block_start") {
         const block = event.content_block;
         if (block.type === "text") {
@@ -143,7 +161,7 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
           const jsonStr = partialJsonByIndex.get(event.index) ?? "{}";
           try {
             (block as { input: Record<string, unknown> }).input = JSON.parse(jsonStr);
-          } catch (error) {
+          } catch {
             console.error(`Failed to parse tool input JSON: ${jsonStr}`);
             (block as { input: Record<string, unknown> }).input = {};
           }
