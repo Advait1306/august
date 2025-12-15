@@ -1,8 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import type {
-  BetaRequestMCPServerURLDefinition,
-  BetaMCPToolset,
   BetaRawMessageStreamEvent,
   BetaMessageParam,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
@@ -71,22 +69,11 @@ export interface AgentLoopConfig {
   messages: BetaMessageParam[];
   tools?: (Tool | ZodToolDefinition)[];
   /**
-   * MCP servers to connect via Anthropic's native connector.
-   * Tools will be executed server-side by Anthropic.
-   * @deprecated Use mcpTools for programmatic tool calling instead
-   */
-  mcpServers?: BetaRequestMCPServerURLDefinition[];
-  /**
    * Pre-converted MCP tools from McpConnection.tools.
-   * These should already have allowed_callers set for programmatic calling.
-   * When provided, code execution tool is automatically added.
+   * When provided, code execution tool is automatically added and all tools
+   * are marked as programmatically callable.
    */
   mcpTools?: Tool[];
-  /**
-   * Enable programmatic tool calling for all tools (not just MCP).
-   * When true, code execution tool is added and local tools get allowed_callers.
-   */
-  enableProgrammaticCalling?: boolean;
   model?: string;
   maxTokens?: number;
   /** Optional Anthropic client instance. If not provided, a new client will be created. */
@@ -107,17 +94,15 @@ export async function* agentLoop(
   const {
     messages,
     tools = [],
-    mcpServers = [],
     mcpTools = [],
-    enableProgrammaticCalling = false,
     model = "claude-sonnet-4-5-20250929",
     maxTokens = 8192,
     client = new Anthropic(),
     container,
   } = config;
 
-  // Determine if we're using programmatic tool calling
-  const useProgrammaticCalling = enableProgrammaticCalling || mcpTools.length > 0;
+  // Enable programmatic tool calling when MCP tools are provided
+  const useProgrammaticCalling = mcpTools.length > 0;
 
   // Convert local tools to Anthropic format (handle both Tool and ZodToolDefinition)
   const convertedTools: Tool[] = tools.map((tool) => {
@@ -146,29 +131,17 @@ export async function* agentLoop(
   });
 
   // Combine local tools with MCP tools (MCP tools already have allowed_callers set)
-  let allTools: (Tool | BetaMCPToolset | typeof CODE_EXECUTION_TOOL)[] = [...convertedTools, ...mcpTools];
+  let allTools: (Tool | typeof CODE_EXECUTION_TOOL)[] = [...convertedTools, ...mcpTools];
 
   // Add code execution tool if using programmatic calling
   if (useProgrammaticCalling) {
     allTools = [CODE_EXECUTION_TOOL, ...allTools];
   }
 
-  // Legacy: Build MCP toolsets for native Anthropic MCP connector
-  const mcpToolsets: BetaMCPToolset[] = mcpServers.map((server) => ({
-    type: "mcp_toolset" as const,
-    mcp_server_name: server.name,
-  }));
-  allTools = [...allTools, ...mcpToolsets];
-
-  const hasNativeMcp = mcpServers.length > 0;
-
   // Determine which betas to use
   const betas: string[] = [];
   if (useProgrammaticCalling) {
     betas.push("advanced-tool-use-2025-11-20");
-  }
-  if (hasNativeMcp) {
-    betas.push("mcp-client-2025-11-20");
   }
 
   // Generate dynamic system prompt based on available tools
@@ -180,7 +153,6 @@ export async function* agentLoop(
     system: systemPrompt,
     tools: allTools.length > 0 ? allTools : undefined,
     messages,
-    mcp_servers: hasNativeMcp ? mcpServers : undefined,
     betas: betas.length > 0 ? betas : undefined,
     container,
     stream: true,
