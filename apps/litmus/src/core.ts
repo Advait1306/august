@@ -1,6 +1,11 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
+import type {
+  BetaRawMessageStartEvent,
+  BetaRawMessageDeltaEvent,
+  BetaToolUseBlock,
+} from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import {
   ls,
   lsToolDefinition,
@@ -103,7 +108,9 @@ export interface RunAgentOptions {
   mcpConnections?: McpConnection[];
 }
 
-export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResult> {
+export async function runAgentLoop(
+  options: RunAgentOptions
+): Promise<AgentResult> {
   const {
     messages,
     onText,
@@ -123,7 +130,8 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
   const mcpTools = getMcpTools(mcpConnections);
 
   // Create unified MCP executor for all connections
-  const mcpExecutor = mcpConnections.length > 0 ? createMcpExecutor(mcpConnections) : null;
+  const mcpExecutor =
+    mcpConnections.length > 0 ? createMcpExecutor(mcpConnections) : null;
 
   // Build set of MCP tool names for quick lookup
   const mcpToolNames = new Set(mcpTools.map((t) => t.name));
@@ -137,13 +145,16 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
     const partialJsonByIndex: Map<number, string> = new Map();
     let stopReason: string | null = null;
 
-    for await (const event of agentLoop({ messages, tools, mcpTools, client, container: containerId })) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const eventAny = event as any;
-
+    for await (const event of agentLoop({
+      messages,
+      tools,
+      mcpTools,
+      client,
+      container: containerId,
+    })) {
       // Handle message_start - may contain content blocks and container info
       if (event.type === "message_start") {
-        const message = eventAny.message;
+        const { message } = event as BetaRawMessageStartEvent;
         if (message.container?.id) {
           containerId = message.container.id;
         }
@@ -159,10 +170,11 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
       }
       // Handle message_delta - may contain container info
       if (event.type === "message_delta") {
-        if (eventAny.delta?.container?.id) {
-          containerId = eventAny.delta.container.id;
+        const { delta } = event as BetaRawMessageDeltaEvent;
+        if (delta.container?.id) {
+          containerId = delta.container.id;
         }
-        stopReason = event.delta.stop_reason;
+        stopReason = delta.stop_reason;
         continue;
       }
       if (event.type === "content_block_start") {
@@ -172,8 +184,11 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
         } else if (block.type === "tool_use") {
           // Tool use (local or MCP) - needs input parsing
           // For programmatic tool calls, input may already be populated
-          const toolBlock = block as { id: string; name: string; input?: unknown };
-          if (toolBlock.input && Object.keys(toolBlock.input as object).length > 0) {
+          const toolBlock = block as BetaToolUseBlock;
+          if (
+            toolBlock.input &&
+            Object.keys(toolBlock.input as object).length > 0
+          ) {
             // Input already populated (programmatic call) - use it directly
             contentBlocks.push({ ...block } as Anthropic.ContentBlock);
           } else {
@@ -200,7 +215,10 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
           const blockType = (block as { type: string }).type;
           if (blockType === "tool_use" || blockType === "server_tool_use") {
             const current = partialJsonByIndex.get(event.index) ?? "";
-            partialJsonByIndex.set(event.index, current + event.delta.partial_json);
+            partialJsonByIndex.set(
+              event.index,
+              current + event.delta.partial_json
+            );
           }
         }
       } else if (event.type === "content_block_stop") {
@@ -211,7 +229,9 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
           if (partialJsonByIndex.has(event.index)) {
             const jsonStr = partialJsonByIndex.get(event.index) ?? "{}";
             try {
-              (block as { input: Record<string, unknown> }).input = JSON.parse(jsonStr || "{}");
+              (block as { input: Record<string, unknown> }).input = JSON.parse(
+                jsonStr || "{}"
+              );
             } catch {
               (block as { input: Record<string, unknown> }).input = {};
             }
@@ -256,8 +276,14 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
       if (isMcpTool && mcpExecutor) {
         // Execute MCP tool
         try {
-          const result = await mcpExecutor(toolUse.name, toolUse.input as Record<string, unknown>);
-          const resultStr = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+          const result = await mcpExecutor(
+            toolUse.name,
+            toolUse.input as Record<string, unknown>
+          );
+          const resultStr =
+            typeof result === "string"
+              ? result
+              : JSON.stringify(result, null, 2);
           toolCalls.push({
             name: toolUse.name,
             input: toolUse.input,
@@ -271,7 +297,8 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
             content: resultStr,
           });
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
           toolCalls.push({
             name: toolUse.name,
             input: toolUse.input,
@@ -309,7 +336,10 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
 
         try {
           const result = await executor(toolUse.input);
-          const resultStr = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+          const resultStr =
+            typeof result === "string"
+              ? result
+              : JSON.stringify(result, null, 2);
           toolCalls.push({
             name: toolUse.name,
             input: toolUse.input,
@@ -323,7 +353,8 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
             content: resultStr,
           });
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
+          const errorMsg =
+            error instanceof Error ? error.message : String(error);
           toolCalls.push({
             name: toolUse.name,
             input: toolUse.input,
@@ -345,7 +376,9 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
   }
 
   if (iterations >= maxIterations) {
-    throw new Error(`Agent loop exceeded maximum iterations (${maxIterations})`);
+    throw new Error(
+      `Agent loop exceeded maximum iterations (${maxIterations})`
+    );
   }
 
   return { messages, toolCalls, finalResponse };

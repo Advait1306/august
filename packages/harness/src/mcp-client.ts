@@ -43,7 +43,10 @@ export interface McpConnection {
   /** Mapping from sanitized tool names to original MCP tool names */
   toolNameMap: Map<string, string>;
   /** Execute a tool by name (accepts sanitized name, maps to original) */
-  execute: (toolName: string, args: Record<string, unknown>) => Promise<unknown>;
+  execute: (
+    toolName: string,
+    args: Record<string, unknown>
+  ) => Promise<unknown>;
   /** Disconnect from the server */
   disconnect: () => Promise<void>;
 }
@@ -65,7 +68,10 @@ function convertMcpToolToAnthropic(
     anthropicTool: {
       name: sanitizedName,
       description: tool.description || `Tool from ${serverName}`,
-      input_schema: (tool.inputSchema || { type: "object", properties: {} }) as AnthropicTool["input_schema"],
+      input_schema: (tool.inputSchema || {
+        type: "object",
+        properties: {},
+      }) as AnthropicTool["input_schema"],
       // Enable programmatic calling from code execution
       allowed_callers: ["code_execution_20250825"],
     } as AnthropicTool,
@@ -76,7 +82,9 @@ function convertMcpToolToAnthropic(
 /**
  * Connect to an MCP server and retrieve its tools
  */
-export async function connectMcpServer(config: McpServerConfig): Promise<McpConnection> {
+export async function connectMcpServer(
+  config: McpServerConfig
+): Promise<McpConnection> {
   const client = new Client(
     { name: "august-harness", version: "1.0.0" },
     { capabilities: {} }
@@ -115,25 +123,36 @@ export async function connectMcpServer(config: McpServerConfig): Promise<McpConn
   const tools: AnthropicTool[] = [];
 
   for (const tool of mcpTools) {
-    const { anthropicTool, sanitizedName } = convertMcpToolToAnthropic(tool, config.name);
+    const { anthropicTool, sanitizedName } = convertMcpToolToAnthropic(
+      tool,
+      config.name
+    );
     tools.push(anthropicTool);
     // Map the sanitized name to the original MCP tool name
     toolNameMap.set(sanitizedName, tool.name);
   }
 
   // Create executor function
-  const execute = async (toolName: string, args: Record<string, unknown>): Promise<unknown> => {
+  const execute = async (
+    toolName: string,
+    args: Record<string, unknown>
+  ): Promise<unknown> => {
     // Look up the original tool name from the mapping
     const originalToolName = toolNameMap.get(toolName);
     if (!originalToolName) {
       throw new Error(`Unknown tool: ${toolName}`);
     }
 
-    const result = await client.callTool({ name: originalToolName, arguments: args });
+    const result = await client.callTool({
+      name: originalToolName,
+      arguments: args,
+    });
 
     // Extract content from result
     if (result.content && Array.isArray(result.content)) {
-      const textContent = result.content.find((c): c is { type: "text"; text: string } => c.type === "text");
+      const textContent = result.content.find(
+        (c): c is { type: "text"; text: string } => c.type === "text"
+      );
       if (textContent) {
         // Try to parse as JSON if possible
         try {
@@ -166,7 +185,9 @@ export async function connectMcpServer(config: McpServerConfig): Promise<McpConn
 /**
  * Connect to multiple MCP servers
  */
-export async function connectMcpServers(configs: McpServerConfig[]): Promise<McpConnection[]> {
+export async function connectMcpServers(
+  configs: McpServerConfig[]
+): Promise<McpConnection[]> {
   return Promise.all(configs.map(connectMcpServer));
 }
 
@@ -197,6 +218,8 @@ export function createMcpExecutor(
 /**
  * Disconnect all MCP connections
  */
-export async function disconnectAll(connections: McpConnection[]): Promise<void> {
+export async function disconnectAll(
+  connections: McpConnection[]
+): Promise<void> {
   await Promise.all(connections.map((conn) => conn.disconnect()));
 }
