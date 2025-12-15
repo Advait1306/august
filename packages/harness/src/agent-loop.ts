@@ -65,22 +65,6 @@ You also have access to local tools for file system operations that can be calle
 }
 
 /**
- * Container information returned from code execution
- */
-export interface ContainerInfo {
-  id: string;
-  expires_at: string;
-}
-
-/**
- * Custom event to communicate container info from streaming
- */
-export interface ContainerInfoEvent {
-  type: "container_info";
-  container: ContainerInfo;
-}
-
-/**
  * Agent loop configuration
  */
 export interface AgentLoopConfig {
@@ -116,15 +100,10 @@ export interface AgentLoopConfig {
  *
  * Takes messages and tools, streams them through the Anthropic API,
  * and yields events as they arrive.
- *
- * When mcpTools or enableProgrammaticCalling is set, tools can be called
- * programmatically from within code execution, reducing round trips.
- *
- * Yields ContainerInfoEvent when container info is available (for programmatic tool calling).
  */
 export async function* agentLoop(
   config: AgentLoopConfig
-): AsyncGenerator<BetaRawMessageStreamEvent | ContainerInfoEvent> {
+): AsyncGenerator<BetaRawMessageStreamEvent> {
   const {
     messages,
     tools = [],
@@ -208,21 +187,6 @@ export async function* agentLoop(
   });
 
   for await (const event of stream) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const eventAny = event as any;
-
-    if (event.type === "message_start") {
-      const message = eventAny.message;
-      if (message.container) {
-        yield { type: "container_info" as const, container: message.container as ContainerInfo };
-      }
-    } else if (event.type === "message_delta") {
-      // Check if container is in message_delta.delta
-      if (eventAny.delta?.container) {
-        yield { type: "container_info" as const, container: eventAny.delta.container as ContainerInfo };
-      }
-    }
-
     yield event;
   }
 }

@@ -376,25 +376,14 @@ for (const toolUse of toolUseBlocks) {
 }
 ```
 
-## Custom Events
+## Event Handling Notes
 
-The agent loop yields one custom event in addition to Anthropic events:
+The agent loop yields raw Anthropic streaming events without any custom events. The consumer (`core.ts`) handles special cases:
 
-### `container_info`
+- **`message_start`**: May contain `container` info (for code execution persistence) and `content` blocks (during code execution continuation)
+- **`message_delta`**: May contain `container` info and `stop_reason`
 
-Emitted when container information is available.
-
-```typescript
-interface ContainerInfoEvent {
-  type: "container_info";
-  container: {
-    id: string;
-    expires_at: string;
-  };
-}
-```
-
-Note: `message_start` events may contain content blocks directly (e.g., during code execution continuation). The consumer (`core.ts`) handles this by checking `event.message.content` in `message_start` events.
+Container ID must be extracted and passed to subsequent requests to maintain code execution state.
 
 ## Configuration
 

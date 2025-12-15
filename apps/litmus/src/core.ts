@@ -25,7 +25,6 @@ import {
   agentLoop,
   type ZodToolDefinition,
   type McpConnection,
-  type ContainerInfoEvent,
   getMcpTools,
   createMcpExecutor,
 } from "@august/harness";
@@ -139,16 +138,15 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
     let stopReason: string | null = null;
 
     for await (const event of agentLoop({ messages, tools, mcpTools, client, container: containerId })) {
-      // Handle container info event (for programmatic tool calling)
-      if (event.type === "container_info") {
-        const containerEvent = event as ContainerInfoEvent;
-        containerId = containerEvent.container.id;
-        continue;
-      }
-      // Handle message_start - may contain content blocks (e.g., during code execution continuation)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const eventAny = event as any;
+
+      // Handle message_start - may contain content blocks and container info
       if (event.type === "message_start") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const message = (event as any).message;
+        const message = eventAny.message;
+        if (message.container?.id) {
+          containerId = message.container.id;
+        }
         if (message.content && Array.isArray(message.content)) {
           for (const block of message.content) {
             contentBlocks.push(block as Anthropic.ContentBlock);
@@ -157,6 +155,14 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
         if (message.stop_reason) {
           stopReason = message.stop_reason;
         }
+        continue;
+      }
+      // Handle message_delta - may contain container info
+      if (event.type === "message_delta") {
+        if (eventAny.delta?.container?.id) {
+          containerId = eventAny.delta.container.id;
+        }
+        stopReason = event.delta.stop_reason;
         continue;
       }
       if (event.type === "content_block_start") {
@@ -211,8 +217,6 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
             }
           }
         }
-      } else if (event.type === "message_delta") {
-        stopReason = event.delta.stop_reason;
       }
     }
 
