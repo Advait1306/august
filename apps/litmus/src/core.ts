@@ -26,7 +26,6 @@ import {
   type ZodToolDefinition,
   type McpConnection,
   type ContainerInfoEvent,
-  type PrefilledContentEvent,
   getMcpTools,
   createMcpExecutor,
 } from "@august/harness";
@@ -146,15 +145,17 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
         containerId = containerEvent.container.id;
         continue;
       }
-      // Handle prefilled content (from code execution continuation)
-      if (event.type === "prefilled_content") {
-        const prefilledEvent = event as PrefilledContentEvent;
-        for (const block of prefilledEvent.content) {
-          contentBlocks.push(block as Anthropic.ContentBlock);
+      // Handle message_start - may contain content blocks (e.g., during code execution continuation)
+      if (event.type === "message_start") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const message = (event as any).message;
+        if (message.content && Array.isArray(message.content)) {
+          for (const block of message.content) {
+            contentBlocks.push(block as Anthropic.ContentBlock);
+          }
         }
-        // Update stop reason if provided
-        if (prefilledEvent.stopReason) {
-          stopReason = prefilledEvent.stopReason;
+        if (message.stop_reason) {
+          stopReason = message.stop_reason;
         }
         continue;
       }

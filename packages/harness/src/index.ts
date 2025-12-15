@@ -4,7 +4,6 @@ export {
   type ZodToolDefinition,
   type ContainerInfo,
   type ContainerInfoEvent,
-  type PrefilledContentEvent,
 } from "./agent-loop";
 export type { BetaRawMessageStreamEvent } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 

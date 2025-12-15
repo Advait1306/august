@@ -81,15 +81,6 @@ export interface ContainerInfoEvent {
 }
 
 /**
- * Custom event for pre-filled content blocks (from code execution continuation)
- */
-export interface PrefilledContentEvent {
-  type: "prefilled_content";
-  content: unknown[];
-  stopReason?: string | null;
-}
-
-/**
  * Agent loop configuration
  */
 export interface AgentLoopConfig {
@@ -133,7 +124,7 @@ export interface AgentLoopConfig {
  */
 export async function* agentLoop(
   config: AgentLoopConfig
-): AsyncGenerator<BetaRawMessageStreamEvent | ContainerInfoEvent | PrefilledContentEvent> {
+): AsyncGenerator<BetaRawMessageStreamEvent | ContainerInfoEvent> {
   const {
     messages,
     tools = [],
@@ -222,15 +213,6 @@ export async function* agentLoop(
 
     if (event.type === "message_start") {
       const message = eventAny.message;
-      // Check if content is already in message_start (happens with code execution continuation)
-      if (message.content && Array.isArray(message.content) && message.content.length > 0) {
-        // Yield prefilled content event for core.ts to handle
-        yield {
-          type: "prefilled_content" as const,
-          content: message.content,
-          stopReason: message.stop_reason as string | null | undefined,
-        };
-      }
       if (message.container) {
         yield { type: "container_info" as const, container: message.container as ContainerInfo };
       }
