@@ -5,6 +5,18 @@ import type { Tool as McpTool } from "@modelcontextprotocol/sdk/types.js";
 import type { Tool as AnthropicTool } from "@anthropic-ai/sdk/resources/messages";
 
 /**
+ * Sanitize a tool name to match Anthropic API requirements.
+ * Anthropic requires tool names to match: ^[a-zA-Z0-9_-]{1,128}$
+ * Replaces invalid characters (like dots) with underscores.
+ */
+function sanitizeToolName(name: string): string {
+  // Replace any character that's not alphanumeric, underscore, or hyphen with underscore
+  const sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "_");
+  // Truncate to 128 characters if needed
+  return sanitized.slice(0, 128);
+}
+
+/**
  * Configuration for connecting to an MCP server
  */
 export interface McpServerConfig {
@@ -28,23 +40,37 @@ export interface McpConnection {
   tools: AnthropicTool[];
   /** Original MCP tools */
   mcpTools: McpTool[];
-  /** Execute a tool by name */
+  /** Mapping from sanitized tool names to original MCP tool names */
+  toolNameMap: Map<string, string>;
+  /** Execute a tool by name (accepts sanitized name, maps to original) */
   execute: (toolName: string, args: Record<string, unknown>) => Promise<unknown>;
   /** Disconnect from the server */
   disconnect: () => Promise<void>;
 }
 
 /**
- * Convert MCP tool to Anthropic tool format with programmatic calling enabled
+ * Convert MCP tool to Anthropic tool format with programmatic calling enabled.
+ * Returns both the Anthropic tool and the sanitized full name for mapping.
  */
-function convertMcpToolToAnthropic(tool: McpTool, serverName: string): AnthropicTool {
+function convertMcpToolToAnthropic(
+  tool: McpTool,
+  serverName: string
+): { anthropicTool: AnthropicTool; sanitizedName: string } {
+  // Sanitize both server name and tool name to ensure valid Anthropic tool name
+  const sanitizedServerName = sanitizeToolName(serverName);
+  const sanitizedToolName = sanitizeToolName(tool.name);
+  const sanitizedName = `${sanitizedServerName}__${sanitizedToolName}`;
+
   return {
-    name: `${serverName}__${tool.name}`,
-    description: tool.description || `Tool from ${serverName}`,
-    input_schema: (tool.inputSchema || { type: "object", properties: {} }) as AnthropicTool["input_schema"],
-    // Enable programmatic calling from code execution
-    allowed_callers: ["code_execution_20250825"],
-  } as AnthropicTool;
+    anthropicTool: {
+      name: sanitizedName,
+      description: tool.description || `Tool from ${serverName}`,
+      input_schema: (tool.inputSchema || { type: "object", properties: {} }) as AnthropicTool["input_schema"],
+      // Enable programmatic calling from code execution
+      allowed_callers: ["code_execution_20250825"],
+    } as AnthropicTool,
+    sanitizedName,
+  };
 }
 
 /**
@@ -83,17 +109,27 @@ export async function connectMcpServer(config: McpServerConfig): Promise<McpConn
   const toolsResult = await client.listTools();
   const mcpTools = toolsResult.tools;
 
-  // Convert to Anthropic format with allowed_callers
-  const tools = mcpTools.map((tool) => convertMcpToolToAnthropic(tool, config.name));
+  // Convert to Anthropic format and build name mapping
+  // Map: sanitized full name -> original MCP tool name
+  const toolNameMap = new Map<string, string>();
+  const tools: AnthropicTool[] = [];
+
+  for (const tool of mcpTools) {
+    const { anthropicTool, sanitizedName } = convertMcpToolToAnthropic(tool, config.name);
+    tools.push(anthropicTool);
+    // Map the sanitized name to the original MCP tool name
+    toolNameMap.set(sanitizedName, tool.name);
+  }
 
   // Create executor function
   const execute = async (toolName: string, args: Record<string, unknown>): Promise<unknown> => {
-    // Strip server name prefix if present
-    const actualToolName = toolName.startsWith(`${config.name}__`)
-      ? toolName.slice(config.name.length + 2)
-      : toolName;
+    // Look up the original tool name from the mapping
+    const originalToolName = toolNameMap.get(toolName);
+    if (!originalToolName) {
+      throw new Error(`Unknown tool: ${toolName}`);
+    }
 
-    const result = await client.callTool({ name: actualToolName, arguments: args });
+    const result = await client.callTool({ name: originalToolName, arguments: args });
 
     // Extract content from result
     if (result.content && Array.isArray(result.content)) {
@@ -121,6 +157,7 @@ export async function connectMcpServer(config: McpServerConfig): Promise<McpConn
     client,
     tools,
     mcpTools,
+    toolNameMap,
     execute,
     disconnect,
   };
@@ -147,9 +184,9 @@ export function createMcpExecutor(
   connections: McpConnection[]
 ): (toolName: string, args: Record<string, unknown>) => Promise<unknown> {
   return async (toolName: string, args: Record<string, unknown>) => {
-    // Find the connection that owns this tool
+    // Find the connection that owns this tool by checking the toolNameMap
     for (const conn of connections) {
-      if (toolName.startsWith(`${conn.name}__`)) {
+      if (conn.toolNameMap.has(toolName)) {
         return conn.execute(toolName, args);
       }
     }
