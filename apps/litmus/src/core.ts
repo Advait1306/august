@@ -1,7 +1,6 @@
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
-import type { BetaRequestMCPServerURLDefinition } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import {
   ls,
   lsToolDefinition,
@@ -22,7 +21,15 @@ import {
   writeToolDefinition,
   WriteInputSchema,
 } from "@august/shell-tools";
-import { agentLoop, type ZodToolDefinition } from "@august/harness";
+import {
+  agentLoop,
+  type ZodToolDefinition,
+  type McpConnection,
+  type ContainerInfoEvent,
+  type PrefilledContentEvent,
+  getMcpTools,
+  createMcpExecutor,
+} from "@august/harness";
 
 // All available tools
 export const tools: ZodToolDefinition[] = [
@@ -81,44 +88,50 @@ export interface AgentResult {
   finalResponse: string;
 }
 
-/** MCP server definition for runAgentLoop */
-export interface MCPServerDefinition {
-  name: string;
-  url: string;
-  authToken?: string;
-}
-
 export interface RunAgentOptions {
   messages: MessageParam[];
   onText?: (text: string) => void;
   onToolStart?: (name: string, input: unknown) => void;
   onToolResult?: (name: string, result: string, isError: boolean) => void;
-  /** Called when an MCP tool is invoked (server-side execution) */
-  onMcpToolUse?: (name: string, serverName: string, input: unknown) => void;
-  /** Called when an MCP tool result is received */
-  onMcpToolResult?: (toolUseId: string, content: unknown, isError: boolean) => void;
   maxIterations?: number;
   /** Optional Anthropic client instance for testing. If not provided, a new client will be created. */
   client?: Anthropic;
   /** Optional tool executors for testing. If not provided, uses default executors. */
   executors?: ToolExecutorMap;
-  /** Optional MCP servers to connect to */
-  mcpServers?: MCPServerDefinition[];
+  /**
+   * Pre-connected MCP connections for programmatic tool calling.
+   * Use connectMcpServers() from @august/harness to create these.
+   */
+  mcpConnections?: McpConnection[];
 }
 
 export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResult> {
-  const { messages, onText, onToolStart, onToolResult, onMcpToolUse, onMcpToolResult, maxIterations = 50, client, executors = toolExecutors, mcpServers = [] } = options;
+  const {
+    messages,
+    onText,
+    onToolStart,
+    onToolResult,
+    maxIterations = 50,
+    client,
+    executors = toolExecutors,
+    mcpConnections = [],
+  } = options;
+
   const toolCalls: ToolCall[] = [];
   let finalResponse = "";
   let iterations = 0;
 
-  // Convert MCP server definitions to Anthropic format
-  const mcpServerDefs: BetaRequestMCPServerURLDefinition[] = mcpServers.map((server) => ({
-    type: "url" as const,
-    name: server.name,
-    url: server.url,
-    authorization_token: server.authToken,
-  }));
+  // Get MCP tools from connections (already have allowed_callers set)
+  const mcpTools = getMcpTools(mcpConnections);
+
+  // Create unified MCP executor for all connections
+  const mcpExecutor = mcpConnections.length > 0 ? createMcpExecutor(mcpConnections) : null;
+
+  // Build set of MCP tool names for quick lookup
+  const mcpToolNames = new Set(mcpTools.map((t) => t.name));
+
+  // Track container ID for code execution persistence across programmatic tool calls
+  let containerId: string | undefined;
 
   while (iterations < maxIterations) {
     iterations++;
@@ -126,31 +139,47 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
     const partialJsonByIndex: Map<number, string> = new Map();
     let stopReason: string | null = null;
 
-    for await (const event of agentLoop({ messages, tools, mcpServers: mcpServerDefs, client })) {
+    for await (const event of agentLoop({ messages, tools, mcpTools, client, container: containerId })) {
+      // Handle container info event (for programmatic tool calling)
+      if (event.type === "container_info") {
+        const containerEvent = event as ContainerInfoEvent;
+        containerId = containerEvent.container.id;
+        continue;
+      }
+      // Handle prefilled content (from code execution continuation)
+      if (event.type === "prefilled_content") {
+        const prefilledEvent = event as PrefilledContentEvent;
+        for (const block of prefilledEvent.content) {
+          contentBlocks.push(block as Anthropic.ContentBlock);
+        }
+        // Update stop reason if provided
+        if (prefilledEvent.stopReason) {
+          stopReason = prefilledEvent.stopReason;
+        }
+        continue;
+      }
       if (event.type === "content_block_start") {
         const block = event.content_block;
         if (block.type === "text") {
           contentBlocks.push({ ...block, text: "" });
         } else if (block.type === "tool_use") {
-          // Client-side tool use - needs input parsing
-          contentBlocks.push({ ...block, input: {} });
-          partialJsonByIndex.set(event.index, "");
+          // Tool use (local or MCP) - needs input parsing
+          // For programmatic tool calls, input may already be populated
+          const toolBlock = block as { id: string; name: string; input?: unknown };
+          if (toolBlock.input && Object.keys(toolBlock.input as object).length > 0) {
+            // Input already populated (programmatic call) - use it directly
+            contentBlocks.push({ ...block } as Anthropic.ContentBlock);
+          } else {
+            // Need to collect input from input_json_delta events
+            contentBlocks.push({ ...block, input: {} });
+            partialJsonByIndex.set(event.index, "");
+          }
         } else if (block.type === "server_tool_use") {
-          // Server-side tool use (e.g., web search) - needs input parsing
+          // Server-side tool use (e.g., code execution) - needs input parsing
           contentBlocks.push({ ...block, input: {} } as Anthropic.ContentBlock);
           partialJsonByIndex.set(event.index, "");
-        } else if ((block as { type: string }).type === "mcp_tool_use") {
-          // MCP tool use - needs input parsing, executed server-side
-          contentBlocks.push({ ...block, input: {} } as unknown as Anthropic.ContentBlock);
-          partialJsonByIndex.set(event.index, "");
-        } else if ((block as { type: string }).type === "mcp_tool_result") {
-          // MCP tool result - received complete, trigger callback immediately
-          contentBlocks.push(block as unknown as Anthropic.ContentBlock);
-          const mcpResult = block as { tool_use_id: string; content: unknown; is_error?: boolean };
-          onMcpToolResult?.(mcpResult.tool_use_id, mcpResult.content, mcpResult.is_error ?? false);
         } else {
-          // Handle other block types (web_search_tool_result, etc.)
-          // These are passed through as-is since they don't require client-side processing
+          // Handle other block types (code_execution_tool_result, etc.)
           contentBlocks.push(block as Anthropic.ContentBlock);
         }
       } else if (event.type === "content_block_delta") {
@@ -161,9 +190,8 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
           onText?.(event.delta.text);
           (block as Anthropic.TextBlock).text += event.delta.text;
         } else if (event.delta.type === "input_json_delta") {
-          // Handle input JSON delta for tool_use, server_tool_use, and mcp_tool_use
           const blockType = (block as { type: string }).type;
-          if (blockType === "tool_use" || blockType === "server_tool_use" || blockType === "mcp_tool_use") {
+          if (blockType === "tool_use" || blockType === "server_tool_use") {
             const current = partialJsonByIndex.get(event.index) ?? "";
             partialJsonByIndex.set(event.index, current + event.delta.partial_json);
           }
@@ -171,24 +199,18 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
       } else if (event.type === "content_block_stop") {
         const block = contentBlocks[event.index];
         const blockType = (block as { type: string } | undefined)?.type;
-        // Parse JSON input for tool_use, server_tool_use, and mcp_tool_use blocks
-        if (blockType === "tool_use" || blockType === "server_tool_use" || blockType === "mcp_tool_use") {
-          const jsonStr = partialJsonByIndex.get(event.index) ?? "{}";
-          try {
-            (block as { input: Record<string, unknown> }).input = JSON.parse(jsonStr);
-          } catch {
-            console.error(`Failed to parse tool input JSON: ${jsonStr}`);
-            (block as { input: Record<string, unknown> }).input = {};
-          }
-
-          // Trigger MCP tool use callback after input is parsed
-          if (blockType === "mcp_tool_use") {
-            const mcpBlock = block as unknown as { name: string; server_name: string; input: unknown };
-            onMcpToolUse?.(mcpBlock.name, mcpBlock.server_name, mcpBlock.input);
+        if (blockType === "tool_use" || blockType === "server_tool_use") {
+          // Only parse JSON if we were collecting input_json_delta events
+          if (partialJsonByIndex.has(event.index)) {
+            const jsonStr = partialJsonByIndex.get(event.index) ?? "{}";
+            try {
+              (block as { input: Record<string, unknown> }).input = JSON.parse(jsonStr || "{}");
+            } catch {
+              (block as { input: Record<string, unknown> }).input = {};
+            }
           }
         }
       } else if (event.type === "message_delta") {
-        // Track the stop reason from the message delta
         stopReason = event.delta.stop_reason;
       }
     }
@@ -203,81 +225,114 @@ export async function runAgentLoop(options: RunAgentOptions): Promise<AgentResul
       finalResponse = textBlocks.map((b) => b.text).join("\n");
     }
 
-    // Handle stop reasons:
-    // - pause_turn: Continue the loop (e.g., web search paused a long-running turn)
-    // - tool_use: Execute client-side tools
-    // - end_turn, max_tokens, etc.: Break out of the loop
+    // Handle stop reasons
     if (stopReason === "pause_turn") {
-      // Server paused a long-running turn (e.g., during web search)
-      // Continue the loop without adding a user message - the assistant message is already added
       continue;
     }
 
-    // Check if we need to execute client-side tools
+    // Check if we need to execute tools
     const toolUseBlocks = contentBlocks.filter(
       (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
     );
 
     if (toolUseBlocks.length === 0) {
-      // No client-side tools to execute - we're done
       break;
     }
 
-    // Execute client-side tools and collect results
+    // Execute tools and collect results
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
     for (const toolUse of toolUseBlocks) {
+      // Check if this is an MCP tool (prefixed with serverName__)
+      const isMcpTool = mcpToolNames.has(toolUse.name);
+
       onToolStart?.(toolUse.name, toolUse.input);
 
-      const executor = executors[toolUse.name];
-      if (!executor) {
-        const errorMsg = `Unknown tool: ${toolUse.name}`;
-        toolCalls.push({
-          name: toolUse.name,
-          input: toolUse.input,
-          result: errorMsg,
-          isError: true,
-        });
-        onToolResult?.(toolUse.name, errorMsg, true);
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: toolUse.id,
-          content: errorMsg,
-          is_error: true,
-        });
-        continue;
-      }
+      if (isMcpTool && mcpExecutor) {
+        // Execute MCP tool
+        try {
+          const result = await mcpExecutor(toolUse.name, toolUse.input as Record<string, unknown>);
+          const resultStr = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+          toolCalls.push({
+            name: toolUse.name,
+            input: toolUse.input,
+            result: resultStr,
+            isError: false,
+          });
+          onToolResult?.(toolUse.name, resultStr, false);
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: resultStr,
+          });
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          toolCalls.push({
+            name: toolUse.name,
+            input: toolUse.input,
+            result: errorMsg,
+            isError: true,
+          });
+          onToolResult?.(toolUse.name, errorMsg, true);
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: errorMsg,
+            is_error: true,
+          });
+        }
+      } else {
+        // Execute local tool
+        const executor = executors[toolUse.name];
+        if (!executor) {
+          const errorMsg = `Unknown tool: ${toolUse.name}`;
+          toolCalls.push({
+            name: toolUse.name,
+            input: toolUse.input,
+            result: errorMsg,
+            isError: true,
+          });
+          onToolResult?.(toolUse.name, errorMsg, true);
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: errorMsg,
+            is_error: true,
+          });
+          continue;
+        }
 
-      try {
-        const result = await executor(toolUse.input);
-        const resultStr = typeof result === "string" ? result : JSON.stringify(result, null, 2);
-        toolCalls.push({
-          name: toolUse.name,
-          input: toolUse.input,
-          result: resultStr,
-          isError: false,
-        });
-        onToolResult?.(toolUse.name, resultStr, false);
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: toolUse.id,
-          content: resultStr,
-        });
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        toolCalls.push({
-          name: toolUse.name,
-          input: toolUse.input,
-          result: errorMsg,
-          isError: true,
-        });
-        onToolResult?.(toolUse.name, errorMsg, true);
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: toolUse.id,
-          content: errorMsg,
-          is_error: true,
-        });
+        try {
+          const result = await executor(toolUse.input);
+          const resultStr = typeof result === "string" ? result : JSON.stringify(result, null, 2);
+          toolCalls.push({
+            name: toolUse.name,
+            input: toolUse.input,
+            result: resultStr,
+            isError: false,
+          });
+          onToolResult?.(toolUse.name, resultStr, false);
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: resultStr,
+          });
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          toolCalls.push({
+            name: toolUse.name,
+            input: toolUse.input,
+            result: errorMsg,
+            isError: true,
+          });
+          onToolResult?.(toolUse.name, errorMsg, true);
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: errorMsg,
+            is_error: true,
+          });
+        }
       }
     }
 

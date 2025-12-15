@@ -6,7 +6,6 @@ import type {
   BetaRawMessageStreamEvent,
   BetaMessageParam,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
-import { systemPrompt } from "./system";
 import type { ZodObject } from "zod";
 import { toJSONSchema } from "zod/v4/core";
 
@@ -20,58 +19,190 @@ export interface ZodToolDefinition {
 }
 
 /**
+ * Code execution tool definition
+ */
+const CODE_EXECUTION_TOOL = {
+  type: "code_execution_20250825" as const,
+  name: "code_execution" as const,
+};
+
+/**
+ * Generate system prompt based on available tools
+ */
+function generateSystemPrompt(mcpTools: Tool[], localTools: Tool[]): string {
+  let prompt = `You are a helpful assistant with access to various tools.`;
+
+  if (mcpTools.length > 0) {
+    const toolList = mcpTools
+      .map((t) => `- ${t.name}: ${t.description || "No description"}`)
+      .join("\n");
+
+    prompt += `
+
+You have access to MCP (Model Context Protocol) tools that MUST be called programmatically via code execution.
+To use these tools, write Python code that calls them using await syntax.
+
+Available MCP tools:
+${toolList}
+
+Example usage in code execution:
+\`\`\`python
+# Call an MCP tool
+result = await tool_name(param1="value1", param2="value2")
+print(result)
+\`\`\`
+
+Important: These MCP tools can ONLY be called from within code execution, not directly.`;
+  }
+
+  if (localTools.length > 0) {
+    prompt += `
+
+You also have access to local tools for file system operations that can be called directly or via code execution.`;
+  }
+
+  return prompt;
+}
+
+/**
+ * Container information returned from code execution
+ */
+export interface ContainerInfo {
+  id: string;
+  expires_at: string;
+}
+
+/**
+ * Custom event to communicate container info from streaming
+ */
+export interface ContainerInfoEvent {
+  type: "container_info";
+  container: ContainerInfo;
+}
+
+/**
+ * Custom event for pre-filled content blocks (from code execution continuation)
+ */
+export interface PrefilledContentEvent {
+  type: "prefilled_content";
+  content: unknown[];
+  stopReason?: string | null;
+}
+
+/**
  * Agent loop configuration
  */
 export interface AgentLoopConfig {
   messages: BetaMessageParam[];
   tools?: (Tool | ZodToolDefinition)[];
+  /**
+   * MCP servers to connect via Anthropic's native connector.
+   * Tools will be executed server-side by Anthropic.
+   * @deprecated Use mcpTools for programmatic tool calling instead
+   */
   mcpServers?: BetaRequestMCPServerURLDefinition[];
+  /**
+   * Pre-converted MCP tools from McpConnection.tools.
+   * These should already have allowed_callers set for programmatic calling.
+   * When provided, code execution tool is automatically added.
+   */
+  mcpTools?: Tool[];
+  /**
+   * Enable programmatic tool calling for all tools (not just MCP).
+   * When true, code execution tool is added and local tools get allowed_callers.
+   */
+  enableProgrammaticCalling?: boolean;
   model?: string;
   maxTokens?: number;
   /** Optional Anthropic client instance. If not provided, a new client will be created. */
   client?: Anthropic;
+  /** Optional container ID for code execution persistence */
+  container?: string;
 }
 
 /**
  * Run the agent loop as an async generator
  *
  * Takes messages and tools, streams them through the Anthropic API,
- * and yields events as they arrive. MCP tools are executed server-side.
+ * and yields events as they arrive.
+ *
+ * When mcpTools or enableProgrammaticCalling is set, tools can be called
+ * programmatically from within code execution, reducing round trips.
+ *
+ * Yields ContainerInfoEvent when container info is available (for programmatic tool calling).
  */
 export async function* agentLoop(
   config: AgentLoopConfig
-): AsyncGenerator<BetaRawMessageStreamEvent> {
+): AsyncGenerator<BetaRawMessageStreamEvent | ContainerInfoEvent | PrefilledContentEvent> {
   const {
     messages,
     tools = [],
     mcpServers = [],
-    model = "claude-sonnet-4-20250514",
+    mcpTools = [],
+    enableProgrammaticCalling = false,
+    model = "claude-sonnet-4-5-20250929",
     maxTokens = 8192,
     client = new Anthropic(),
+    container,
   } = config;
 
-  // Convert tools to Anthropic format (handle both Tool and ZodToolDefinition)
+  // Determine if we're using programmatic tool calling
+  const useProgrammaticCalling = enableProgrammaticCalling || mcpTools.length > 0;
+
+  // Convert local tools to Anthropic format (handle both Tool and ZodToolDefinition)
   const convertedTools: Tool[] = tools.map((tool) => {
     if ("input_schema" in tool) {
       // Already in Anthropic Tool format
+      // Add allowed_callers if programmatic calling is enabled
+      if (useProgrammaticCalling && !("allowed_callers" in tool)) {
+        return {
+          ...tool,
+          allowed_callers: ["code_execution_20250825"],
+        } as Tool;
+      }
       return tool;
     }
     // ZodToolDefinition - convert inputSchema to JSON schema
-    return {
+    const converted: Tool = {
       name: tool.name,
       description: tool.description,
       input_schema: toJSONSchema(tool.inputSchema) as Tool["input_schema"],
     };
+    // Add allowed_callers if programmatic calling is enabled
+    if (useProgrammaticCalling) {
+      (converted as Tool & { allowed_callers: string[] }).allowed_callers = ["code_execution_20250825"];
+    }
+    return converted;
   });
 
-  // Build MCP toolsets for each server
+  // Combine local tools with MCP tools (MCP tools already have allowed_callers set)
+  let allTools: (Tool | BetaMCPToolset | typeof CODE_EXECUTION_TOOL)[] = [...convertedTools, ...mcpTools];
+
+  // Add code execution tool if using programmatic calling
+  if (useProgrammaticCalling) {
+    allTools = [CODE_EXECUTION_TOOL, ...allTools];
+  }
+
+  // Legacy: Build MCP toolsets for native Anthropic MCP connector
   const mcpToolsets: BetaMCPToolset[] = mcpServers.map((server) => ({
     type: "mcp_toolset" as const,
     mcp_server_name: server.name,
   }));
+  allTools = [...allTools, ...mcpToolsets];
 
-  const allTools = [...convertedTools, ...mcpToolsets];
-  const hasMcp = mcpServers.length > 0;
+  const hasNativeMcp = mcpServers.length > 0;
+
+  // Determine which betas to use
+  const betas: string[] = [];
+  if (useProgrammaticCalling) {
+    betas.push("advanced-tool-use-2025-11-20");
+  }
+  if (hasNativeMcp) {
+    betas.push("mcp-client-2025-11-20");
+  }
+
+  // Generate dynamic system prompt based on available tools
+  const systemPrompt = generateSystemPrompt(mcpTools, convertedTools);
 
   const stream = await client.beta.messages.create({
     model,
@@ -79,12 +210,37 @@ export async function* agentLoop(
     system: systemPrompt,
     tools: allTools.length > 0 ? allTools : undefined,
     messages,
-    mcp_servers: hasMcp ? mcpServers : undefined,
-    betas: hasMcp ? ["mcp-client-2025-11-20"] : undefined,
+    mcp_servers: hasNativeMcp ? mcpServers : undefined,
+    betas: betas.length > 0 ? betas : undefined,
+    container,
     stream: true,
   });
 
   for await (const event of stream) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const eventAny = event as any;
+
+    if (event.type === "message_start") {
+      const message = eventAny.message;
+      // Check if content is already in message_start (happens with code execution continuation)
+      if (message.content && Array.isArray(message.content) && message.content.length > 0) {
+        // Yield prefilled content event for core.ts to handle
+        yield {
+          type: "prefilled_content" as const,
+          content: message.content,
+          stopReason: message.stop_reason as string | null | undefined,
+        };
+      }
+      if (message.container) {
+        yield { type: "container_info" as const, container: message.container as ContainerInfo };
+      }
+    } else if (event.type === "message_delta") {
+      // Check if container is in message_delta.delta
+      if (eventAny.delta?.container) {
+        yield { type: "container_info" as const, container: eventAny.delta.container as ContainerInfo };
+      }
+    }
+
     yield event;
   }
 }

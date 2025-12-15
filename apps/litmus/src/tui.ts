@@ -1,14 +1,20 @@
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { select, input, checkbox, confirm } from "@inquirer/prompts";
-import { runAgentLoop, type MCPServerDefinition } from "./core.js";
-import { ServerConfigManager, OAuth2Client, CredentialStorage, type ServerConfig } from "./mcp/index.js";
+import { runAgentLoop } from "./core";
+import {
+  ServerConfigManager,
+  OAuth2Client,
+  CredentialStorage,
+  type ServerConfig,
+} from "./mcp/index.js";
+import { connectMcpServer, type McpConnection } from "@august/harness";
 
 const messages: MessageParam[] = [];
 const serverConfigManager = new ServerConfigManager();
 const credentialStorage = new CredentialStorage();
 
-// Connected MCP servers with their auth tokens
-const connectedServers: Map<string, MCPServerDefinition> = new Map();
+// Connected MCP servers (actual MCP connections with programmatic tool calling)
+const connectedServers: Map<string, McpConnection> = new Map();
 
 async function getAuthToken(server: ServerConfig): Promise<string | undefined> {
   const transport = server.transport;
@@ -48,11 +54,15 @@ async function getAuthToken(server: ServerConfig): Promise<string | undefined> {
     clientId = transport.clientId;
     clientSecret = transport.clientSecret;
   } else if (metadata.registration_endpoint) {
-    const registration = await oauth.registerClient(metadata.registration_endpoint);
+    const registration = await oauth.registerClient(
+      metadata.registration_endpoint
+    );
     clientId = registration.client_id as string;
     clientSecret = registration.client_secret as string | undefined;
   } else {
-    throw new Error("No client credentials and dynamic registration not supported");
+    throw new Error(
+      "No client credentials and dynamic registration not supported"
+    );
   }
 
   const credentials = await oauth.authorize(
@@ -65,13 +75,56 @@ async function getAuthToken(server: ServerConfig): Promise<string | undefined> {
   return credentials.accessToken;
 }
 
+async function autoConnectServers(): Promise<void> {
+  const servers = serverConfigManager.getAllServers();
+  const disconnected = servers.filter((s) => !connectedServers.has(s.id));
+
+  for (const server of disconnected) {
+    try {
+      const transport = server.transport;
+      if (transport.type === "stdio") {
+        continue; // Skip stdio transports for now
+      }
+
+      // Get auth token if needed
+      const authToken = await getAuthToken(server);
+
+      // Connect via MCP client
+      const connection = await connectMcpServer({
+        name: server.name,
+        url: transport.url,
+        authToken,
+      });
+
+      connectedServers.set(server.id, connection);
+      await serverConfigManager.markAsUsed(server.id);
+      console.log(
+        `\x1b[32m✓ Auto-connected to ${server.name} (${connection.tools.length} tools)\x1b[0m`
+      );
+    } catch (error) {
+      console.error(
+        `\x1b[31m✗ Failed to auto-connect to ${server.name}:\x1b[0m`,
+        error instanceof Error ? error.message : error
+      );
+    }
+  }
+}
+
 async function chat(): Promise<void> {
   console.log("\n\x1b[36m--- Chat Mode ---\x1b[0m");
+
+  // Auto-connect to all configured servers
+  await autoConnectServers();
+
   console.log("Type your message. Enter empty line to return to menu.\n");
 
-  const connectedNames = Array.from(connectedServers.values()).map(s => s.name);
+  const connectedNames = Array.from(connectedServers.values()).map(
+    (s) => s.name
+  );
   if (connectedNames.length > 0) {
-    console.log(`\x1b[90mConnected MCP servers: ${connectedNames.join(", ")}\x1b[0m\n`);
+    console.log(
+      `\x1b[90mConnected MCP servers: ${connectedNames.join(", ")}\x1b[0m\n`
+    );
   }
 
   while (true) {
@@ -85,36 +138,31 @@ async function chat(): Promise<void> {
     messages.push({ role: "user", content: trimmed });
     process.stdout.write("\n\x1b[34mAssistant:\x1b[0m ");
 
-    const mcpServers = Array.from(connectedServers.values());
+    const mcpConnections = Array.from(connectedServers.values());
 
     try {
       await runAgentLoop({
         messages,
-        mcpServers,
+        mcpConnections,
         onText: (text) => process.stdout.write(text),
         onToolStart: (name, input) => {
-          console.log(`\n\x1b[33m[Tool: ${name}]\x1b[0m`);
+          // Check if this is an MCP tool (prefixed with serverName__)
+          const isMcpTool = name.includes("__");
+          const color = isMcpTool ? "\x1b[35m" : "\x1b[33m";
+          const label = isMcpTool ? "MCP Tool" : "Tool";
+          console.log(`\n${color}[${label}: ${name}]\x1b[0m`);
           const inputStr = JSON.stringify(input, null, 2);
-          console.log(`\x1b[90mInput: ${inputStr.slice(0, 500)}${inputStr.length > 500 ? "..." : ""}\x1b[0m`);
+          console.log(
+            `\x1b[90mInput: ${inputStr.slice(0, 500)}${inputStr.length > 500 ? "..." : ""}\x1b[0m`
+          );
         },
         onToolResult: (name, result, isError) => {
           if (isError) {
             console.log(`\x1b[31mError: ${result}\x1b[0m`);
           } else {
-            console.log(`\x1b[90mOutput: ${result.slice(0, 500)}${result.length > 500 ? "..." : ""}\x1b[0m`);
-          }
-        },
-        onMcpToolUse: (name, serverName, input) => {
-          console.log(`\n\x1b[35m[MCP Tool: ${name} @ ${serverName}]\x1b[0m`);
-          const inputStr = JSON.stringify(input, null, 2);
-          console.log(`\x1b[90mInput: ${inputStr.slice(0, 500)}${inputStr.length > 500 ? "..." : ""}\x1b[0m`);
-        },
-        onMcpToolResult: (_toolUseId, content, isError) => {
-          const contentStr = typeof content === "string" ? content : JSON.stringify(content, null, 2);
-          if (isError) {
-            console.log(`\x1b[31mMCP Error: ${contentStr.slice(0, 500)}${contentStr.length > 500 ? "..." : ""}\x1b[0m`);
-          } else {
-            console.log(`\x1b[90mMCP Output: ${contentStr.slice(0, 500)}${contentStr.length > 500 ? "..." : ""}\x1b[0m`);
+            console.log(
+              `\x1b[90mOutput: ${result.slice(0, 500)}${result.length > 500 ? "..." : ""}\x1b[0m`
+            );
           }
         },
       });
@@ -127,7 +175,7 @@ async function chat(): Promise<void> {
 
 async function connectToServers(): Promise<void> {
   const servers = serverConfigManager.getAllServers();
-  const disconnected = servers.filter(s => !connectedServers.has(s.id));
+  const disconnected = servers.filter((s) => !connectedServers.has(s.id));
 
   if (disconnected.length === 0) {
     console.log("\nNo servers to connect (all connected or none configured).");
@@ -137,7 +185,11 @@ async function connectToServers(): Promise<void> {
 
   const serverIds = await checkbox({
     message: "Select servers to connect:",
-    choices: disconnected.map(s => ({ name: s.name, value: s.id, checked: true })),
+    choices: disconnected.map((s) => ({
+      name: s.name,
+      value: s.id,
+      checked: true,
+    })),
   });
 
   for (const serverId of serverIds) {
@@ -152,16 +204,26 @@ async function connectToServers(): Promise<void> {
         continue;
       }
 
+      // Get auth token if needed
       const authToken = await getAuthToken(server);
-      connectedServers.set(server.id, {
+
+      // Connect via MCP client (with programmatic tool calling support)
+      const connection = await connectMcpServer({
         name: server.name,
         url: transport.url,
         authToken,
       });
+
+      connectedServers.set(server.id, connection);
       await serverConfigManager.markAsUsed(server.id);
-      console.log(`\x1b[32m✓ Connected to ${server.name}\x1b[0m`);
+      console.log(
+        `\x1b[32m✓ Connected to ${server.name} (${connection.tools.length} tools)\x1b[0m`
+      );
     } catch (error) {
-      console.error(`\x1b[31m✗ Failed to connect to ${server.name}:\x1b[0m`, error);
+      console.error(
+        `\x1b[31m✗ Failed to connect to ${server.name}:\x1b[0m`,
+        error
+      );
     }
   }
   await waitForKey();
@@ -170,7 +232,10 @@ async function connectToServers(): Promise<void> {
 async function addServer(): Promise<void> {
   const name = await input({ message: "Server name:" });
   const url = await input({ message: "Server URL:" });
-  const requiresAuth = await confirm({ message: "Requires OAuth?", default: true });
+  const requiresAuth = await confirm({
+    message: "Requires OAuth?",
+    default: true,
+  });
 
   const config = await serverConfigManager.addServer({
     name,
@@ -229,12 +294,22 @@ async function manageServers(): Promise<void> {
         const connected = Array.from(connectedServers.entries());
         const disconnectIds = await checkbox({
           message: "Select servers to disconnect:",
-          choices: connected.map(([id, def]) => ({ name: def.name, value: id })),
+          choices: connected.map(([id, conn]) => ({
+            name: conn.name,
+            value: id,
+          })),
         });
         for (const id of disconnectIds) {
-          const def = connectedServers.get(id);
-          connectedServers.delete(id);
-          console.log(`\x1b[32m✓ Disconnected from ${def?.name}\x1b[0m`);
+          const conn = connectedServers.get(id);
+          if (conn) {
+            try {
+              await conn.disconnect();
+            } catch {
+              // Ignore disconnect errors
+            }
+            connectedServers.delete(id);
+            console.log(`\x1b[32m✓ Disconnected from ${conn.name}\x1b[0m`);
+          }
         }
         await waitForKey();
         break;
@@ -248,26 +323,39 @@ async function manageServers(): Promise<void> {
         const authServerId = await select({
           message: "Select server to re-authenticate:",
           choices: [
-            ...servers.map(s => ({ name: s.name, value: s.id })),
+            ...servers.map((s) => ({ name: s.name, value: s.id })),
             { name: "← Back", value: "back" },
           ],
         });
         if (authServerId !== "back") {
           const server = serverConfigManager.getServer(authServerId);
           if (server) {
+            // Disconnect existing connection if any
+            const existingConn = connectedServers.get(server.id);
+            if (existingConn) {
+              try {
+                await existingConn.disconnect();
+              } catch {
+                // Ignore
+              }
+              connectedServers.delete(server.id);
+            }
+
             await credentialStorage.clearCredentials(server.id);
-            connectedServers.delete(server.id);
             console.log(`Re-authenticating ${server.name}...`);
             const transport = server.transport;
             if (transport.type !== "stdio" && "url" in transport) {
               try {
                 const authToken = await getAuthToken(server);
-                connectedServers.set(server.id, {
+                const connection = await connectMcpServer({
                   name: server.name,
                   url: transport.url,
                   authToken,
                 });
-                console.log(`\x1b[32m✓ Re-authenticated and connected to ${server.name}\x1b[0m`);
+                connectedServers.set(server.id, connection);
+                console.log(
+                  `\x1b[32m✓ Re-authenticated and connected to ${server.name} (${connection.tools.length} tools)\x1b[0m`
+                );
               } catch (error) {
                 console.error(`\x1b[31m✗ Failed:\x1b[0m`, error);
               }
@@ -286,7 +374,7 @@ async function manageServers(): Promise<void> {
         const removeServerId = await select({
           message: "Select server to remove:",
           choices: [
-            ...servers.map(s => ({ name: s.name, value: s.id })),
+            ...servers.map((s) => ({ name: s.name, value: s.id })),
             { name: "← Back", value: "back" },
           ],
         });
@@ -319,7 +407,9 @@ async function main() {
 
     const connectedCount = connectedServers.size;
     const serverCount = serverConfigManager.getAllServers().length;
-    console.log(`\x1b[90mMCP Servers: ${connectedCount}/${serverCount} connected\x1b[0m\n`);
+    console.log(
+      `\x1b[90mMCP Servers: ${connectedCount}/${serverCount} connected\x1b[0m\n`
+    );
 
     const action = await select({
       message: "What would you like to do?",
