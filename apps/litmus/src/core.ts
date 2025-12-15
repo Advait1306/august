@@ -139,12 +139,18 @@ export async function runAgentLoop(
   // Track container ID for code execution persistence across programmatic tool calls
   let containerId: string | undefined;
 
+  // Main agent loop - continues until:
+  // 1. No more tool calls (model finished responding)
+  // 2. Max iterations reached
+  // 3. Error occurs
   while (iterations < maxIterations) {
     iterations++;
     const contentBlocks: Anthropic.ContentBlock[] = [];
+    // Track partial JSON for tool inputs that arrive incrementally via input_json_delta events
     const partialJsonByIndex: Map<number, string> = new Map();
     let stopReason: string | null = null;
 
+    // Stream events from a single API call to the model
     for await (const event of agentLoop({
       messages,
       tools,
@@ -152,7 +158,8 @@ export async function runAgentLoop(
       client,
       container: containerId,
     })) {
-      // Handle message_start - may contain content blocks and container info
+      // EVENT TYPE: message_start
+      // First event in the stream - contains message metadata and possibly pre-populated content
       if (event.type === "message_start") {
         const { message } = event as BetaRawMessageStartEvent;
         if (message.container?.id) {
@@ -168,7 +175,8 @@ export async function runAgentLoop(
         }
         continue;
       }
-      // Handle message_delta - may contain container info
+      // EVENT TYPE: message_delta
+      // Final event before message_stop - contains stop_reason and final metadata
       if (event.type === "message_delta") {
         const { delta } = event as BetaRawMessageDeltaEvent;
         if (delta.container?.id) {
@@ -177,43 +185,59 @@ export async function runAgentLoop(
         stopReason = delta.stop_reason;
         continue;
       }
+      // EVENT TYPE: content_block_start
+      // Signals the beginning of a new content block (text, tool_use, server_tool_use, etc.)
+      // We initialize the block here and may need to accumulate data in subsequent delta events
       if (event.type === "content_block_start") {
         const block = event.content_block;
+
+        // BLOCK TYPE: text - model's text response
         if (block.type === "text") {
           contentBlocks.push({ ...block, text: "" });
+
+        // BLOCK TYPE: tool_use - local or MCP tool call
         } else if (block.type === "tool_use") {
-          // Tool use (local or MCP) - needs input parsing
-          // For programmatic tool calls, input may already be populated
           const toolBlock = block as BetaToolUseBlock;
+          // Check if input is already populated (happens with programmatic/pre-computed tool calls)
           if (
             toolBlock.input &&
             Object.keys(toolBlock.input as object).length > 0
           ) {
-            // Input already populated (programmatic call) - use it directly
+            // Input already complete - no need to collect from delta events
             contentBlocks.push({ ...block } as Anthropic.ContentBlock);
           } else {
-            // Need to collect input from input_json_delta events
+            // Input will arrive incrementally via input_json_delta events
             contentBlocks.push({ ...block, input: {} });
             partialJsonByIndex.set(event.index, "");
           }
+
+        // BLOCK TYPE: server_tool_use - server-side tool (e.g., code execution sandbox)
         } else if (block.type === "server_tool_use") {
-          // Server-side tool use (e.g., code execution) - needs input parsing
+          // Server tools always need input parsing from delta events
           contentBlocks.push({ ...block, input: {} } as Anthropic.ContentBlock);
           partialJsonByIndex.set(event.index, "");
+
+        // BLOCK TYPE: other - code_execution_tool_result, mcp_tool_result, etc.
         } else {
-          // Handle other block types (code_execution_tool_result, etc.)
+          // These blocks come pre-populated, just store them
           contentBlocks.push(block as Anthropic.ContentBlock);
         }
+      // EVENT TYPE: content_block_delta
+      // Incremental updates to a content block - either text chunks or JSON fragments
       } else if (event.type === "content_block_delta") {
         const block = contentBlocks[event.index];
         if (!block) continue;
 
+        // DELTA TYPE: text_delta - append text to a text block
         if (event.delta.type === "text_delta" && block.type === "text") {
           onText?.(event.delta.text);
           (block as Anthropic.TextBlock).text += event.delta.text;
+
+        // DELTA TYPE: input_json_delta - accumulate JSON for tool input
         } else if (event.delta.type === "input_json_delta") {
-          const blockType = (block as { type: string }).type;
+          const blockType = block.type;
           if (blockType === "tool_use" || blockType === "server_tool_use") {
+            // Concatenate JSON fragments - will be parsed in content_block_stop
             const current = partialJsonByIndex.get(event.index) ?? "";
             partialJsonByIndex.set(
               event.index,
@@ -221,11 +245,15 @@ export async function runAgentLoop(
             );
           }
         }
+
+      // EVENT TYPE: content_block_stop
+      // Block is complete - finalize any accumulated data
       } else if (event.type === "content_block_stop") {
         const block = contentBlocks[event.index];
         const blockType = (block as { type: string } | undefined)?.type;
         if (blockType === "tool_use" || blockType === "server_tool_use") {
-          // Only parse JSON if we were collecting input_json_delta events
+          // Parse accumulated JSON into the block's input field
+          // Only if we were collecting fragments (not for pre-populated inputs)
           if (partialJsonByIndex.has(event.index)) {
             const jsonStr = partialJsonByIndex.get(event.index) ?? "{}";
             try {
@@ -239,10 +267,12 @@ export async function runAgentLoop(
         }
       }
     }
+    // End of streaming for this API call
 
+    // Add assistant's response to conversation history
     messages.push({ role: "assistant", content: contentBlocks });
 
-    // Extract final text response
+    // Extract final text response for return value
     const textBlocks = contentBlocks.filter(
       (block): block is Anthropic.TextBlock => block.type === "text"
     );
@@ -250,31 +280,38 @@ export async function runAgentLoop(
       finalResponse = textBlocks.map((b) => b.text).join("\n");
     }
 
-    // Handle stop reasons
+    // STOP REASON: pause_turn
+    // Server-side tools (code execution) are still running - continue to next iteration
+    // to get the results without executing any local tools
     if (stopReason === "pause_turn") {
       continue;
     }
 
-    // Check if we need to execute tools
+    // Check if we need to execute local/MCP tools
     const toolUseBlocks = contentBlocks.filter(
       (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
     );
 
+    // STOP REASON: end_turn or max_tokens (no tool_use blocks)
+    // Model finished responding without requesting tools - exit the loop
     if (toolUseBlocks.length === 0) {
       break;
     }
 
-    // Execute tools and collect results
+    // STOP REASON: tool_use
+    // Model requested tool calls - execute them and continue the loop
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
     for (const toolUse of toolUseBlocks) {
-      // Check if this is an MCP tool (prefixed with serverName__)
+      // Determine if this tool is served by an MCP connection
+      // MCP tools are prefixed with serverName__ (e.g., "filesystem__readFile")
       const isMcpTool = mcpToolNames.has(toolUse.name);
 
       onToolStart?.(toolUse.name, toolUse.input);
 
+      // BRANCH: MCP tool execution
+      // Route to the appropriate MCP server via the unified executor
       if (isMcpTool && mcpExecutor) {
-        // Execute MCP tool
         try {
           const result = await mcpExecutor(
             toolUse.name,
@@ -313,8 +350,10 @@ export async function runAgentLoop(
             is_error: true,
           });
         }
+
+      // BRANCH: Local tool execution
+      // Use the toolExecutors map to find and run the tool
       } else {
-        // Execute local tool
         const executor = executors[toolUse.name];
         if (!executor) {
           const errorMsg = `Unknown tool: ${toolUse.name}`;
@@ -372,9 +411,13 @@ export async function runAgentLoop(
       }
     }
 
+    // Add tool results to conversation as a "user" message
+    // This lets the model see the results and continue reasoning
     messages.push({ role: "user", content: toolResults });
+    // Loop continues - model will process tool results and respond
   }
 
+  // Safety check: prevent infinite loops
   if (iterations >= maxIterations) {
     throw new Error(
       `Agent loop exceeded maximum iterations (${maxIterations})`
