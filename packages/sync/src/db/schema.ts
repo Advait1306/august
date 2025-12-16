@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
   doublePrecision,
   integer,
   jsonb,
@@ -10,7 +11,10 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const integrationType = pgEnum("integration_type", ["oauth", "composio"]);
+export const integrationType = pgEnum("integration_type", [
+  "oauth",
+  "composio",
+]);
 
 export const users = pgTable("users", {
   id: varchar().primaryKey().notNull(),
@@ -53,31 +57,37 @@ export const mcpStore = pgTable("mcp_store", {
 });
 
 // OAuth Integration Details - Server-side only (NEVER sent to client)
-export const mcpOauthIntegrationDetails = pgTable("mcp_oauth_integration_details", {
-  id: varchar().primaryKey().notNull(),
-  mcp_store_id: varchar()
-    .unique()
-    .notNull()
-    .references(() => mcpStore.id),
-  mcp_server_url: varchar().notNull(),
-  default_scopes: varchar(),
-  created_at: timestamp().notNull().defaultNow(),
-  updated_at: timestamp().notNull().defaultNow(),
-});
+export const mcpOauthIntegrationDetails = pgTable(
+  "mcp_oauth_integration_details",
+  {
+    id: varchar().primaryKey().notNull(),
+    mcp_store_id: varchar()
+      .unique()
+      .notNull()
+      .references(() => mcpStore.id),
+    mcp_server_url: varchar().notNull(),
+    default_scopes: varchar(),
+    created_at: timestamp().notNull().defaultNow(),
+    updated_at: timestamp().notNull().defaultNow(),
+  }
+);
 
 // Composio Integration Details - Server-side only (NEVER sent to client)
-export const mcpComposioIntegrationDetails = pgTable("mcp_composio_integration_details", {
-  id: varchar().primaryKey().notNull(),
-  mcp_store_id: varchar()
-    .unique()
-    .notNull()
-    .references(() => mcpStore.id),
-  auth_config_id: varchar().notNull(),
-  mcp_config_id: varchar().notNull(),
-  metadata: jsonb(),
-  created_at: timestamp().notNull().defaultNow(),
-  updated_at: timestamp().notNull().defaultNow(),
-});
+export const mcpComposioIntegrationDetails = pgTable(
+  "mcp_composio_integration_details",
+  {
+    id: varchar().primaryKey().notNull(),
+    mcp_store_id: varchar()
+      .unique()
+      .notNull()
+      .references(() => mcpStore.id),
+    auth_config_id: varchar().notNull(),
+    mcp_config_id: varchar().notNull(),
+    metadata: jsonb(),
+    created_at: timestamp().notNull().defaultNow(),
+    updated_at: timestamp().notNull().defaultNow(),
+  }
+);
 
 // MCPs - Per-user, per-org MCP instances
 export const mcps = pgTable("mcps", {
@@ -185,6 +195,12 @@ export const agents = pgTable("agents", {
     .references(() => users.id),
 });
 
+export const taskStatus = pgEnum("task_status", [
+  "available",
+  "executing",
+  "stopping",
+]);
+
 export const tasks = pgTable("tasks", {
   id: varchar().notNull().primaryKey(),
   name: varchar().notNull(),
@@ -196,6 +212,53 @@ export const tasks = pgTable("tasks", {
     .references(() => users.id),
   created_at: timestamp().notNull().defaultNow(),
   agent_id: varchar().references(() => agents.id),
+  last_session_id: varchar(),
+  worker_id: varchar(),
+  status: taskStatus().notNull().default("available"),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+export const turnType = pgEnum("turn_type", ["user", "assistant"]);
+
+export const turns = pgTable("turns", {
+  id: varchar().notNull().primaryKey(),
+  type: turnType().notNull(),
+  complete: boolean().notNull().default(false),
+  metadata: jsonb(),
+  task_id: varchar()
+    .notNull()
+    .references(() => tasks.id),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+export const blockType = pgEnum("block_type", [
+  "text",
+  "tool_use",
+  "server_tool_use",
+  "code_execution_tool_result",
+  "web_search_tool_result",
+  "thinking",
+]);
+
+export const blockStatus = pgEnum("block_status", [
+  "none",
+  "permission_pending",
+  "client_pending",
+  "server_pending",
+  "completed",
+]);
+
+export const blocks = pgTable("blocks", {
+  id: varchar().notNull().primaryKey(),
+  turn_id: varchar()
+    .notNull()
+    .references(() => turns.id),
+  type: blockType().notNull(),
+  status: blockStatus().notNull().default("none"),
+  complete: boolean().notNull().default(false),
+  content: jsonb().notNull(),
+  created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
 });
 
@@ -257,6 +320,24 @@ export const taskRelations = relations(tasks, ({ one, many }) => ({
   organisation: one(organisations, {
     fields: [tasks.organisation_id],
     references: [organisations.id],
+  }),
+  turns: many(turns),
+}));
+
+// Turn relations
+export const turnRelations = relations(turns, ({ one, many }) => ({
+  task: one(tasks, {
+    fields: [turns.task_id],
+    references: [tasks.id],
+  }),
+  blocks: many(blocks),
+}));
+
+// Block relations
+export const blockRelations = relations(blocks, ({ one }) => ({
+  turn: one(turns, {
+    fields: [blocks.turn_id],
+    references: [turns.id],
   }),
 }));
 

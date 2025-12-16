@@ -90,6 +90,84 @@ export const schema = {
       },
       primaryKey: ["id"],
     },
+    blocks: {
+      name: "blocks",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "id"
+          >,
+        },
+        turn_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "turn_id"
+          >,
+        },
+        type: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "type"
+          >,
+        },
+        status: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "status"
+          >,
+        },
+        complete: {
+          type: "boolean",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "complete"
+          >,
+        },
+        content: {
+          type: "json",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "content"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+    },
     composioStates: {
       name: "composioStates",
       columns: {
@@ -943,12 +1021,108 @@ export const schema = {
             "agent_id"
           >,
         },
+        last_session_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "tasks",
+            "last_session_id"
+          >,
+        },
+        worker_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "tasks",
+            "worker_id"
+          >,
+        },
+        status: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "tasks",
+            "status"
+          >,
+        },
         updated_at: {
           type: "number",
           optional: true,
           customType: null as unknown as ZeroCustomType<
             ZeroSchema,
             "tasks",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+    },
+    turns: {
+      name: "turns",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "turns",
+            "id"
+          >,
+        },
+        type: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "turns",
+            "type"
+          >,
+        },
+        complete: {
+          type: "boolean",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "turns",
+            "complete"
+          >,
+        },
+        metadata: {
+          type: "json",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "turns",
+            "metadata"
+          >,
+        },
+        task_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "turns",
+            "task_id"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "turns",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "turns",
             "updated_at"
           >,
         },
@@ -1081,6 +1255,16 @@ export const schema = {
           sourceField: ["organisation_id"],
           destField: ["id"],
           destSchema: "organisations",
+          cardinality: "one",
+        },
+      ],
+    },
+    blocks: {
+      turn: [
+        {
+          sourceField: ["turn_id"],
+          destField: ["id"],
+          destSchema: "turns",
           cardinality: "one",
         },
       ],
@@ -1354,6 +1538,32 @@ export const schema = {
           cardinality: "one",
         },
       ],
+      turns: [
+        {
+          sourceField: ["id"],
+          destField: ["task_id"],
+          destSchema: "turns",
+          cardinality: "many",
+        },
+      ],
+    },
+    turns: {
+      task: [
+        {
+          sourceField: ["task_id"],
+          destField: ["id"],
+          destSchema: "tasks",
+          cardinality: "one",
+        },
+      ],
+      blocks: [
+        {
+          sourceField: ["id"],
+          destField: ["turn_id"],
+          destSchema: "blocks",
+          cardinality: "many",
+        },
+      ],
     },
     usage: {
       organisation: [
@@ -1423,6 +1633,11 @@ export type Schema = typeof schema;
  */
 export type Agent = Row<Schema["tables"]["agents"]>;
 /**
+ * Represents a row from the "blocks" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type Block = Row<Schema["tables"]["blocks"]>;
+/**
  * Represents a row from the "composioStates" table.
  * This type is auto-generated from your Drizzle schema definition.
  */
@@ -1483,6 +1698,11 @@ export type Organisation = Row<Schema["tables"]["organisations"]>;
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Task = Row<Schema["tables"]["tasks"]>;
+/**
+ * Represents a row from the "turns" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type Turn = Row<Schema["tables"]["turns"]>;
 /**
  * Represents a row from the "usage" table.
  * This type is auto-generated from your Drizzle schema definition.
