@@ -1,4 +1,4 @@
-import { Processor, Queue, Worker } from "bullmq";
+import { Processor, Queue, Worker, WorkerOptions } from "bullmq";
 import IORedis from "ioredis";
 
 const redisConnection = new IORedis(process.env.REDIS_URL!, {
@@ -14,7 +14,7 @@ const createQueue = (queueName: string) => {
 const createWorker = (
   queueName: string,
   callback: Processor,
-  options: WorkerOptions = {}
+  options: Omit<WorkerOptions, "connection"> = {}
 ): Worker => {
   const worker = new Worker(queueName, callback, {
     connection: redisConnection,

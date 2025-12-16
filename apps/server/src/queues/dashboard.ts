@@ -33,11 +33,12 @@ const createBullDashboardAndAttachRouter = (
 
     try {
       const user = await clerkClient.users.getUser(userId);
-      const internalRole = user.privateMetadata?.internal_role as
-        | string[]
-        | undefined;
+      const internalRole = user.privateMetadata?.internal_role;
 
-      if (!internalRole?.includes("sixhuman_admin")) {
+      if (
+        !Array.isArray(internalRole) ||
+        !internalRole.includes("sixhuman_admin")
+      ) {
         return res.status(403).json({ error: "Access denied" });
       }
 
