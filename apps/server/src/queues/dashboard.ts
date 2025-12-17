@@ -1,11 +1,17 @@
 import { ExpressAdapter } from "@bull-board/express";
 import { createBullBoard } from "@bull-board/api";
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { queue as AgentLoopQueue } from "./workers/agentLoopWorker";
 import { Express, Request, Response, NextFunction } from "express";
 import { getAuth, ClerkClient } from "@clerk/express";
+import { BullBoardGroupMQAdapter } from "groupmq";
 
-const queues = [new BullMQAdapter(AgentLoopQueue)];
+const queues = [
+  new BullBoardGroupMQAdapter(AgentLoopQueue, {
+    displayName: "Agent Loop",
+    description: "Handles all agent running jobs",
+    readOnlyMode: false,
+  }),
+];
 
 const createBullDashboardAndAttachRouter = (
   app: Express,

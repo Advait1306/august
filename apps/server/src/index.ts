@@ -30,6 +30,7 @@ import { createBillingController } from "./controllers/billing.controller";
 import { createMCPController } from "./controllers/mcp.controller";
 import { createRedirectController } from "./controllers/redirect.controller";
 import { createBullDashboardAndAttachRouter } from "./queues/dashboard";
+import { gracefulShutdown } from "./queues/factory";
 
 const app = express();
 
@@ -92,6 +93,24 @@ app.use(createRedirectController());
 // Mount Bull Dashboard
 createBullDashboardAndAttachRouter(app, clerkClient);
 
-app.listen(8080, () => {
+const server = app.listen(8080, () => {
   console.log("Server is running on port 8080");
 });
+
+// Graceful shutdown handlers
+const shutdown = async (signal: string) => {
+  console.log(`\n${signal} received, starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(() => {
+    console.log("HTTP server closed");
+  });
+
+  // Shutdown workers and queues (30s timeout for in-progress jobs)
+  await gracefulShutdown(5000);
+
+  process.exit(0);
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
