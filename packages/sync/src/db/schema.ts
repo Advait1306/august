@@ -197,6 +197,7 @@ export const agents = pgTable("agents", {
 
 export const taskStatus = pgEnum("task_status", [
   "available",
+  "starting",
   "executing",
   "stopping",
 ]);
@@ -230,11 +231,13 @@ export const turns = pgTable("turns", {
     .references(() => tasks.id),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
+  locked: boolean().notNull().default(false),
 });
 
 export const blockType = pgEnum("block_type", [
   "text",
   "tool_use",
+  "tool_result",
   "server_tool_use",
   "code_execution_tool_result",
   "web_search_tool_result",
@@ -260,6 +263,7 @@ export const blocks = pgTable("blocks", {
   content: jsonb().notNull(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
+  processed: boolean().notNull().default(false),
 });
 
 export const messages = pgTable("messages", {

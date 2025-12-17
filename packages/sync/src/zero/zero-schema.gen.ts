@@ -165,6 +165,15 @@ export const schema = {
             "updated_at"
           >,
         },
+        processed: {
+          type: "boolean",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "processed"
+          >,
+        },
       },
       primaryKey: ["id"],
     },
@@ -1124,6 +1133,15 @@ export const schema = {
             ZeroSchema,
             "turns",
             "updated_at"
+          >,
+        },
+        locked: {
+          type: "boolean",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "turns",
+            "locked"
           >,
         },
       },
