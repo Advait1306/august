@@ -10,6 +10,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+import { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 
 export const integrationType = pgEnum("integration_type", [
   "oauth",
@@ -242,7 +243,7 @@ export const blockType = pgEnum("block_type", [
   "code_execution_tool_result",
   "web_search_tool_result",
   "thinking",
-]);
+] as const satisfies readonly BetaContentBlockParam["type"][]);
 
 export const blockStatus = pgEnum("block_status", [
   "none",
@@ -260,7 +261,7 @@ export const blocks = pgTable("blocks", {
   type: blockType().notNull(),
   status: blockStatus().notNull().default("none"),
   complete: boolean().notNull().default(false),
-  content: jsonb().notNull(),
+  content: jsonb().$type<BetaContentBlockParam>().notNull(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
   processed: boolean().notNull().default(false),

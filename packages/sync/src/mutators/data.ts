@@ -99,6 +99,7 @@ export function createMutators(authData: AuthData) {
           turn_id: turn_id,
           type: "text",
           content: {
+            type: "text",
             text: message,
           },
           created_at: Date.now(),
@@ -183,6 +184,7 @@ export function createMutators(authData: AuthData) {
           turn_id: turn_id,
           type: "text",
           content: {
+            type: "text",
             text: message,
           },
           processed: false,
@@ -252,8 +254,9 @@ export function createMutators(authData: AuthData) {
           type: "tool_result",
           status: "completed",
           content: {
+            type: "tool_result",
             tool_use_id,
-            result,
+            content: result,
           },
           created_at: Date.now(),
           updated_at: Date.now(),
@@ -332,8 +335,10 @@ export function createMutators(authData: AuthData) {
           type: "tool_result",
           // TODO: Fix content here in order to match anthropic's expectations
           content: {
-            reason,
-            isError: true,
+            type: "tool_result",
+            tool_use_id: tool_block_id,
+            content: reason,
+            is_error: true,
           },
           created_at: Date.now(),
           updated_at: Date.now(),

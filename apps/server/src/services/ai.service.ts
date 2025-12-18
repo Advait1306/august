@@ -1,6 +1,10 @@
 import { eq, InferSelectModel } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { blocks, tasks, turns } from "@jupiter/sync/db/schema";
+import { agentLoop } from "@august/harness";
+import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+
+const MAX_ITERATIONS = 50;
 
 type TaskWithTurns = InferSelectModel<typeof tasks> & {
   turns: (InferSelectModel<typeof turns> & {
@@ -155,6 +159,42 @@ export class AiService {
   }
 
   private async runAgentLoop(taskId: string) {
-    
+    const task = await this.db.query.tasks.findFirst({
+      where: eq(tasks.id, taskId),
+      with: {
+        turns: {
+          with: {
+            blocks: {
+              where: eq(blocks.processed, true),
+            },
+          },
+        },
+      },
+    });
+
+    if (!task) {
+      throw new Error("Task not found");
+    }
+
+    let iterations = 0;
+
+    while (iterations < MAX_ITERATIONS) {
+      iterations++;
+
+      const messages: BetaMessageParam[] = task.turns.map(
+        (turn): BetaMessageParam => {
+          return {
+            role: turn.type as "user" | "assistant",
+            content: turn.blocks.map((block) => block.content),
+          };
+        }
+      );
+
+      for await (const event of agentLoop({
+        messages,
+      })) {
+        console.log(event);
+      }
+    }
   }
 }
