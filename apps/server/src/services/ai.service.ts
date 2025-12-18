@@ -1,6 +1,18 @@
-import { eq } from "drizzle-orm";
+import { eq, InferSelectModel } from "drizzle-orm";
 import { AppState } from "../config/state";
-import { tasks } from "@jupiter/sync/db/schema";
+import { blocks, tasks, turns } from "@jupiter/sync/db/schema";
+
+type TaskWithTurns = InferSelectModel<typeof tasks> & {
+  turns: (InferSelectModel<typeof turns> & {
+    blocks: InferSelectModel<typeof blocks>[];
+  })[];
+};
+
+interface ProcessBlockParams {
+  task: TaskWithTurns;
+  turn: InferSelectModel<typeof turns>;
+  block: InferSelectModel<typeof blocks>;
+}
 
 export class AiService {
   private static instance: AiService;
@@ -13,13 +25,15 @@ export class AiService {
     return AiService.instance;
   }
 
-  async runAgentLoop(taskId: string, turnId: string, blockId: string) {
+  async processBlock(taskId: string, turnId: string, blockId: string) {
     const task = await this.db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
       with: {
         turns: {
           with: {
-            blocks: true,
+            blocks: {
+              where: eq(blocks.processed, true),
+            },
           },
         },
       },
@@ -29,17 +43,118 @@ export class AiService {
       throw new Error("Task not found");
     }
 
-    const turn = task.turns.find((turn) => turn.id === turnId);
+    // TODO: can potentially just pass the turnId instead of fetch the turn from db
+    const turn = await this.db.query.turns.findFirst({
+      where: eq(turns.id, turnId),
+    });
+
     if (!turn) {
       throw new Error("Turn not found");
     }
 
-    const block = turn.blocks.find((block) => block.id === blockId);
+    const block = await this.db.query.blocks.findFirst({
+      where: eq(blocks.id, blockId),
+    });
+
     if (!block) {
       throw new Error("Block not found");
     }
 
-    // TODO: Do agent loop kickstarting checks here
-    // TODO: Implement agent loop here
+    if (block.processed) {
+      throw new Error("Block has already been processed");
+    }
+
+    if (block.type === "tool_result") {
+      return this.processToolResultBlock({ task, turn, block });
+    } else if (block.type === "text") {
+      return this.processTextBlock({ task, turn, block });
+    }
+  }
+
+  private async processToolResultBlock(params: ProcessBlockParams) {
+    const { task, turn, block } = params;
+
+    if (turn.type !== "user") {
+      throw new Error("Only user turns can trigger agent loop");
+    }
+
+    // Get last turn that should contain the corresponding tool_use
+    const lastAssistantTurnToolUseBlocks = task.turns
+      .reverse()
+      .find((turn) => turn.type === "assistant")
+      ?.blocks.filter((block) => block.type === "tool_use");
+
+    if (
+      !lastAssistantTurnToolUseBlocks ||
+      lastAssistantTurnToolUseBlocks.length === 0
+    ) {
+      throw new Error("No tool use blocks found to associate tool result");
+    }
+
+    // Match tool_use_id from tool_result to tool_use
+    const toolUseId = (block.content as { tool_use_id: string }).tool_use_id;
+
+    const toolUseBlock = lastAssistantTurnToolUseBlocks.find(
+      (block) =>
+        (block.content as { tool_use_id: string }).tool_use_id === toolUseId
+    );
+
+    if (!toolUseBlock) {
+      throw new Error("Tool use block not found to associate tool result");
+    }
+
+    // tool_result block matched with tool_use block, mark it as processed
+    await this.db
+      .update(blocks)
+      .set({
+        processed: true,
+      })
+      .where(eq(blocks.id, block.id));
+
+    // Check if all tool_use blocks are answered - to start the agent loop
+    const toolResultBlocks = task.turns
+      .find((turn) => turn.id === turn.id)
+      ?.blocks.filter((block) => block.type === "tool_result");
+
+    if (!toolResultBlocks) {
+      throw new Error("Tool result blocks not found");
+    }
+
+    const appendedToolResultBlocks = [...toolResultBlocks, block];
+
+    // TODO: Find a better array matching algorithm, this is O(n^2)
+    if (
+      lastAssistantTurnToolUseBlocks.every((block) => {
+        const tool_use_id = (block.content as { tool_use_id: string })
+          .tool_use_id;
+
+        return appendedToolResultBlocks.some((toolResultBlock) => {
+          const result_tool_use_id = (
+            toolResultBlock.content as { tool_use_id: string }
+          ).tool_use_id;
+          return result_tool_use_id === tool_use_id;
+        });
+      })
+    ) {
+      // All tool use blocks are answered, start the agent loop
+      await this.runAgentLoop(params.task.id);
+    }
+  }
+
+  private async processTextBlock(params: ProcessBlockParams) {
+    // TODO: We might have to check for integrity here
+    await this.db
+      .update(blocks)
+      .set({
+        processed: true,
+      })
+      .where(eq(blocks.id, params.block.id));
+
+    // Start agent loop
+    await this.runAgentLoop(params.task.id);
+  }
+
+  private async runAgentLoop(taskId: string) {
+    
   }
 }

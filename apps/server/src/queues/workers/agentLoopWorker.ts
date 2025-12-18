@@ -18,7 +18,7 @@ const worker = createWorker(
   async (job: ReservedJob<AgentLoopJobData>) => {
     const aiService = AiService.getInstance(state);
 
-    await aiService.runAgentLoop(
+    await aiService.processBlock(
       job.data.task_id,
       job.data.turn_id,
       job.data.block_id
