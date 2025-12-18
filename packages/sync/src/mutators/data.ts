@@ -64,13 +64,18 @@ export function createMutators(authData: AuthData) {
         tx: Transaction<Schema>,
         {
           message,
+          task_id,
+          turn_id,
+          block_id,
         }: {
           message: string;
+          task_id: string;
+          turn_id: string;
+          block_id: string;
         }
       ) => {
-        const taskId = crypto.randomUUID();
         await tx.mutate.tasks.insert({
-          id: taskId,
+          id: task_id,
           name: message.length > 40 ? message.slice(0, 40) + "..." : message,
           author_id: authData.userId,
           organisation_id: authData.orgId,
@@ -79,21 +84,19 @@ export function createMutators(authData: AuthData) {
           updated_at: Date.now(),
         });
 
-        const turnId = crypto.randomUUID();
         await tx.mutate.turns.insert({
-          id: turnId,
+          id: turn_id,
           type: "user",
-          task_id: taskId,
+          task_id: task_id,
           complete: true,
           created_at: Date.now(),
           updated_at: Date.now(),
           locked: true,
         });
 
-        const blockId = crypto.randomUUID();
         await tx.mutate.blocks.insert({
-          id: blockId,
-          turn_id: turnId,
+          id: block_id,
+          turn_id: turn_id,
           type: "text",
           content: {
             text: message,
@@ -137,9 +140,13 @@ export function createMutators(authData: AuthData) {
         {
           message,
           task_id,
+          turn_id,
+          block_id,
         }: {
-          task_id: string;
           message: string;
+          task_id: string;
+          turn_id: string;
+          block_id: string;
         }
       ) => {
         const task = await tx.query.tasks
@@ -152,9 +159,7 @@ export function createMutators(authData: AuthData) {
           throw new Error("Task not found with user");
         }
 
-        const status = task.status;
-
-        if (status !== "available") {
+        if (task.status !== "available") {
           throw new Error("Task is not in available state");
         }
 
@@ -163,9 +168,8 @@ export function createMutators(authData: AuthData) {
           status: "starting",
         });
 
-        const turnId = crypto.randomUUID();
         await tx.mutate.turns.insert({
-          id: turnId,
+          id: turn_id,
           type: "user",
           task_id: task_id,
           complete: true,
@@ -174,10 +178,9 @@ export function createMutators(authData: AuthData) {
           locked: true,
         });
 
-        const blockId = crypto.randomUUID();
         await tx.mutate.blocks.insert({
-          id: blockId,
-          turn_id: turnId,
+          id: block_id,
+          turn_id: turn_id,
           type: "text",
           content: {
             text: message,
@@ -221,15 +224,30 @@ export function createMutators(authData: AuthData) {
           tool_use_id,
           turn_id,
           result,
+          block_id,
         }: {
           tool_use_id: string;
           turn_id: string;
           result: string;
+          block_id: string;
         }
       ) => {
-        const blockId = crypto.randomUUID();
+        const turn = await tx.query.turns.where("id", turn_id).one().run();
+
+        if (!turn) {
+          throw new Error("Turn not found");
+        }
+
+        if (turn.type !== "user") {
+          throw new Error("Turn is not a user turn");
+        }
+
+        if (turn.locked) {
+          throw new Error("Turn is locked");
+        }
+
         await tx.mutate.blocks.insert({
-          id: blockId,
+          id: block_id,
           turn_id: turn_id,
           type: "tool_result",
           status: "completed",
@@ -279,16 +297,21 @@ export function createMutators(authData: AuthData) {
       deny: async (
         tx: Transaction<Schema>,
         {
-          block_id,
+          tool_block_id,
           turn_id,
           reason,
+          result_block_id,
         }: {
-          block_id: string;
+          tool_block_id: string;
           turn_id: string;
           reason: string;
+          result_block_id: string;
         }
       ) => {
-        const block = await tx.query.blocks.where("id", block_id).one().run();
+        const block = await tx.query.blocks
+          .where("id", tool_block_id)
+          .one()
+          .run();
 
         if (!block) {
           throw new Error("Block not found");
@@ -299,13 +322,12 @@ export function createMutators(authData: AuthData) {
         }
 
         await tx.mutate.blocks.update({
-          id: block_id,
+          id: tool_block_id,
           status: "completed",
         });
 
-        const blockId = crypto.randomUUID();
         await tx.mutate.blocks.insert({
-          id: blockId,
+          id: result_block_id,
           turn_id: turn_id,
           type: "tool_result",
           // TODO: Fix content here in order to match anthropic's expectations
