@@ -4,16 +4,16 @@ import { ProxyService } from "../services/proxy.service";
 import { BillingService } from "../services/billing.service";
 import { OAuthService } from "../services/oauth.service";
 import { ComposioService } from "../services/composio.service";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { eq, and } from "drizzle-orm";
 import { mcps, mcpOauthIntegrationDetails } from "@jupiter/sync/db/schema";
+import { AppState } from "../config/state";
 
 export function createProxyController(
   proxyService: ProxyService,
   billingService: BillingService,
   oauthService: OAuthService,
   composioService: ComposioService,
-  db: NodePgDatabase
+  db: AppState["db"]
 ): Router {
   const router = Router();
 

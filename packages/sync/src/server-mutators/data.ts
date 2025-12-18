@@ -15,12 +15,21 @@ type OAuthService = {
   revokeToken: (params: { mcpId: string }) => Promise<void>;
 };
 
+type AgentLoopJobData = {
+  task_id: string;
+  turn_id: string;
+  block_id: string;
+};
+
+type AddToAgentLoopQueue = (data: AgentLoopJobData) => Promise<void>;
+
 export function createServerMutators(
   clientMutators: CustomMutatorDefs,
   authData: AuthData,
   asyncTasks: AsyncTask,
   mixpanel: mixpanel.Mixpanel,
-  oauthService: OAuthService
+  oauthService: OAuthService,
+  addToAgentLoopQueue: AddToAgentLoopQueue
 ) {
   // Analytics configuration
   const analyticsConfig = {
@@ -156,7 +165,11 @@ export function createServerMutators(
         });
 
         asyncTasks.push(async () => {
-          // TODO: Create a task processing job
+          addToAgentLoopQueue({
+            task_id,
+            turn_id,
+            block_id,
+          });
         });
       },
       abort: async (
@@ -292,7 +305,11 @@ export function createServerMutators(
         });
 
         asyncTasks.push(async () => {
-          // TODO: Create a message processing job
+          addToAgentLoopQueue({
+            task_id,
+            turn_id,
+            block_id,
+          });
         });
         // TODO: Add analytics event
       },
@@ -390,7 +407,11 @@ export function createServerMutators(
         });
 
         asyncTasks.push(async () => {
-          // TODO: Create a tool result processing job
+          addToAgentLoopQueue({
+            task_id: turn.task_id,
+            turn_id,
+            block_id,
+          });
         });
         // TODO: Add analytics event
       },
@@ -431,10 +452,6 @@ export function createServerMutators(
             throw new Error("Block doesn't support permission approval");
           }
         }
-
-        asyncTasks.push(async () => {
-          // TODO: Create a tool result processing job
-        });
         // TODO: Add analytics event
       },
       deny: async (
@@ -460,6 +477,12 @@ export function createServerMutators(
           })
           .one()
           .run();
+
+        const turn = await tx.query.turns.where("id", turn_id).one().run();
+
+        if (!turn) {
+          throw new Error("Turn not found");
+        }
 
         if (!block) {
           throw new Error("Block not found");
@@ -490,7 +513,17 @@ export function createServerMutators(
         });
 
         asyncTasks.push(async () => {
-          // TODO: Create a tool result processing job
+          /* TODO: Find standardised way of getting these details within the txn
+           
+          Currently we're doing multiple trips to the db in order to collect the task_id and turn_id
+          This is not efficient and should be improved 
+          
+          */
+          addToAgentLoopQueue({
+            task_id: turn.task_id,
+            turn_id,
+            block_id,
+          });
         });
         // TODO: Add analytics event
       },

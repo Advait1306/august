@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { organisations, usage } from "@jupiter/sync/db/schema";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { AppState } from "../config/state";
 
 // Pricing calculation for Claude models (prices in cents per 1M tokens)
 export interface UsageData {
@@ -11,7 +11,7 @@ export interface UsageData {
 }
 
 export class BillingService {
-  constructor(private db: NodePgDatabase) {}
+  constructor(private db: AppState["db"]) {}
 
   /**
    * Calculate cost for Claude models
@@ -130,7 +130,10 @@ export class BillingService {
   /**
    * Add credits to organisation wallet
    */
-  async addCredits(orgId: string, amountInCents: number): Promise<{
+  async addCredits(
+    orgId: string,
+    amountInCents: number
+  ): Promise<{
     success: boolean;
     newBalance?: number;
     error?: string;
