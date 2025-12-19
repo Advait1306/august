@@ -336,8 +336,8 @@ export const turnRelations = relations(turns, ({ one, many }) => ({
     fields: [turns.task_id],
     references: [tasks.id],
   }),
-  blocks: many(blocks),
-  response_turns: many(blocks),
+  blocks: many(blocks, { relationName: "turn" }),
+  response_blocks: many(blocks, { relationName: "response_turn" }),
 }));
 
 // Block relations
@@ -345,10 +345,12 @@ export const blockRelations = relations(blocks, ({ one }) => ({
   turn: one(turns, {
     fields: [blocks.turn_id],
     references: [turns.id],
+    relationName: "turn",
   }),
   response_turn: one(turns, {
     fields: [blocks.response_turn_id],
     references: [turns.id],
+    relationName: "response_turn",
   }),
 }));
 

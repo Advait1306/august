@@ -5,7 +5,7 @@ import { agentLoop } from "@august/harness";
 import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { AssistantTurnProcessor } from "../processors/assistant-turn-processor";
 
-const MAX_ITERATIONS = 50;
+// const MAX_ITERATIONS = 50;
 
 type TaskWithTurns = InferSelectModel<typeof tasks> & {
   turns: (InferSelectModel<typeof turns> & {
@@ -177,57 +177,63 @@ export class AiService {
       throw new Error("Task not found");
     }
 
-    let iterations = 0;
+    // TODO: Use iterations once pause_turn is implemented
+    // let iterations = 0;
 
     // This while loop is only to allow iterating on multipe "pause" stop reasons
-    while (iterations < MAX_ITERATIONS) {
-      iterations++;
+    // while (iterations < MAX_ITERATIONS) {
+    //   iterations++;
 
-      const messages: BetaMessageParam[] = task.turns.map(
-        (turn): BetaMessageParam => {
-          return {
-            role: turn.type as "user" | "assistant",
-            content: turn.blocks.map((block) => block.content),
-          };
+    const messages: BetaMessageParam[] = task.turns.map(
+      (turn): BetaMessageParam => {
+        return {
+          role: turn.type as "user" | "assistant",
+          content: turn.blocks.map((block) => block.content),
+        };
+      }
+    );
+
+    const assistantTurnProcessor = new AssistantTurnProcessor(this.db, taskId);
+
+    let lastFlush = Date.now();
+
+    for await (const event of agentLoop({
+      messages,
+    })) {
+      switch (event.type) {
+        case "message_start": {
+          assistantTurnProcessor.processMessageStart(event);
+          break;
         }
-      );
-
-      const assistantTurnProcessor = new AssistantTurnProcessor(
-        this.db,
-        taskId
-      );
-
-      for await (const event of agentLoop({
-        messages,
-      })) {
-        switch (event.type) {
-          case "message_start": {
-            assistantTurnProcessor.processMessageStart(event);
-            break;
-          }
-          case "message_delta": {
-            assistantTurnProcessor.processMessageDelta(event);
-            break;
-          }
-          case "message_stop": {
-            assistantTurnProcessor.processMessageStop();
-            break;
-          }
-          case "content_block_start": {
-            assistantTurnProcessor.processBlockStart(event);
-            // Handle content block start
-            break;
-          }
-          case "content_block_delta": {
-            assistantTurnProcessor.processBlockDelta(event);
-            break;
-          }
-          case "content_block_stop": {
-            assistantTurnProcessor.processBlockStop(event);
-            break;
-          }
+        case "message_delta": {
+          assistantTurnProcessor.processMessageDelta(event);
+          break;
+        }
+        case "message_stop": {
+          assistantTurnProcessor.processMessageStop();
+          break;
+        }
+        case "content_block_start": {
+          assistantTurnProcessor.processBlockStart(event);
+          // Handle content block start
+          break;
+        }
+        case "content_block_delta": {
+          assistantTurnProcessor.processBlockDelta(event);
+          break;
+        }
+        case "content_block_stop": {
+          assistantTurnProcessor.processBlockStop(event);
+          break;
         }
       }
+
+      if (Date.now() - lastFlush > 200) {
+        await assistantTurnProcessor.flushToDb();
+        lastFlush = Date.now();
+      }
     }
+
+    // }
   }
 }

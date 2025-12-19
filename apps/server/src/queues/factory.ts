@@ -13,6 +13,7 @@ const createQueue = (queueName: string) => {
   const queue = new Queue({
     redis: redisConnection,
     namespace: queueName,
+    maxAttempts: 1,
     keepCompleted: 100, // Retain last 100 completed jobs for Bull Board
     keepFailed: 100, // Retain last 100 failed jobs for Bull Board
   });
@@ -39,7 +40,9 @@ const createWorker = (
   });
 
   worker.on("graceful-timeout", (job) => {
-    console.log(`⚠️ ${queue.name} job ${job.id} timed out during graceful shutdown`);
+    console.log(
+      `⚠️ ${queue.name} job ${job.id} timed out during graceful shutdown`
+    );
   });
 
   worker.on("closed", () => {

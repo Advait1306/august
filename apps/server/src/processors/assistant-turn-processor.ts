@@ -189,7 +189,7 @@ export class AssistantTurnProcessor {
           content: block.data.content,
           created_at: new Date(),
           updated_at: new Date(),
-
+          complete: block.data.complete,
           // Tool use types require a response turn for clients to put result in
           response_turn_id:
             block.data.content.type === "tool_use"

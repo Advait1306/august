@@ -1599,10 +1599,10 @@ export const schema = {
           cardinality: "many",
         },
       ],
-      response_turns: [
+      response_blocks: [
         {
           sourceField: ["id"],
-          destField: ["turn_id"],
+          destField: ["response_turn_id"],
           destSchema: "blocks",
           cardinality: "many",
         },
