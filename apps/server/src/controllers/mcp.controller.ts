@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
 import { getAuth } from "@clerk/express";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
 import { OAuthService } from "../services/oauth.service";
 import { ComposioService } from "../services/composio.service";
 import { mcpStore } from "@jupiter/sync/db/schema";
+import { AppState } from "../config/state";
 
-export function createMCPController(db: NodePgDatabase): Router {
+export function createMCPController(db: AppState["db"]): Router {
   const router = Router();
   const oauthService = new OAuthService(db);
   const composioService = new ComposioService(db);

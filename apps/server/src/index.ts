@@ -9,7 +9,7 @@ import mixpanel from "mixpanel";
 import DodoPayments from "dodopayments";
 
 // Config
-import { db, processor } from "./config/database";
+import { db, processor } from "./config/state";
 
 // Middleware
 import { apiKeyToAuthMiddleware } from "./middleware/apiKeyToAuth";

@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { eq } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { AppState } from "../config/state";
 import {
   mcps,
   mcpStore,
@@ -33,7 +33,7 @@ function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
 export class OAuthService {
   private serverUrl: string;
 
-  constructor(private db: NodePgDatabase) {
+  constructor(private db: AppState["db"]) {
     this.serverUrl = process.env.SERVER_URL || "http://localhost:8080";
   }
 
@@ -56,10 +56,7 @@ export class OAuthService {
 
     const discoveryResponse = await fetch(discoveryUrl.toString());
 
-    console.log(
-      "[OAuth Discovery] Response status:",
-      discoveryResponse.status
-    );
+    console.log("[OAuth Discovery] Response status:", discoveryResponse.status);
 
     if (!discoveryResponse.ok) {
       const errorText = await discoveryResponse.text();
@@ -68,7 +65,9 @@ export class OAuthService {
         statusText: discoveryResponse.statusText,
         body: errorText,
       });
-      throw new Error(`OAuth discovery failed: ${discoveryResponse.statusText}`);
+      throw new Error(
+        `OAuth discovery failed: ${discoveryResponse.statusText}`
+      );
     }
 
     const metadata = (await discoveryResponse.json()) as {
@@ -95,7 +94,8 @@ export class OAuthService {
     userId: string;
     organisationId: string;
   }): Promise<{ authorizationUrl: string }> {
-    const { mcpStoreId, customMcpUrl, customMcpName, userId, organisationId } = params;
+    const { mcpStoreId, customMcpUrl, customMcpName, userId, organisationId } =
+      params;
 
     console.log("[OAuth Flow] Starting OAuth flow:", {
       hasStoreMcp: !!mcpStoreId,
@@ -155,7 +155,9 @@ export class OAuthService {
         url: mcpServerUrl,
       });
     } else {
-      throw new Error("Must provide either mcpStoreId OR both customMcpUrl and customMcpName");
+      throw new Error(
+        "Must provide either mcpStoreId OR both customMcpUrl and customMcpName"
+      );
     }
 
     // Discover OAuth metadata from MCP server
@@ -174,7 +176,9 @@ export class OAuthService {
     console.log("[OAuth Flow] Registering OAuth client");
 
     if (!metadata.registration_endpoint) {
-      throw new Error("OAuth provider does not support dynamic client registration");
+      throw new Error(
+        "OAuth provider does not support dynamic client registration"
+      );
     }
 
     const registrationPayload = {
@@ -200,7 +204,9 @@ export class OAuthService {
         status: registrationResponse.status,
         body: errorText,
       });
-      throw new Error(`OAuth client registration failed: ${registrationResponse.statusText}`);
+      throw new Error(
+        `OAuth client registration failed: ${registrationResponse.statusText}`
+      );
     }
 
     const registrationData = (await registrationResponse.json()) as {
@@ -436,7 +442,9 @@ export class OAuthService {
         id: crypto.randomUUID(),
         mcp_id: newMcpId,
         oauth_client_id: storedMetadata.client_id,
-        oauth_client_secret: storedMetadata.client_secret ? encrypt(storedMetadata.client_secret) : null,
+        oauth_client_secret: storedMetadata.client_secret
+          ? encrypt(storedMetadata.client_secret)
+          : null,
         access_token: encrypt(tokenData.access_token),
         refresh_token: tokenData.refresh_token
           ? encrypt(tokenData.refresh_token)
@@ -480,9 +488,7 @@ export class OAuthService {
    * Automatically refreshes the token if it's expired
    * Note: Caller should verify MCP ownership before calling this method
    */
-  async getAccessToken(params: {
-    mcpId: string;
-  }): Promise<string | null> {
+  async getAccessToken(params: { mcpId: string }): Promise<string | null> {
     const { mcpId } = params;
 
     const [connection] = await this.db
@@ -527,9 +533,7 @@ export class OAuthService {
   /**
    * Refreshes an expired OAuth token
    */
-  async refreshToken(params: {
-    mcpId: string;
-  }): Promise<boolean> {
+  async refreshToken(params: { mcpId: string }): Promise<boolean> {
     const { mcpId } = params;
 
     const [connection] = await this.db
@@ -538,7 +542,12 @@ export class OAuthService {
       .where(eq(mcpOauthConnections.mcp_id, mcpId))
       .limit(1);
 
-    if (!connection || !connection.refresh_token || !connection.oauth_client_id || !connection.oauth_metadata) {
+    if (
+      !connection ||
+      !connection.refresh_token ||
+      !connection.oauth_client_id ||
+      !connection.oauth_metadata
+    ) {
       return false;
     }
 
@@ -607,9 +616,7 @@ export class OAuthService {
    * Revokes OAuth tokens for an MCP connection
    * Should be called when a user disconnects or deletes an MCP
    */
-  async revokeToken(params: {
-    mcpId: string;
-  }): Promise<void> {
+  async revokeToken(params: { mcpId: string }): Promise<void> {
     const { mcpId } = params;
 
     try {
@@ -675,7 +682,9 @@ export class OAuthService {
           console.log("[OAuth Revoke] Token revoked successfully at provider");
         }
       } else {
-        console.log("[OAuth Revoke] No revocation endpoint available, skipping provider revocation");
+        console.log(
+          "[OAuth Revoke] No revocation endpoint available, skipping provider revocation"
+        );
       }
 
       // Delete the OAuth connection from our database
@@ -692,5 +701,4 @@ export class OAuthService {
       // Don't throw - we want to continue with deletion even if revocation fails
     }
   }
-
 }

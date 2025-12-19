@@ -165,6 +165,24 @@ export const schema = {
             "updated_at"
           >,
         },
+        processed: {
+          type: "boolean",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "processed"
+          >,
+        },
+        response_turn_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "response_turn_id"
+          >,
+        },
       },
       primaryKey: ["id"],
     },
@@ -1126,6 +1144,15 @@ export const schema = {
             "updated_at"
           >,
         },
+        locked: {
+          type: "boolean",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "turns",
+            "locked"
+          >,
+        },
       },
       primaryKey: ["id"],
     },
@@ -1263,6 +1290,14 @@ export const schema = {
       turn: [
         {
           sourceField: ["turn_id"],
+          destField: ["id"],
+          destSchema: "turns",
+          cardinality: "one",
+        },
+      ],
+      response_turn: [
+        {
+          sourceField: ["response_turn_id"],
           destField: ["id"],
           destSchema: "turns",
           cardinality: "one",
@@ -1560,6 +1595,14 @@ export const schema = {
         {
           sourceField: ["id"],
           destField: ["turn_id"],
+          destSchema: "blocks",
+          cardinality: "many",
+        },
+      ],
+      response_blocks: [
+        {
+          sourceField: ["id"],
+          destField: ["response_turn_id"],
           destSchema: "blocks",
           cardinality: "many",
         },

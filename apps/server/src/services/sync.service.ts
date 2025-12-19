@@ -15,8 +15,9 @@ import { schema } from "@jupiter/sync/zero/schema";
 import { handleGetQueriesRequest } from "@rocicorp/zero/server";
 import type { Mixpanel } from "mixpanel";
 import { AuthData } from "../types/auth.types";
-import { processorType } from "../config/database";
+import { processorType } from "../config/state";
 import { OAuthService } from "./oauth.service";
+import { addToAgentLoopQueue } from "../queues/workers/agentLoopWorker";
 
 // Validated queries
 const validated = Object.fromEntries(
@@ -90,7 +91,8 @@ export class SyncService {
         { userId: authData.userId, orgId: authData.orgId },
         asyncTasks,
         this.mp,
-        this.oauthService
+        this.oauthService,
+        addToAgentLoopQueue
       ),
       query,
       body

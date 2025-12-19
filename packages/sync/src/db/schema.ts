@@ -10,6 +10,7 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+import { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 
 export const integrationType = pgEnum("integration_type", [
   "oauth",
@@ -197,6 +198,7 @@ export const agents = pgTable("agents", {
 
 export const taskStatus = pgEnum("task_status", [
   "available",
+  "starting",
   "executing",
   "stopping",
 ]);
@@ -230,16 +232,18 @@ export const turns = pgTable("turns", {
     .references(() => tasks.id),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
+  locked: boolean().notNull().default(false),
 });
 
 export const blockType = pgEnum("block_type", [
   "text",
   "tool_use",
+  "tool_result",
   "server_tool_use",
   "code_execution_tool_result",
   "web_search_tool_result",
   "thinking",
-]);
+] as const satisfies readonly BetaContentBlockParam["type"][]);
 
 export const blockStatus = pgEnum("block_status", [
   "none",
@@ -257,9 +261,11 @@ export const blocks = pgTable("blocks", {
   type: blockType().notNull(),
   status: blockStatus().notNull().default("none"),
   complete: boolean().notNull().default(false),
-  content: jsonb().notNull(),
+  content: jsonb().$type<BetaContentBlockParam>().notNull(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
+  processed: boolean().notNull().default(false),
+  response_turn_id: varchar().references(() => turns.id),
 });
 
 export const messages = pgTable("messages", {
@@ -330,7 +336,8 @@ export const turnRelations = relations(turns, ({ one, many }) => ({
     fields: [turns.task_id],
     references: [tasks.id],
   }),
-  blocks: many(blocks),
+  blocks: many(blocks, { relationName: "turn" }),
+  response_blocks: many(blocks, { relationName: "response_turn" }),
 }));
 
 // Block relations
@@ -338,6 +345,12 @@ export const blockRelations = relations(blocks, ({ one }) => ({
   turn: one(turns, {
     fields: [blocks.turn_id],
     references: [turns.id],
+    relationName: "turn",
+  }),
+  response_turn: one(turns, {
+    fields: [blocks.response_turn_id],
+    references: [turns.id],
+    relationName: "response_turn",
   }),
 }));
 

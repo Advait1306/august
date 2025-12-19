@@ -1,23 +1,24 @@
 import { Request, Response, Router } from "express";
 import { ClerkClient, getAuth } from "@clerk/express";
 import type DodoPayments from "dodopayments";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
 import { organisations } from "@jupiter/sync/db/schema";
 import { Webhook } from "standardwebhooks";
 import { BillingService } from "../services/billing.service";
+import { AppState } from "../config/state";
 
 // Product IDs for different environments
 const PRODUCT_ID_DEV_STAGING = "pdt_CyV6Fvwt5AjgHg49qI6qc";
 const PRODUCT_ID_PRODUCTION = "pdt_1sxa3DfkaEPHQsR2wzRax";
 
-const PRODUCT_ID = process.env.NODE_ENV === "production"
-  ? PRODUCT_ID_PRODUCTION
-  : PRODUCT_ID_DEV_STAGING;
+const PRODUCT_ID =
+  process.env.NODE_ENV === "production"
+    ? PRODUCT_ID_PRODUCTION
+    : PRODUCT_ID_DEV_STAGING;
 
 export function createBillingController(
   clerkClient: ClerkClient,
-  db: NodePgDatabase,
+  db: AppState["db"],
   dodoClient: DodoPayments,
   billingService: BillingService
 ): Router {

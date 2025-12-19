@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { organisations, users } from "@jupiter/sync/db/schema";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { AppState } from "../config/state";
 
 export class ClerkService {
-  constructor(private db: NodePgDatabase) {}
+  constructor(private db: AppState["db"]) {}
 
   /**
    * Create a new user in the database
