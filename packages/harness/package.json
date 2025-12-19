@@ -11,11 +11,12 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "tsc-esm-fix": "^3.1.2",
     "vitest": "^4.0.15"
   },
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc",
+    "build": "tsc && tsc-esm-fix --target=dist",
     "test": "vitest run",
     "test:watch": "vitest"
   },
