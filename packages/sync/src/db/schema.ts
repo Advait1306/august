@@ -265,6 +265,7 @@ export const blocks = pgTable("blocks", {
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
   processed: boolean().notNull().default(false),
+  response_turn_id: varchar().references(() => turns.id),
 });
 
 export const messages = pgTable("messages", {
@@ -336,12 +337,17 @@ export const turnRelations = relations(turns, ({ one, many }) => ({
     references: [tasks.id],
   }),
   blocks: many(blocks),
+  response_turns: many(blocks),
 }));
 
 // Block relations
 export const blockRelations = relations(blocks, ({ one }) => ({
   turn: one(turns, {
     fields: [blocks.turn_id],
+    references: [turns.id],
+  }),
+  response_turn: one(turns, {
+    fields: [blocks.response_turn_id],
     references: [turns.id],
   }),
 }));

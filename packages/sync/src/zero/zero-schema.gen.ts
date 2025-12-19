@@ -174,6 +174,15 @@ export const schema = {
             "processed"
           >,
         },
+        response_turn_id: {
+          type: "string",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "blocks",
+            "response_turn_id"
+          >,
+        },
       },
       primaryKey: ["id"],
     },
@@ -1286,6 +1295,14 @@ export const schema = {
           cardinality: "one",
         },
       ],
+      response_turn: [
+        {
+          sourceField: ["response_turn_id"],
+          destField: ["id"],
+          destSchema: "turns",
+          cardinality: "one",
+        },
+      ],
     },
     composioStates: {
       user: [
@@ -1575,6 +1592,14 @@ export const schema = {
         },
       ],
       blocks: [
+        {
+          sourceField: ["id"],
+          destField: ["turn_id"],
+          destSchema: "blocks",
+          cardinality: "many",
+        },
+      ],
+      response_turns: [
         {
           sourceField: ["id"],
           destField: ["turn_id"],

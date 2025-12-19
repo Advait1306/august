@@ -3,6 +3,7 @@ import { AppState } from "../config/state";
 import { blocks, tasks, turns } from "@jupiter/sync/db/schema";
 import { agentLoop } from "@august/harness";
 import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import { AssistantTurnProcessor } from "../processors/assistant-turn-processor";
 
 const MAX_ITERATIONS = 50;
 
@@ -178,6 +179,7 @@ export class AiService {
 
     let iterations = 0;
 
+    // This while loop is only to allow iterating on multipe "pause" stop reasons
     while (iterations < MAX_ITERATIONS) {
       iterations++;
 
@@ -190,10 +192,41 @@ export class AiService {
         }
       );
 
+      const assistantTurnProcessor = new AssistantTurnProcessor(
+        this.db,
+        taskId
+      );
+
       for await (const event of agentLoop({
         messages,
       })) {
-        console.log(event);
+        switch (event.type) {
+          case "message_start": {
+            assistantTurnProcessor.processMessageStart(event);
+            break;
+          }
+          case "message_delta": {
+            assistantTurnProcessor.processMessageDelta(event);
+            break;
+          }
+          case "message_stop": {
+            assistantTurnProcessor.processMessageStop();
+            break;
+          }
+          case "content_block_start": {
+            assistantTurnProcessor.processBlockStart(event);
+            // Handle content block start
+            break;
+          }
+          case "content_block_delta": {
+            assistantTurnProcessor.processBlockDelta(event);
+            break;
+          }
+          case "content_block_stop": {
+            assistantTurnProcessor.processBlockStop(event);
+            break;
+          }
+        }
       }
     }
   }
