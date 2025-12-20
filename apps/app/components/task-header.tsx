@@ -98,11 +98,11 @@ export function TaskHeader({
                     className="flex items-start gap-2 text-sm"
                   >
                     {todo.status === "completed" ? (
-                      <CheckCircle2Icon className="w-4 h-4 mt-0.5 text-green-500 flex-shrink-0" />
+                      <CheckCircle2Icon className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
                     ) : todo.status === "in_progress" ? (
-                      <Loader2Icon className="w-4 h-4 mt-0.5 text-blue-500 animate-spin flex-shrink-0" />
+                      <Loader2Icon className="w-4 h-4 mt-0.5 text-blue-500 animate-spin shrink-0" />
                     ) : (
-                      <CircleIcon className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                      <CircleIcon className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                     )}
                     <span
                       className={cn(

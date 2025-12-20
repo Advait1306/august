@@ -87,7 +87,7 @@ export function AssistantTextBlock({ block }: { block: BlockType }) {
           </ol>
         ),
         hr: () => (
-          <Separator className="my-5 border-0 h-[1.5px] bg-gradient-to-r from-border via-border/70 to-transparent" />
+          <Separator className="my-5 border-0 h-[1.5px] bg-linear-to-r from-border via-border/70 to-transparent" />
         ),
         pre: ({ children }) => {
           return <pre className="border border-border">{children}</pre>;

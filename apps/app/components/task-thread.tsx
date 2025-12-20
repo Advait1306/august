@@ -62,7 +62,7 @@ export function TaskThread({ selectedTaskId }: TaskThreadProps) {
             <div className="h-[40px] w-[40px] rounded-full bg-primary" />
           </div>
         </div>
-        <div className="relative flex grow-1 max-h-[300px] w-full max-w-[800px]">
+        <div className="relative flex grow max-h-[300px] w-full max-w-[800px]">
           <Carousel
             opts={{
               align: "start",
@@ -117,7 +117,7 @@ export function TaskThread({ selectedTaskId }: TaskThreadProps) {
       ref={scrollContainerRef}
       className="relative flex flex-col w-full max-w-[720px] h-[calc(100vh-204px)]"
     >
-      <VList className="grow-1 no-scrollbar w-full" ref={virtualizerRef}>
+      <VList className="grow no-scrollbar w-full" ref={virtualizerRef}>
         {/* Used to offset the header */}
         <div className="h-[54px] w-full" />
         {turns.map((turn) => (
