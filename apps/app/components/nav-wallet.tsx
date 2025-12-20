@@ -1,22 +1,18 @@
-"use client";
-
 import { Wallet } from "lucide-react";
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useSyncContext } from "@/src/components/sync_engine";
 import { useQuery } from "@rocicorp/zero/react";
-import { getOrganisation } from "@jupiter/sync/queries/data";
+import { queries } from "@jupiter/sync/queries/data";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function NavWallet() {
-  const syncData = useSyncContext();
   const navigate = useNavigate();
   const location = useLocation();
-  const [organisation] = useQuery(getOrganisation(syncData.authData));
+  const [organisation] = useQuery(queries.organisations.current());
 
   const balance = organisation?.wallet ?? null;
   const loading = !organisation;

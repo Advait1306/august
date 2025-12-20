@@ -1,6 +1,5 @@
-import { useSyncContext } from "../src/components/sync_engine";
 import { useQuery } from "@rocicorp/zero/react";
-import { getMCPStore, getMCPs } from "@jupiter/sync/queries/data";
+import { queries } from "@jupiter/sync/queries/data";
 import { Input } from "@/components/ui/input";
 import { useState, useMemo } from "react";
 import { fuzzyMatch } from "@/src/lib/fuzzy-match";
@@ -16,11 +15,11 @@ import {
 import { useZero } from "@/src/hooks/useZero";
 import { toast } from "sonner";
 import { motion } from "motion/react";
+import { mutators } from "@jupiter/sync/mutators/data";
 
 export function MCPContent() {
-  const syncContext = useSyncContext();
-  const mcpStore = useQuery(getMCPStore(syncContext.authData))[0];
-  const userMcps = useQuery(getMCPs(syncContext.authData))[0];
+  const [mcpStore] = useQuery(queries.mcpStore.active());
+  const [userMcps] = useQuery(queries.mcps.all());
   const [searchQuery, setSearchQuery] = useState("");
   const z = useZero();
 
@@ -43,7 +42,7 @@ export function MCPContent() {
 
   const handleDeleteMcp = async (mcpId: string, mcpName: string) => {
     try {
-      await z.mutate.mcps.delete({ mcp_id: mcpId });
+      await z.mutate(mutators.mcps.delete({ mcp_id: mcpId })).client;
       toast.success(`${mcpName} disconnected successfully`);
     } catch (error) {
       console.error("Failed to delete connection:", error);

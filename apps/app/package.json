@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.27",
+    "@anthropic-ai/sdk": "^0.71.2",
     "@clerk/clerk-react": "^5.47.0",
     "@clerk/themes": "^2.4.21",
     "@electron-toolkit/preload": "^3.0.2",
