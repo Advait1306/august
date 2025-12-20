@@ -45,6 +45,7 @@ export class AssistantTurnProcessor {
       data: {
         content: BetaContentBlockParam;
         complete: boolean;
+        processed: boolean;
       };
     }
   > = {};
@@ -99,6 +100,7 @@ export class AssistantTurnProcessor {
       data: {
         content: content,
         complete: false,
+        processed: false,
       },
     };
 
@@ -132,6 +134,7 @@ export class AssistantTurnProcessor {
 
   processBlockStop(data: BetaRawContentBlockStopEvent) {
     this.blocks[data.index].data.complete = true;
+    this.blocks[data.index].data.processed = true;
     this.blocks[data.index].dirty = true;
 
     // TODO: Add check for tools that can be executed on August servers
@@ -206,6 +209,7 @@ export class AssistantTurnProcessor {
           .set({
             content: block.data.content,
             complete: block.data.complete,
+            processed: block.data.processed,
             updated_at: new Date(),
           })
           .where(eq(blocks.id, block.id));
