@@ -9,7 +9,7 @@ import {
   useOrganization,
   useUser,
 } from "@clerk/clerk-react";
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
 import { Zero } from "@rocicorp/zero";
 
 const ZERO_URL = import.meta.env.VITE_ZERO_URL;
@@ -57,7 +57,20 @@ export const SyncEngine = ({ children }: { children: React.ReactNode }) => {
       mutators,
       context: authData,
     });
-  }, [authData, getToken]);
+  }, [authData]);
+
+  useEffect(() => {
+    const unsubscribe = zero.connection.state.subscribe(async (state) => {
+      if (state.name === "needs-auth") {
+        const token = await getToken();
+        if (token) {
+          await zero.connection.connect({ auth: token });
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [zero, getToken]);
 
   return (
     <>
