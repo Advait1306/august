@@ -17,22 +17,22 @@ export const queries = defineQueries({
     }),
   },
   turns: {
-    byTask: defineQuery(z.object({ taskId: z.string() }), ({ args: { taskId } }) => {
-      return builder.turns.where("task_id", taskId).orderBy("created_at", "asc");
-    }),
-  },
-  messages: {
     byTask: defineQuery(
       z.object({ taskId: z.string() }),
-      ({ ctx, args: { taskId } }) => {
-        return builder.tasks
-          .where("id", taskId)
-          .where("author_id", ctx.userId)
-          .where("organisation_id", ctx.orgId)
-          .one()
-          .related("messages", (q: typeof builder.messages) => {
-            return q.orderBy("created_at", "asc");
-          });
+      ({ args: { taskId } }) => {
+        return builder.turns
+          .where("task_id", taskId)
+          .orderBy("created_at", "asc");
+      }
+    ),
+  },
+  blocks: {
+    byTurn: defineQuery(
+      z.object({ turnId: z.string() }),
+      ({ args: { turnId } }) => {
+        return builder.blocks
+          .where("turn_id", turnId)
+          .orderBy("created_at", "asc");
       }
     ),
   },
@@ -51,7 +51,9 @@ export const queries = defineQueries({
   },
   mcpStore: {
     active: defineQuery(() => {
-      return builder.mcpStore.where("is_active", 1).orderBy("sort_order", "asc");
+      return builder.mcpStore
+        .where("is_active", 1)
+        .orderBy("sort_order", "asc");
     }),
   },
   mcps: {

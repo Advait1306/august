@@ -1,16 +1,10 @@
 import { Permission } from "@jupiter/shared/types";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { getAgents, getMessages, getTasks } from "@jupiter/sync/queries/data";
+import { createContext, useContext, useEffect, useState } from "react";
+import { queries } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
-import { Agent, Task, Message } from "@jupiter/sync/zero/zero-schema.gen";
-import { useSyncContext } from "@/src/components/sync_engine";
+import { Agent, Task } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "@/src/hooks/useZero";
+import { mutators } from "@jupiter/sync/mutators/data";
 
 type PermissionState = Record<string, Permission[]>;
 type PermissionIndexState = Record<string, number>;
@@ -19,7 +13,6 @@ type TaskRuntimeState = {
   tasks: Task[];
   selectedTaskId: string | "new-conversation";
   selectedTask: Task | "new-conversation" | null;
-  messages: readonly Message[] | undefined;
   selectTask: (task: string | "new-conversation") => void;
   sendMessage: (message: string) => void;
   stopGeneration: (taskId: string) => void;
@@ -34,7 +27,6 @@ type TaskRuntimeState = {
   nextPermission: (threadId: string) => void;
   previousPermission: (threadId: string) => void;
   defaultCwd: string;
-  todoState: TodoState;
 };
 
 // Helper function to get default cwd (will be populated async)
@@ -63,7 +55,6 @@ export type TodoState = Todo[];
 
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
   tasks: [],
-  messages: [],
   selectedTaskId: "new-conversation",
   selectedTask: "new-conversation",
   selectTask: () => {},
@@ -76,7 +67,6 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   nextPermission: () => {},
   previousPermission: () => {},
   defaultCwd: "",
-  todoState: [],
 });
 
 export const TaskRuntimeProvider = ({
@@ -84,11 +74,9 @@ export const TaskRuntimeProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const syncData = useSyncContext();
-
   const z = useZero();
-  const agents = useQuery(getAgents(syncData.authData))[0];
-  const tasks = useQuery(getTasks(syncData.authData))[0];
+  const agents = useQuery(queries.agents.all())[0];
+  const tasks = useQuery(queries.tasks.all())[0];
 
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
@@ -133,80 +121,6 @@ export const TaskRuntimeProvider = ({
       ? "new-conversation"
       : (tasks?.find((task) => task.id === selectedTaskId) ?? null);
 
-  const selectedTasksMessages = useQuery(
-    getMessages(
-      syncData.authData,
-      selectedTaskId === "new-conversation" ? "" : selectedTaskId
-    ),
-    { enabled: selectedTaskId !== "new-conversation" }
-  );
-
-  // Extract cwd from messages when a task is selected
-  useEffect(() => {
-    if (
-      selectedTaskId !== "new-conversation" &&
-      selectedTasksMessages[0]?.messages
-    ) {
-      const messages = selectedTasksMessages[0].messages;
-
-      // Find the last assistant message with metadata
-      const lastAssistantMsg = [...messages]
-        .reverse()
-        .find((msg) => msg.role === "assistant" && msg.metadata);
-
-      if (lastAssistantMsg && lastAssistantMsg.metadata) {
-        const metadata = lastAssistantMsg.metadata as any;
-        // Check for cwd or old project.path for backward compatibility
-        const cwdFromMessages =
-          metadata?.claude?.cwd || metadata?.claude?.project?.path || "";
-
-        if (
-          cwdFromMessages &&
-          selectedTask &&
-          typeof selectedTask === "object"
-        ) {
-          const agent = agents.find(
-            (agent) => agent.id === selectedTask.agent_id
-          );
-
-          if (agent) {
-            setComposerStates((prev) => {
-              return {
-                ...prev,
-                [selectedTask.id]: {
-                  ...prev[selectedTask.id],
-                  agent: agent,
-                  cwd: cwdFromMessages,
-                },
-              };
-            });
-          }
-        }
-      }
-    }
-  }, [selectedTaskId, selectedTasksMessages, selectedTask, agents]);
-
-  const todoState: TodoState = useMemo(() => {
-    const lastAssistantMessageWithTodo =
-      selectedTasksMessages[0]?.messages.findLast(
-        (message) =>
-          message.role === "assistant" &&
-          (message.content as any[]).some(
-            (content) =>
-              content.type === "tool-call" && content.toolName === "TodoWrite"
-          )
-      );
-
-    const todos = (lastAssistantMessageWithTodo?.content as any[])
-      ?.filter(
-        (content) =>
-          content.type === "tool-call" && content.toolName === "TodoWrite"
-      )
-      ?.at(-1)?.input.todos as Todo[];
-
-    return todos || [];
-  }, [selectedTasksMessages, selectedTaskId]);
-
   useEffect(() => {
     // New task is added, select it
     if (waitForSelect) {
@@ -232,9 +146,11 @@ export const TaskRuntimeProvider = ({
   };
 
   const stopGeneration = (taskId: string) => {
-    z.mutate.tasks.abort({
-      task_id: taskId,
-    });
+    z.mutate(
+      mutators.tasks.abort({
+        task_id: taskId,
+      })
+    );
   };
 
   const nextPermission = (threadId: string) => {
@@ -287,29 +203,28 @@ export const TaskRuntimeProvider = ({
       const turnId = crypto.randomUUID();
       const blockId = crypto.randomUUID();
 
-      // Create new task
-      const result = z.mutate.tasks.create({
-        task_id: taskId,
-        turn_id: turnId,
-        block_id: blockId,
-        message,
-      });
-
-      await result.client;
+      await z.mutate(
+        mutators.tasks.create({
+          task_id: taskId,
+          turn_id: turnId,
+          block_id: blockId,
+          message,
+        })
+      ).client;
 
       setWaitForSelect(taskId);
     } else {
       const turnId = crypto.randomUUID();
       const blockId = crypto.randomUUID();
 
-      let res = z.mutate.message.create({
-        task_id: selectedTaskId,
-        turn_id: turnId,
-        block_id: blockId,
-        message,
-      });
-
-      await res.client;
+      await z.mutate(
+        mutators.message.create({
+          task_id: selectedTaskId,
+          turn_id: turnId,
+          block_id: blockId,
+          message,
+        })
+      ).client;
     }
   };
 
@@ -332,7 +247,6 @@ export const TaskRuntimeProvider = ({
         selectedTaskId,
         selectedTask,
         selectTask,
-        messages: selectedTasksMessages[0]?.messages,
         sendMessage,
         stopGeneration,
         composerStates,
@@ -342,7 +256,6 @@ export const TaskRuntimeProvider = ({
         nextPermission,
         previousPermission,
         defaultCwd,
-        todoState,
       }}
     >
       {children}
