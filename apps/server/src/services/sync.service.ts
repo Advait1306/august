@@ -1,104 +1,67 @@
-import { ReadonlyJSONValue, withValidation } from "@rocicorp/zero";
-import {
-  AuthData as ZeroAuthData,
-  getAgents,
-  getMCPStore,
-  getMCPs,
-  getMessages,
-  getOrganisation,
-  getTasks,
-  getUsage,
-} from "@jupiter/sync/queries/data";
-import { createMutators } from "@jupiter/sync/mutators/data";
+import { mustGetQuery, mustGetMutator } from "@rocicorp/zero";
+import { handleQueryRequest, handleMutateRequest } from "@rocicorp/zero/server";
+import { queries } from "@jupiter/sync/queries/data";
 import { createServerMutators } from "@jupiter/sync/server-mutators/data";
-import { schema } from "@jupiter/sync/zero/schema";
-import { handleGetQueriesRequest } from "@rocicorp/zero/server";
+import { schema, AuthData } from "@jupiter/sync/zero/schema";
 import type { Mixpanel } from "mixpanel";
-import { AuthData } from "../types/auth.types";
-import { processorType } from "../config/state";
 import { OAuthService } from "./oauth.service";
 import { addToAgentLoopQueue } from "../queues/workers/agentLoopWorker";
-
-// Validated queries
-const validated = Object.fromEntries(
-  [
-    getTasks,
-    getMessages,
-    getAgents,
-    getOrganisation,
-    getUsage,
-    getMCPStore,
-    getMCPs,
-  ].map((q) => [q.queryName, withValidation(q)])
-);
+import { DbProviderType } from "../config/state";
 
 export class SyncService {
   constructor(
-    private processor: processorType,
+    private dbProvider: DbProviderType,
     private mp: Mixpanel,
     private oauthService: OAuthService
   ) {}
 
   /**
-   * Get a query by name with auth context
+   * Handle Zero query request
    */
-  private getQuery(
-    authData: ZeroAuthData,
-    name: string,
-    args: readonly ReadonlyJSONValue[]
-  ) {
-    const q = validated[name];
-    if (!q) {
-      throw new Error(`No such query: ${name}`);
-    }
-    return {
-      query: q(authData, ...args),
-    };
-  }
-
-  /**
-   * Handle Zero get queries request
-   */
-  async handleGetQueries(authData: AuthData, body: ReadonlyJSONValue) {
-    return await handleGetQueriesRequest(
-      (name, args) =>
-        this.getQuery(
-          {
-            userId: authData.userId,
-            orgId: authData.orgId,
-          },
-          name,
-          args
-        ),
+  async handleQuery(authData: AuthData, body: Request) {
+    return await handleQueryRequest(
+      (name, args) => {
+        const query = mustGetQuery(queries, name);
+        return query.fn({
+          args,
+          ctx: authData,
+        });
+      },
       schema,
       body
     );
   }
 
   /**
-   * Handle Zero push mutations
+   * Handle Zero mutate request
    */
-  async handlePush(
-    authData: AuthData,
-    query: Record<string, string>,
-    body: ReadonlyJSONValue
-  ) {
+  async handleMutate(authData: AuthData, body: Request) {
     const asyncTasks: Array<() => Promise<void>> = [];
 
-    const result = await this.processor.process(
-      createServerMutators(
-        createMutators({ userId: authData.userId, orgId: authData.orgId }),
-        { userId: authData.userId, orgId: authData.orgId },
-        asyncTasks,
-        this.mp,
-        this.oauthService,
-        addToAgentLoopQueue
-      ),
-      query,
+    const serverMutators = createServerMutators(
+      asyncTasks,
+      this.mp,
+      this.oauthService,
+      addToAgentLoopQueue
+    );
+
+    const result = await handleMutateRequest(
+      this.dbProvider,
+      (transact) =>
+        transact((tx, name, args) => {
+          const mutator = mustGetMutator(serverMutators, name);
+          return mutator.fn({
+            tx,
+            ctx: authData,
+            args,
+          });
+        }),
       body
     );
 
-    await Promise.all(asyncTasks.map((task) => task()));
+    // Run async tasks after mutation completes
+    await Promise.allSettled(asyncTasks.map((task) => task()));
+
     return result;
   }
 }

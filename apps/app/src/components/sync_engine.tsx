@@ -1,6 +1,6 @@
 import { ZeroProvider } from "@rocicorp/zero/react";
 import { schema } from "@jupiter/sync/zero/schema";
-import { createMutators } from "@jupiter/sync/mutators/data";
+import { mutators } from "@jupiter/sync/mutators/data";
 import {
   ClerkLoaded,
   SignedIn,
@@ -54,14 +54,8 @@ export const SyncEngine = ({ children }: { children: React.ReactNode }) => {
       userID: `${authData.userId}-${authData.orgId}`,
       schema,
       server: ZERO_URL,
-      auth: async () => {
-        const token = await getToken();
-        return token === null ? undefined : token;
-      },
-      mutators: createMutators({
-        userId: authData.userId,
-        orgId: authData.orgId,
-      }),
+      mutators,
+      context: authData,
     });
   }, [authData, getToken]);
 

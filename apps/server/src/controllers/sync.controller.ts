@@ -6,16 +6,16 @@ export function createSyncController(syncService: SyncService): Router {
   const router = Router();
 
   /**
-   * Handle Zero get queries
+   * Handle Zero query request
    */
-  router.post("/get-queries", async (req: Request, res: Response) => {
+  router.post("/query", async (req: Request, res: Response) => {
     const { isAuthenticated, userId, orgId } = getAuth(req);
 
     if (!isAuthenticated) {
       return res.status(401).json({ error: "User not authenticated" });
     }
 
-    const result = await syncService.handleGetQueries(
+    const result = await syncService.handleQuery(
       {
         userId: userId!,
         orgId: orgId ?? userId!,
@@ -27,21 +27,20 @@ export function createSyncController(syncService: SyncService): Router {
   });
 
   /**
-   * Handle Zero push mutations
+   * Handle Zero mutate request
    */
-  router.post("/push", async (req: Request, res: Response) => {
+  router.post("/mutate", async (req: Request, res: Response) => {
     const { isAuthenticated, userId, orgId } = getAuth(req);
 
     if (!isAuthenticated) {
       return res.status(401).json({ error: "User not authenticated" });
     }
 
-    const result = await syncService.handlePush(
+    const result = await syncService.handleMutate(
       {
         userId: userId!,
         orgId: orgId ?? userId!,
       },
-      req.query as Record<string, string>,
       req.body
     );
 
