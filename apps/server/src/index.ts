@@ -9,7 +9,7 @@ import mixpanel from "mixpanel";
 import DodoPayments from "dodopayments";
 
 // Config
-import { db, processor } from "./config/state";
+import { db, dbProvider } from "./config/state";
 
 // Middleware
 import { apiKeyToAuthMiddleware } from "./middleware/apiKeyToAuth";
@@ -61,7 +61,7 @@ const clerkService = new ClerkService(db);
 const billingService = new BillingService(db);
 const oauthService = new OAuthService(db);
 const composioService = new ComposioService(db);
-const syncService = new SyncService(processor, mp, oauthService);
+const syncService = new SyncService(dbProvider, mp, oauthService);
 const proxyService = new ProxyService(billingService, oauthService);
 
 // Clerk webhook needs raw body parser

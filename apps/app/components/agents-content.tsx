@@ -12,14 +12,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
-import { useSyncContext } from "../src/components/sync_engine";
 import { useQuery } from "@rocicorp/zero/react";
-import { getAgents } from "@jupiter/sync/queries/data";
 import { nanoid } from "nanoid";
 import { useZero } from "@/src/hooks/useZero";
 import { motion, AnimatePresence } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { useScrollGradients } from "@/hooks/use-scroll-gradients";
+import { queries } from "@jupiter/sync/queries/data";
+import { mutators } from "@jupiter/sync/mutators/data";
 
 type NewAgent = Omit<
   Agent,
@@ -28,9 +28,8 @@ type NewAgent = Omit<
 
 export function AgentsContent() {
   const z = useZero();
-  const syncContext = useSyncContext();
 
-  const agents = useQuery(getAgents(syncContext.authData))[0];
+  const [agents] = useQuery(queries.agents.all());
 
   // Form states
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -66,13 +65,14 @@ export function AgentsContent() {
     try {
       const agentId = nanoid();
 
-      const result = z.mutate.agents.create({
-        agent_id: agentId,
-        name: newAgentName,
-        system_prompt: "",
-        base_agent: "claude-code" as Agent["base_agent"],
-      });
-      await result.client;
+      await z.mutate(
+        mutators.agents.create({
+          agent_id: agentId,
+          name: newAgentName,
+          system_prompt: "",
+          base_agent: "claude-code" as Agent["base_agent"],
+        })
+      ).client;
 
       // Immediately open the newly created agent
       setSelectedAgentId(agentId);
@@ -99,8 +99,7 @@ export function AgentsContent() {
       if (updates.system_prompt !== undefined)
         updateData.system_prompt = updates.system_prompt;
 
-      const result = z.mutate.agents.update(updateData);
-      await result.client;
+      await z.mutate(mutators.agents.update(updateData)).client;
     } catch (error) {
       console.error("Failed to update agent:", error);
     }
@@ -125,10 +124,11 @@ export function AgentsContent() {
         }
       }
 
-      const result = z.mutate.agents.delete({
-        agent_id: selectedAgentId,
-      });
-      await result.client;
+      await z.mutate(
+        mutators.agents.delete({
+          agent_id: selectedAgentId,
+        })
+      ).client;
 
       setSelectedAgentId(nextAgentId);
     } catch (error) {

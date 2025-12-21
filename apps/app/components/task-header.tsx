@@ -1,6 +1,5 @@
 import { Button } from "./ui/button";
 import { CheckCircle2Icon, CircleIcon, Loader2Icon } from "lucide-react";
-import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
 import { TodoState } from "@/src/contexts/task-runtime";
 import {
   Popover,
@@ -10,7 +9,6 @@ import {
 import { cn } from "@/lib/utils";
 
 interface TaskHeaderProps {
-  agent?: Agent;
   cwd: string;
   defaultCwd: string;
   todoState: TodoState;
@@ -18,7 +16,6 @@ interface TaskHeaderProps {
 }
 
 export function TaskHeader({
-  agent,
   cwd,
   defaultCwd,
   todoState,
@@ -38,7 +35,6 @@ export function TaskHeader({
   return (
     <div className="absolute bg-accent/70 z-20 backdrop-blur-md px-4 py-2 w-full h-[54px] border-b border-border flex items-center justify-between">
       <div>
-        {agent ? <span className="">{agent?.name}</span> : <div />}
         {cwd && cwd !== defaultCwd && (
           <span className="text-xs flex items-center gap-1 text-muted-foreground">
             Working in {cwd.match(/[^/\\]+$/)?.[0] || "Folder"}
@@ -102,11 +98,11 @@ export function TaskHeader({
                     className="flex items-start gap-2 text-sm"
                   >
                     {todo.status === "completed" ? (
-                      <CheckCircle2Icon className="w-4 h-4 mt-0.5 text-green-500 flex-shrink-0" />
+                      <CheckCircle2Icon className="w-4 h-4 mt-0.5 text-green-500 shrink-0" />
                     ) : todo.status === "in_progress" ? (
-                      <Loader2Icon className="w-4 h-4 mt-0.5 text-blue-500 animate-spin flex-shrink-0" />
+                      <Loader2Icon className="w-4 h-4 mt-0.5 text-blue-500 animate-spin shrink-0" />
                     ) : (
-                      <CircleIcon className="w-4 h-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                      <CircleIcon className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                     )}
                     <span
                       className={cn(

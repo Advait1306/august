@@ -1,80 +1,69 @@
-import { syncedQueryWithContext } from "@rocicorp/zero";
-import z from "zod";
+import { defineQueries, defineQuery } from "@rocicorp/zero";
+import { z } from "zod";
 import { builder } from "../zero/schema";
 
-export type AuthData = {
-  userId: string;
-  orgId: string;
-};
+export const queries = defineQueries({
+  agents: {
+    all: defineQuery(({ ctx }) => {
+      return builder.agents.where("organisation_id", ctx.orgId);
+    }),
+  },
+  tasks: {
+    all: defineQuery(({ ctx }) => {
+      return builder.tasks
+        .where("author_id", ctx.userId)
+        .where("organisation_id", ctx.orgId)
+        .orderBy("created_at", "desc");
+    }),
+  },
+  turns: {
+    byTask: defineQuery(
+      z.object({ taskId: z.string() }),
+      ({ args: { taskId } }) => {
+        return builder.turns
+          .where("task_id", taskId)
+          .orderBy("created_at", "asc");
+      }
+    ),
+  },
+  blocks: {
+    byTurn: defineQuery(
+      z.object({ turnId: z.string() }),
+      ({ args: { turnId } }) => {
+        return builder.blocks
+          .where("turn_id", turnId)
+          .orderBy("created_at", "asc");
+      }
+    ),
+  },
+  organisations: {
+    current: defineQuery(({ ctx }) => {
+      return builder.organisations.where("id", ctx.orgId).one();
+    }),
+  },
+  usage: {
+    recent: defineQuery(({ ctx }) => {
+      return builder.usage
+        .where("organisation_id", ctx.orgId)
+        .orderBy("created_at", "desc")
+        .limit(50);
+    }),
+  },
+  mcpStore: {
+    active: defineQuery(() => {
+      return builder.mcpStore
+        .where("is_active", 1)
+        .orderBy("sort_order", "asc");
+    }),
+  },
+  mcps: {
+    all: defineQuery(({ ctx }) => {
+      return builder.mcps
+        .where("author_id", ctx.userId)
+        .where("organisation_id", ctx.orgId)
+        .orderBy("created_at", "desc");
+    }),
+  },
+});
 
-export const getAgents = syncedQueryWithContext(
-  "getAgents",
-  z.tuple([]),
-  (context: AuthData) => {
-    return builder.agents.where("organisation_id", context.orgId);
-  }
-);
-
-export const getTasks = syncedQueryWithContext(
-  "getTasks",
-  z.tuple([]),
-  (context: AuthData) => {
-    return builder.tasks
-      .where("author_id", context.userId)
-      .where("organisation_id", context.orgId)
-      .orderBy("created_at", "desc");
-  }
-);
-
-export const getMessages = syncedQueryWithContext(
-  "getMessages",
-  z.tuple([z.string()]),
-  (context: AuthData, taskId: string) => {
-    return builder.tasks
-      .where("id", taskId)
-      .where("author_id", context.userId)
-      .where("organisation_id", context.orgId)
-      .one()
-      .related("messages", (q: typeof builder.messages) => {
-        return q.orderBy("created_at", "asc");
-      });
-  }
-);
-
-export const getOrganisation = syncedQueryWithContext(
-  "getOrganisation",
-  z.tuple([]),
-  (context: AuthData) => {
-    return builder.organisations.where("id", context.orgId).one();
-  }
-);
-
-export const getUsage = syncedQueryWithContext(
-  "getUsage",
-  z.tuple([]),
-  (context: AuthData) => {
-    return builder.usage
-      .where("organisation_id", context.orgId)
-      .orderBy("created_at", "desc")
-      .limit(50);
-  }
-);
-
-export const getMCPStore = syncedQueryWithContext(
-  "getMCPStore",
-  z.tuple([]),
-  () => {
-    return builder.mcpStore.where("is_active", 1).orderBy("sort_order", "asc");
-  }
-);
-
-export const getMCPs = syncedQueryWithContext(
-  "getMCPs",
-  z.tuple([]),
-  (context: AuthData) => {
-    return builder.mcps
-      .where("author_id", context.userId)
-      .where("organisation_id", context.orgId)
-      .orderBy("created_at", "desc");
-  }
-);
+export type Queries = typeof queries;

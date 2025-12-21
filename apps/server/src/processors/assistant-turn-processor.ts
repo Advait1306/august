@@ -12,12 +12,20 @@ import {
   BetaToolUseBlockParam,
 } from "@anthropic-ai/sdk/resources/beta";
 import { AppState } from "../config/state";
-import { blocks, blockType, turns } from "@jupiter/sync/db/schema";
+import { blocks, blockType, tasks, turns } from "@jupiter/sync/db/schema";
 import { eq } from "drizzle-orm";
 
 export class AssistantTurnProcessor {
   private db: AppState["db"];
-  private taskId: string;
+
+  private task: {
+    id?: string;
+    status: "available" | "executing" | "starting";
+    dirty: boolean;
+  } = {
+    status: "starting",
+    dirty: false,
+  };
 
   // Internal state
   private turn: {
@@ -45,13 +53,16 @@ export class AssistantTurnProcessor {
       data: {
         content: BetaContentBlockParam;
         complete: boolean;
+        processed: boolean;
       };
     }
   > = {};
 
   constructor(db: AppState["db"], taskId: string) {
     this.db = db;
-    this.taskId = taskId;
+    this.task.id = taskId;
+    this.task.status = "executing";
+    this.task.dirty = true;
   }
 
   setContainer(container: BetaContainer) {
@@ -87,6 +98,8 @@ export class AssistantTurnProcessor {
   processMessageStop() {
     this.turn.complete = true;
     this.turn.dirty = true;
+    this.task.status = "available";
+    this.task.dirty = true;
     this.flushToDb();
   }
 
@@ -99,6 +112,7 @@ export class AssistantTurnProcessor {
       data: {
         content: content,
         complete: false,
+        processed: false,
       },
     };
 
@@ -132,12 +146,24 @@ export class AssistantTurnProcessor {
 
   processBlockStop(data: BetaRawContentBlockStopEvent) {
     this.blocks[data.index].data.complete = true;
+    this.blocks[data.index].data.processed = true;
     this.blocks[data.index].dirty = true;
 
     // TODO: Add check for tools that can be executed on August servers
   }
 
   async flushToDb() {
+    if (this.task.dirty) {
+      await this.db
+        .update(tasks)
+        .set({
+          status: this.task.status,
+          updated_at: new Date(),
+        })
+        .where(eq(tasks.id, this.task.id!));
+      this.task.dirty = false;
+    }
+
     if (!this.turn.id) {
       const turnId = crypto.randomUUID();
       await this.db.insert(turns).values({
@@ -145,7 +171,7 @@ export class AssistantTurnProcessor {
         type: "assistant",
         complete: this.turn.complete,
         metadata: this.turn.metadata,
-        task_id: this.taskId,
+        task_id: this.task.id!,
         created_at: new Date(),
         updated_at: new Date(),
       });
@@ -169,7 +195,7 @@ export class AssistantTurnProcessor {
       await this.db.insert(turns).values({
         id: toolResponseTurnId,
         type: "user",
-        task_id: this.taskId,
+        task_id: this.task.id!,
         created_at: new Date(),
         updated_at: new Date(),
       });
@@ -206,6 +232,7 @@ export class AssistantTurnProcessor {
           .set({
             content: block.data.content,
             complete: block.data.complete,
+            processed: block.data.processed,
             updated_at: new Date(),
           })
           .where(eq(blocks.id, block.id));
