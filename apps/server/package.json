@@ -39,6 +39,7 @@
     "svix": "^1.76.1",
     "zod": "^4.1.11",
     "@august/harness": "*",
+    "@august/shell-tools": "*",
     "@anthropic-ai/sdk": "^0.71.2"
   },
   "type": "module",

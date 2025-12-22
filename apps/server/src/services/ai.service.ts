@@ -4,6 +4,7 @@ import { blocks, tasks, turns } from "@jupiter/sync/db/schema";
 import { agentLoop } from "@august/harness";
 import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { AssistantTurnProcessor } from "../processors/assistant-turn-processor";
+import { toolDefinitions } from "@august/shell-tools";
 
 // const MAX_ITERATIONS = 50;
 
@@ -171,12 +172,20 @@ export class AiService {
             },
           },
         },
+        runtime: true,
       },
     });
 
     if (!task) {
       throw new Error("Task not found");
     }
+
+    // Get tools from runtime and map to tool definitions
+    // TODO: Check version numbers here to verify correct tools are being used
+    const runtimeTools = task.runtime?.tools ?? [];
+    const tools = toolDefinitions.filter((toolDef) =>
+      runtimeTools.some((rt) => rt.name === toolDef.name)
+    );
 
     // TODO: Use iterations once pause_turn is implemented
     // let iterations = 0;
@@ -200,6 +209,7 @@ export class AiService {
 
     for await (const event of agentLoop({
       messages,
+      tools,
       cwd: task.metadata?.cwd,
     })) {
       switch (event.type) {
