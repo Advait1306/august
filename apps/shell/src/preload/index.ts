@@ -1,6 +1,6 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { IPC_CHANNELS } from '@jupiter/shared/ipc'
+import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
 import { agent } from './agent'
 
 // Custom APIs for renderer
@@ -29,6 +29,15 @@ const api = {
   },
   browser: {
     openUrl: (url: string) => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.BROWSER.OPEN_URL, url)
+  },
+  shellTools: {
+    getManifest: (): Promise<IPC.ShellTools.GetManifestResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.SHELL_TOOLS.GET_MANIFEST),
+    execute: <T extends keyof IPC.ShellTools.ToolInputMap>(
+      name: T,
+      input: IPC.ShellTools.ToolInputMap[T]
+    ): Promise<IPC.ShellTools.ToolOutputMap[T]> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.SHELL_TOOLS.EXECUTE, { name, input })
   }
 }
 

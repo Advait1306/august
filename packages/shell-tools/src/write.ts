@@ -47,6 +47,7 @@ export type WriteOutput = z.infer<typeof WriteOutputSchema>;
 // Tool definition for Anthropic's tool use API
 export const writeToolDefinition = {
   name: "write",
+  version: "0.0.1",
   description:
     "Writes content to a file, creating a new file or completely overwriting an existing file. Automatically creates parent directories if they don't exist. Returns a unified diff showing the changes.",
   inputSchema: WriteInputSchema,

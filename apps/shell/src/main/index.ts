@@ -98,12 +98,14 @@ app.whenReady().then(async () => {
     const { registerAuthIpcHandlers } = await import('./ipc/auth')
     const { registerAutoUpdaterIpcHandlers } = await import('./ipc/auto-updater')
     const { registerBrowserIpcHandlers } = await import('./ipc/browser')
+    const { registerShellToolsIpcHandlers } = await import('./ipc/shell-tools')
 
     registerProjectIpcHandlers()
     registerAgentIpcHandlers()
     registerAuthIpcHandlers()
     registerAutoUpdaterIpcHandlers()
     registerBrowserIpcHandlers()
+    registerShellToolsIpcHandlers()
     AgentAdapterMain.getInstance()
 
     // Initialize auto-updater and start checking for updates

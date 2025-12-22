@@ -35,6 +35,7 @@ export type GlobOutput = z.infer<typeof GlobOutputSchema>;
 // Tool definition for Anthropic's tool use API
 export const globToolDefinition = {
   name: "glob",
+  version: "0.0.1",
   description:
     "Fast file pattern matching tool that works with any codebase size. Supports glob patterns like '**/*.js' or 'src/**/*.ts'. Returns matching file paths sorted by modification time (newest first). Use this when you need to find files by name patterns.",
   inputSchema: GlobInputSchema,
