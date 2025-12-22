@@ -46,17 +46,25 @@ export function createServerMutators(
           turn_id: z.string(),
           block_id: z.string(),
           runtime_id: z.string(),
+          session_id: z.string(),
         }),
         async ({
           tx,
           ctx,
-          args: { message, task_id, turn_id, block_id, runtime_id },
+          args: { message, task_id, turn_id, block_id, runtime_id, session_id },
         }) => {
           // Run the base mutator
           await clientMutators.tasks.create.fn({
             tx,
             ctx,
-            args: { message, task_id, turn_id, block_id, runtime_id },
+            args: {
+              message,
+              task_id,
+              turn_id,
+              block_id,
+              runtime_id,
+              session_id,
+            },
           });
 
           // Add to agent loop queue
@@ -162,13 +170,18 @@ export function createServerMutators(
           task_id: z.string(),
           turn_id: z.string(),
           block_id: z.string(),
+          session_id: z.string(),
         }),
-        async ({ tx, ctx, args: { message, task_id, turn_id, block_id } }) => {
+        async ({
+          tx,
+          ctx,
+          args: { message, task_id, turn_id, block_id, session_id },
+        }) => {
           // Run the base mutator
           await clientMutators.message.create.fn({
             tx,
             ctx,
-            args: { message, task_id, turn_id, block_id },
+            args: { message, task_id, turn_id, block_id, session_id },
           });
 
           // Add to agent loop queue
@@ -181,6 +194,21 @@ export function createServerMutators(
           });
 
           // TODO: Add analytics event
+        }
+      ),
+    },
+    runtimes: {
+      register: defineMutator(
+        z.object({
+          runtime_id: z.string(),
+        }),
+        async ({ tx, ctx, args: { runtime_id } }) => {
+          // Run the base mutator
+          await clientMutators.runtimes.register.fn({
+            tx,
+            ctx,
+            args: { runtime_id },
+          });
         }
       ),
     },

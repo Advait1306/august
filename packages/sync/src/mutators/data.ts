@@ -57,11 +57,12 @@ export const mutators = defineMutators({
         turn_id: z.string(),
         block_id: z.string(),
         runtime_id: z.string(),
+        session_id: z.string(),
       }),
       async ({
         tx,
         ctx,
-        args: { message, task_id, turn_id, block_id, runtime_id },
+        args: { message, task_id, turn_id, block_id, runtime_id, session_id },
       }) => {
         await tx.mutate.tasks.insert({
           id: task_id,
@@ -70,6 +71,7 @@ export const mutators = defineMutators({
           organisation_id: ctx.orgId,
           status: "starting",
           runtime_id: runtime_id,
+          last_session_id: session_id,
           created_at: Date.now(),
           updated_at: Date.now(),
         });
@@ -132,8 +134,9 @@ export const mutators = defineMutators({
         task_id: z.string(),
         turn_id: z.string(),
         block_id: z.string(),
+        session_id: z.string(),
       }),
-      async ({ tx, ctx, args: { message, task_id, turn_id, block_id } }) => {
+      async ({ tx, ctx, args: { message, task_id, turn_id, block_id, session_id } }) => {
         const task = await tx.run(
           builder.tasks
             .where("id", task_id)
@@ -152,6 +155,7 @@ export const mutators = defineMutators({
         await tx.mutate.tasks.update({
           id: task_id,
           status: "starting",
+          last_session_id: session_id,
         });
 
         await tx.mutate.turns.insert({
@@ -303,6 +307,21 @@ export const mutators = defineMutators({
       }),
       async ({ tx, args: { mcp_id } }) => {
         await tx.mutate.mcps.delete({ id: mcp_id });
+      }
+    ),
+  },
+  runtimes: {
+    register: defineMutator(
+      z.object({
+        runtime_id: z.string(),
+      }),
+      async ({ tx, ctx, args: { runtime_id } }) => {
+        await tx.mutate.runtimes.upsert({
+          id: runtime_id,
+          user_id: ctx.userId,
+          created_at: Date.now(),
+          updated_at: Date.now(),
+        });
       }
     ),
   },

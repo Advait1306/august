@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
+import { useZero } from "@/src/hooks/useZero";
+import { mutators } from "@jupiter/sync/mutators/data";
 
 const RUNTIME_ID_PREFIX = "august-runtime-id";
 
 export const useRuntimeId = (
   userId: string | null | undefined
 ): string | null => {
+  const z = useZero();
+
   const [runtimeId, setRuntimeId] = useState<string | null>(() => {
     if (!userId) return null;
 
@@ -34,7 +38,10 @@ export const useRuntimeId = (
     }
 
     setRuntimeId(id);
-  }, [userId]);
+
+    // Register the runtime in the database (upsert is idempotent)
+    z.mutate(mutators.runtimes.register({ runtime_id: id }));
+  }, [userId, z]);
 
   return runtimeId;
 };
