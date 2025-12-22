@@ -683,6 +683,15 @@ const tasksTable = {
       optional: false,
       customType: null as unknown as string,
     },
+    metadata: {
+      type: "json",
+      optional: true,
+      customType: null as unknown as CustomType<
+        typeof drizzleSchema,
+        "tasks",
+        "metadata"
+      >,
+    },
     updated_at: {
       type: "number",
       optional: true,

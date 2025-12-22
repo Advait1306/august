@@ -212,6 +212,7 @@ export const TaskRuntimeProvider = ({
       const taskId = crypto.randomUUID();
       const turnId = crypto.randomUUID();
       const blockId = crypto.randomUUID();
+      const cwd = composerStates["new-conversation"]?.cwd;
 
       await z.mutate(
         mutators.tasks.create({
@@ -221,6 +222,7 @@ export const TaskRuntimeProvider = ({
           message,
           runtime_id: runtimeId,
           session_id: sessionId,
+          metadata: cwd ? { cwd } : undefined,
         })
       ).client;
 

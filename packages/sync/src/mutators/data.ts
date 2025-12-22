@@ -58,11 +58,12 @@ export const mutators = defineMutators({
         block_id: z.string(),
         runtime_id: z.string(),
         session_id: z.string(),
+        metadata: z.object({ cwd: z.string().optional() }).optional(),
       }),
       async ({
         tx,
         ctx,
-        args: { message, task_id, turn_id, block_id, runtime_id, session_id },
+        args: { message, task_id, turn_id, block_id, runtime_id, session_id, metadata },
       }) => {
         await tx.mutate.tasks.insert({
           id: task_id,
@@ -72,6 +73,7 @@ export const mutators = defineMutators({
           status: "starting",
           runtime_id: runtime_id,
           last_session_id: session_id,
+          metadata,
           created_at: Date.now(),
           updated_at: Date.now(),
         });

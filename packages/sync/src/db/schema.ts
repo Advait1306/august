@@ -213,6 +213,10 @@ export const taskStatus = pgEnum("task_status", [
   "stopping",
 ]);
 
+export interface TaskMetadata {
+  cwd?: string;
+}
+
 export const tasks = pgTable("tasks", {
   id: varchar().notNull().primaryKey(),
   name: varchar().notNull(),
@@ -230,6 +234,7 @@ export const tasks = pgTable("tasks", {
   runtime_id: varchar()
     .notNull()
     .references(() => runtimes.id),
+  metadata: jsonb().$type<TaskMetadata>(),
   updated_at: timestamp().notNull().defaultNow(),
 });
 
@@ -409,7 +414,7 @@ export const mcpStoreRelations = relations(mcpStore, ({ one, many }) => ({
 // OAuth Integration Details relations
 export const mcpOauthIntegrationDetailsRelations = relations(
   mcpOauthIntegrationDetails,
-  ({ one }) => ({
+({ one }) => ({
     mcpStore: one(mcpStore, {
       fields: [mcpOauthIntegrationDetails.mcp_store_id],
       references: [mcpStore.id],

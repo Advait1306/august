@@ -148,7 +148,7 @@ export class AiService {
 
   private async processTextBlock(params: ProcessBlockParams) {
     // TODO: We might have to check for integrity here
-    
+
     await this.db
       .update(blocks)
       .set({
@@ -200,6 +200,7 @@ export class AiService {
 
     for await (const event of agentLoop({
       messages,
+      cwd: task.metadata?.cwd,
     })) {
       switch (event.type) {
         case "message_start": {

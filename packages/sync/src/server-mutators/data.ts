@@ -47,11 +47,12 @@ export function createServerMutators(
           block_id: z.string(),
           runtime_id: z.string(),
           session_id: z.string(),
+          metadata: z.object({ cwd: z.string().optional() }).optional(),
         }),
         async ({
           tx,
           ctx,
-          args: { message, task_id, turn_id, block_id, runtime_id, session_id },
+          args: { message, task_id, turn_id, block_id, runtime_id, session_id, metadata },
         }) => {
           // Run the base mutator
           await clientMutators.tasks.create.fn({
@@ -64,6 +65,7 @@ export function createServerMutators(
               block_id,
               runtime_id,
               session_id,
+              metadata,
             },
           });
 
