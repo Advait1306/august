@@ -196,6 +196,15 @@ export const agents = pgTable("agents", {
     .references(() => users.id),
 });
 
+export const runtimes = pgTable("runtimes", {
+  id: varchar().notNull().primaryKey(),
+  user_id: varchar()
+    .notNull()
+    .references(() => users.id),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
 export const taskStatus = pgEnum("task_status", [
   "available",
   "starting",
@@ -217,6 +226,9 @@ export const tasks = pgTable("tasks", {
   last_session_id: varchar(),
   worker_id: varchar(),
   status: taskStatus().notNull().default("available"),
+  runtime_id: varchar()
+    .notNull()
+    .references(() => runtimes.id),
   updated_at: timestamp().notNull().defaultNow(),
 });
 
@@ -287,6 +299,7 @@ export const userRelations = relations(users, ({ many }) => ({
   mcps: many(mcps),
   oauthStates: many(oauthStates),
   composioStates: many(composioStates),
+  runtimes: many(runtimes),
 }));
 
 // Organisation relations
@@ -312,6 +325,15 @@ export const agentRelations = relations(agents, ({ one, many }) => ({
   }),
 }));
 
+// Runtime relations
+export const runtimeRelations = relations(runtimes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [runtimes.user_id],
+    references: [users.id],
+  }),
+  tasks: many(tasks),
+}));
+
 // Task relations
 export const taskRelations = relations(tasks, ({ one, many }) => ({
   user: one(users, {
@@ -328,6 +350,10 @@ export const taskRelations = relations(tasks, ({ one, many }) => ({
     references: [organisations.id],
   }),
   turns: many(turns),
+  runtime: one(runtimes, {
+    fields: [tasks.runtime_id],
+    references: [runtimes.id],
+  }),
 }));
 
 // Turn relations

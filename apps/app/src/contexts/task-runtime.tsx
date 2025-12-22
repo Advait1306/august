@@ -4,7 +4,10 @@ import { queries } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { Agent, Task } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "@/src/hooks/useZero";
+import { useRuntimeId } from "@/src/hooks/useRuntimeId";
+import { useUser } from "@clerk/clerk-react";
 import { mutators } from "@jupiter/sync/mutators/data";
+import { useSessionId } from "@/src/hooks/useSessionId";
 
 type PermissionState = Record<string, Permission[]>;
 type PermissionIndexState = Record<string, number>;
@@ -75,6 +78,9 @@ export const TaskRuntimeProvider = ({
   children: React.ReactNode;
 }) => {
   const z = useZero();
+  const { user } = useUser();
+  const runtimeId = useRuntimeId(user?.id);
+  const sessionId = useSessionId();
   const agents = useQuery(queries.agents.all())[0];
   const tasks = useQuery(queries.tasks.all())[0];
 
@@ -198,6 +204,10 @@ export const TaskRuntimeProvider = ({
     });
 
     if (selectedTaskId === "new-conversation") {
+      if (!runtimeId) {
+        throw new Error("Runtime ID is required");
+      }
+
       // Set states
       const taskId = crypto.randomUUID();
       const turnId = crypto.randomUUID();
@@ -209,6 +219,8 @@ export const TaskRuntimeProvider = ({
           turn_id: turnId,
           block_id: blockId,
           message,
+          runtime_id: runtimeId,
+          session_id: sessionId,
         })
       ).client;
 
@@ -223,6 +235,7 @@ export const TaskRuntimeProvider = ({
           turn_id: turnId,
           block_id: blockId,
           message,
+          session_id: sessionId,
         })
       ).client;
     }
