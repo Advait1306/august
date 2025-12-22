@@ -8,6 +8,7 @@ import { useRuntimeId } from "@/src/hooks/useRuntimeId";
 import { useUser } from "@clerk/clerk-react";
 import { mutators } from "@jupiter/sync/mutators/data";
 import { useSessionId } from "@/src/hooks/useSessionId";
+import { useShellTools } from "@/src/hooks/useShellTools";
 
 type PermissionState = Record<string, Permission[]>;
 type PermissionIndexState = Record<string, number>;
@@ -84,6 +85,8 @@ export const TaskRuntimeProvider = ({
   const agents = useQuery(queries.agents.all())[0];
   const tasks = useQuery(queries.tasks.all())[0];
 
+  useShellTools(runtimeId, sessionId);
+  
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
   >({

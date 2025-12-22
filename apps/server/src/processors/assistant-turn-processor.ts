@@ -54,6 +54,12 @@ export class AssistantTurnProcessor {
         content: BetaContentBlockParam;
         complete: boolean;
         processed: boolean;
+        status:
+          | "none"
+          | "permission_pending"
+          | "client_pending"
+          | "server_pending"
+          | "completed";
       };
     }
   > = {};
@@ -171,6 +177,7 @@ export class AssistantTurnProcessor {
         content: content,
         complete: false,
         processed: false,
+        status: "none",
       },
     };
 
@@ -212,6 +219,11 @@ export class AssistantTurnProcessor {
       this.blocks[data.index].data.content.type === "server_tool_use"
     ) {
       this.convertToolUseBlockInputToObject(data.index);
+    }
+
+    if (this.blocks[data.index].data.content.type === "tool_use") {
+      // Permission checker goes here to check what's the status to be added to the block.
+      this.blocks[data.index].data.status = "client_pending";
     }
 
     this.blocks[data.index].data.complete = true;
@@ -285,6 +297,7 @@ export class AssistantTurnProcessor {
           created_at: new Date(),
           updated_at: new Date(),
           complete: block.data.complete,
+          status: block.data.status,
           // Tool use types require a response turn for clients to put result in
           response_turn_id:
             block.data.content.type === "tool_use"
@@ -302,6 +315,7 @@ export class AssistantTurnProcessor {
             content: block.data.content,
             complete: block.data.complete,
             processed: block.data.processed,
+            status: block.data.status,
             updated_at: new Date(),
           })
           .where(eq(blocks.id, block.id));
