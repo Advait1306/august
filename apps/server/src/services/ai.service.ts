@@ -227,7 +227,6 @@ export class AiService {
         }
         case "content_block_start": {
           assistantTurnProcessor.processBlockStart(event);
-          // Handle content block start
           break;
         }
         case "content_block_delta": {
