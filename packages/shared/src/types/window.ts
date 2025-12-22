@@ -1,6 +1,4 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
-import type { AgentTypes } from "./agent";
-import type { ClaudeInstallation } from "./claude";
 import type { IPC } from "../ipc/contracts";
 
 declare global {
@@ -24,10 +22,6 @@ declare global {
           data?: any;
           error?: string;
         }>;
-      };
-      agent: AgentTypes;
-      claudeCode: {
-        discoverInstallations: () => Promise<ClaudeInstallation[]>;
       };
       browser: {
         openUrl: (url: string) => Promise<boolean>;

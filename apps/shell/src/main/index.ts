@@ -3,7 +3,6 @@ import { join } from 'path'
 import path from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { AgentAdapterMain } from './agent/agent-adapter-main'
 import { setMainWindow, handleAuthToken } from './ipc/auth'
 import { autoUpdaterService } from './services/auto-updater-service'
 
@@ -17,7 +16,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: 'hiddenInset',
-    title: 'Teams',
+    title: 'August',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -94,19 +93,16 @@ app.whenReady().then(async () => {
   // Initialize database and IPC handlers
   try {
     const { registerProjectIpcHandlers } = await import('./ipc/projects')
-    const { registerAgentIpcHandlers } = await import('./ipc/agents')
     const { registerAuthIpcHandlers } = await import('./ipc/auth')
     const { registerAutoUpdaterIpcHandlers } = await import('./ipc/auto-updater')
     const { registerBrowserIpcHandlers } = await import('./ipc/browser')
     const { registerShellToolsIpcHandlers } = await import('./ipc/shell-tools')
 
     registerProjectIpcHandlers()
-    registerAgentIpcHandlers()
     registerAuthIpcHandlers()
     registerAutoUpdaterIpcHandlers()
     registerBrowserIpcHandlers()
     registerShellToolsIpcHandlers()
-    AgentAdapterMain.getInstance()
 
     // Initialize auto-updater and start checking for updates
     await autoUpdaterService.checkForUpdates()

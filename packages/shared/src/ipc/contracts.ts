@@ -1,5 +1,4 @@
 import { ModelMessage } from "ai";
-import { ClaudeInstallation } from "../types/claude";
 import type {
   ShellToolsManifest,
   GrepInput,
@@ -74,11 +73,6 @@ export namespace IPC {
       error?: string;
     }
   }
-
-  export namespace ClaudeCode {
-    export type DiscoverInstallationsResponse = ClaudeInstallation[];
-  }
-
   export namespace ShellTools {
     // Get manifest response
     export type GetManifestResponse = ShellToolsManifest;

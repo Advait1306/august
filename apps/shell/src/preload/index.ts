@@ -1,7 +1,6 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
-import { agent } from './agent'
 
 // Custom APIs for renderer
 const api = {
@@ -21,11 +20,6 @@ const api = {
     quitAndInstall: () =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.QUIT_AND_INSTALL),
     getUpdateInfo: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.GET_INFO)
-  },
-  agent: agent,
-  claudeCode: {
-    discoverInstallations: () =>
-      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_CODE.DISCOVER_INSTALLATIONS)
   },
   browser: {
     openUrl: (url: string) => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.BROWSER.OPEN_URL, url)
