@@ -9,9 +9,11 @@
     "@jupiter/typescript-config": "*",
     "typescript": "latest"
   },
+  "devDependencies": {
+    "tsc-esm-fix": "^3.1.2"
+  },
   "scripts": {
-    "dev": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc && tsc-esm-fix --target=dist"
   },
   "exports": {
     "./agent-request-permission-over-ipc": {

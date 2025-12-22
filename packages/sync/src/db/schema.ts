@@ -201,6 +201,7 @@ export const runtimes = pgTable("runtimes", {
   user_id: varchar()
     .notNull()
     .references(() => users.id),
+  tools: jsonb().$type<{ name: string; version: string }[]>(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
 });

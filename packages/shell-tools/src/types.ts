@@ -22,8 +22,6 @@ export interface ToolDefinition extends ToolMetadata {
  * Used for runtime registration and version checking
  */
 export interface ShellToolsManifest {
-  /** Package version from package.json */
-  packageVersion: string;
   /** Individual tool metadata */
   tools: ToolMetadata[];
 }

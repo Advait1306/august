@@ -9,7 +9,6 @@ import { editToolDefinition } from "./edit";
 import { writeToolDefinition } from "./write";
 import { multieditToolDefinition } from "./multiedit";
 import type { ShellToolsManifest, ToolDefinition } from "./types";
-import packageJson from "../package.json";
 
 /**
  * All tool definitions with full schemas
@@ -34,7 +33,6 @@ export type ToolName = (typeof toolDefinitions)[number]["name"];
  */
 export function getShellToolsManifest(): ShellToolsManifest {
   return {
-    packageVersion: packageJson.version,
     tools: toolDefinitions.map((tool) => ({
       name: tool.name,
       version: tool.version,

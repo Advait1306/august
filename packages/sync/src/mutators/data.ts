@@ -136,7 +136,11 @@ export const mutators = defineMutators({
         block_id: z.string(),
         session_id: z.string(),
       }),
-      async ({ tx, ctx, args: { message, task_id, turn_id, block_id, session_id } }) => {
+      async ({
+        tx,
+        ctx,
+        args: { message, task_id, turn_id, block_id, session_id },
+      }) => {
         const task = await tx.run(
           builder.tasks
             .where("id", task_id)
@@ -314,11 +318,13 @@ export const mutators = defineMutators({
     register: defineMutator(
       z.object({
         runtime_id: z.string(),
+        tools: z.array(z.object({ name: z.string(), version: z.string() })),
       }),
-      async ({ tx, ctx, args: { runtime_id } }) => {
+      async ({ tx, ctx, args: { runtime_id, tools } }) => {
         await tx.mutate.runtimes.upsert({
           id: runtime_id,
           user_id: ctx.userId,
+          tools,
           created_at: Date.now(),
           updated_at: Date.now(),
         });
