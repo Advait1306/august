@@ -3,7 +3,10 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=!website --filter=!litmus",
+    "dev:website": "turbo run dev --filter=website",
+    "dev:litmus": "turbo run dev --filter=litmus",
+    "dev:all": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"
