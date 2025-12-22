@@ -2,7 +2,6 @@ import { defineMutators, defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
 import { builder } from "../zero/schema";
 import { mutators as clientMutators } from "../mutators/data";
-import { wrapMutatorsWithAnalytics } from "./analytics-wrapper";
 import mixpanel from "mixpanel";
 
 type AsyncTask = Array<() => Promise<void>>;
@@ -18,71 +17,6 @@ type AgentLoopJobData = {
 };
 
 type AddToAgentLoopQueue = (data: AgentLoopJobData) => Promise<void>;
-
-// Analytics configuration
-const analyticsConfig = {
-  projects: {
-    create: {
-      event: "project_created",
-      getProperties: (args: any) => ({
-        project_id: args.project_id,
-        name: args.name,
-      }),
-    },
-    update: {
-      event: "project_updated",
-      getProperties: (args: any) => ({ project_id: args.project_id }),
-    },
-    delete: {
-      event: "project_deleted",
-      getProperties: (args: any) => ({ project_id: args.project_id }),
-    },
-  },
-  agents: {
-    create: {
-      event: "agent_created",
-      getProperties: (args: any) => ({
-        agent_id: args.agent_id,
-        base_agent: args.base_agent,
-      }),
-    },
-    update: {
-      event: "agent_updated",
-      getProperties: (args: any) => ({ agent_id: args.agent_id }),
-    },
-    delete: {
-      event: "agent_deleted",
-      getProperties: (args: any) => ({ agent_id: args.agent_id }),
-    },
-  },
-  tasks: {
-    create: {
-      event: "task_created",
-      getProperties: (args: any) => ({
-        task_id: args.task_id,
-        project_id: args.project_id,
-        ...(args.agent_id && { agent_id: args.agent_id }),
-      }),
-    },
-  },
-  message: {
-    create: {
-      event: "message_created",
-      getProperties: (args: any) => ({
-        task_id: args.task_id,
-        message_id: args.message_id,
-        role: args.role,
-      }),
-    },
-    update: {
-      event: "message_updated",
-      getProperties: (args: any) => ({
-        task_id: args.task_id,
-        message_id: args.message_id,
-      }),
-    },
-  },
-};
 
 export function createServerMutators(
   asyncTasks: AsyncTask,
@@ -111,13 +45,18 @@ export function createServerMutators(
           task_id: z.string(),
           turn_id: z.string(),
           block_id: z.string(),
+          runtime_id: z.string(),
         }),
-        async ({ tx, ctx, args: { message, task_id, turn_id, block_id } }) => {
+        async ({
+          tx,
+          ctx,
+          args: { message, task_id, turn_id, block_id, runtime_id },
+        }) => {
           // Run the base mutator
           await clientMutators.tasks.create.fn({
             tx,
             ctx,
-            args: { message, task_id, turn_id, block_id },
+            args: { message, task_id, turn_id, block_id, runtime_id },
           });
 
           // Add to agent loop queue
@@ -129,9 +68,11 @@ export function createServerMutators(
             });
           });
 
-          // Track analytics
-          const trackEvent = createTrackEvent(ctx.userId, ctx.orgId);
-          await trackEvent("task_created", { task_id });
+          asyncTasks.push(async () => {
+            // Track analytics
+            const trackEvent = createTrackEvent(ctx.userId, ctx.orgId);
+            await trackEvent("task_created", { task_id });
+          });
         }
       ),
       abort: defineMutator(
@@ -251,7 +192,11 @@ export function createServerMutators(
           result: z.string(),
           block_id: z.string(),
         }),
-        async ({ tx, ctx, args: { tool_use_id, turn_id, result, block_id } }) => {
+        async ({
+          tx,
+          ctx,
+          args: { tool_use_id, turn_id, result, block_id },
+        }) => {
           const turn = await tx.run(
             builder.turns
               .where("id", turn_id)

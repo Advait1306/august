@@ -148,6 +148,7 @@ export class AiService {
 
   private async processTextBlock(params: ProcessBlockParams) {
     // TODO: We might have to check for integrity here
+    
     await this.db
       .update(blocks)
       .set({

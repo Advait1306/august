@@ -982,6 +982,48 @@ export const schema = {
       },
       primaryKey: ["id"],
     },
+    runtimes: {
+      name: "runtimes",
+      columns: {
+        id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "runtimes",
+            "id"
+          >,
+        },
+        user_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "runtimes",
+            "user_id"
+          >,
+        },
+        created_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "runtimes",
+            "created_at"
+          >,
+        },
+        updated_at: {
+          type: "number",
+          optional: true,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "runtimes",
+            "updated_at"
+          >,
+        },
+      },
+      primaryKey: ["id"],
+    },
     tasks: {
       name: "tasks",
       columns: {
@@ -1064,6 +1106,15 @@ export const schema = {
             ZeroSchema,
             "tasks",
             "status"
+          >,
+        },
+        runtime_id: {
+          type: "string",
+          optional: false,
+          customType: null as unknown as ZeroCustomType<
+            ZeroSchema,
+            "tasks",
+            "runtime_id"
           >,
         },
         updated_at: {
@@ -1540,6 +1591,24 @@ export const schema = {
         },
       ],
     },
+    runtimes: {
+      user: [
+        {
+          sourceField: ["user_id"],
+          destField: ["id"],
+          destSchema: "users",
+          cardinality: "one",
+        },
+      ],
+      tasks: [
+        {
+          sourceField: ["id"],
+          destField: ["runtime_id"],
+          destSchema: "tasks",
+          cardinality: "many",
+        },
+      ],
+    },
     tasks: {
       user: [
         {
@@ -1579,6 +1648,14 @@ export const schema = {
           destField: ["task_id"],
           destSchema: "turns",
           cardinality: "many",
+        },
+      ],
+      runtime: [
+        {
+          sourceField: ["runtime_id"],
+          destField: ["id"],
+          destSchema: "runtimes",
+          cardinality: "one",
         },
       ],
     },
@@ -1659,6 +1736,14 @@ export const schema = {
           cardinality: "many",
         },
       ],
+      runtimes: [
+        {
+          sourceField: ["id"],
+          destField: ["user_id"],
+          destSchema: "runtimes",
+          cardinality: "many",
+        },
+      ],
     },
   },
   enableLegacyQueries: true,
@@ -1736,6 +1821,11 @@ export type OauthState = Row<Schema["tables"]["oauthStates"]>;
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Organisation = Row<Schema["tables"]["organisations"]>;
+/**
+ * Represents a row from the "runtimes" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ */
+export type Runtime = Row<Schema["tables"]["runtimes"]>;
 /**
  * Represents a row from the "tasks" table.
  * This type is auto-generated from your Drizzle schema definition.

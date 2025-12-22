@@ -56,14 +56,20 @@ export const mutators = defineMutators({
         task_id: z.string(),
         turn_id: z.string(),
         block_id: z.string(),
+        runtime_id: z.string(),
       }),
-      async ({ tx, ctx, args: { message, task_id, turn_id, block_id } }) => {
+      async ({
+        tx,
+        ctx,
+        args: { message, task_id, turn_id, block_id, runtime_id },
+      }) => {
         await tx.mutate.tasks.insert({
           id: task_id,
           name: message.length > 40 ? message.slice(0, 40) + "..." : message,
           author_id: ctx.userId,
           organisation_id: ctx.orgId,
           status: "starting",
+          runtime_id: runtime_id,
           created_at: Date.now(),
           updated_at: Date.now(),
         });
