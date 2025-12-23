@@ -171,10 +171,10 @@ export function ToolUseBlock({ block }: { block: BlockType }) {
       >
         <ToolContent>
           <ToolInput input={content.input} />
-          {block.complete && (
+          {block.complete && result && (
             <ToolOutput
               errorText={undefined}
-              output={(result?.content as ToolResultBlockParam).content}
+              output={(result.content as ToolResultBlockParam).content}
             />
           )}
         </ToolContent>
