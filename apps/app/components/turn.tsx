@@ -14,6 +14,7 @@ import {
   ThinkingBlock,
   ToolUseBlock,
 } from "./blocks";
+import { useMemo } from "react";
 
 interface TurnProps {
   turn: TurnType;
@@ -80,7 +81,7 @@ function groupBlocks(blocks: BlockType[]): GroupedBlock[] {
 }
 
 function AssistantTurn({ blocks }: { blocks: BlockType[] }) {
-  const grouped = groupBlocks(blocks);
+  const grouped = useMemo(() => groupBlocks(blocks), [blocks]);
 
   return (
     <div className="flex flex-col gap-2">
