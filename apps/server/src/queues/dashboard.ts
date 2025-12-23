@@ -1,6 +1,7 @@
 import { ExpressAdapter } from "@bull-board/express";
 import { createBullBoard } from "@bull-board/api";
 import { queue as AgentLoopQueue } from "./workers/agentLoopWorker";
+import { queue as ServerToolExecutorQueue } from "./workers/serverToolExecutorWorker";
 import { Express, Request, Response, NextFunction } from "express";
 import { getAuth, ClerkClient } from "@clerk/express";
 import { BullBoardGroupMQAdapter } from "groupmq";
@@ -9,6 +10,11 @@ const queues = [
   new BullBoardGroupMQAdapter(AgentLoopQueue, {
     displayName: "Agent Loop",
     description: "Handles all agent running jobs",
+    readOnlyMode: false,
+  }),
+  new BullBoardGroupMQAdapter(ServerToolExecutorQueue, {
+    displayName: "Server Tool Executor",
+    description: "Executes server-side tools (todo_write, todo_read, etc.)",
     readOnlyMode: false,
   }),
 ];

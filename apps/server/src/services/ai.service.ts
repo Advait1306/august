@@ -5,6 +5,7 @@ import { agentLoop } from "@august/harness";
 import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { AssistantTurnProcessor } from "../processors/assistant-turn-processor";
 import { toolDefinitions } from "@august/shell-tools";
+import { serverToolDefinitions } from "../server-tools";
 import {
   ToolResultBlockParam,
   ToolUseBlockParam,
@@ -190,9 +191,12 @@ export class AiService {
     // Get tools from runtime and map to tool definitions
     // TODO: Check version numbers here to verify correct tools are being used
     const runtimeTools = task.runtime?.tools ?? [];
-    const tools = toolDefinitions.filter((toolDef) =>
+    const shellTools = toolDefinitions.filter((toolDef) =>
       runtimeTools.some((rt) => rt.name === toolDef.name)
     );
+
+    // Server tools are always available
+    const tools = [...shellTools, ...serverToolDefinitions];
 
     // TODO: Use iterations once pause_turn is implemented
     // let iterations = 0;
