@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect } from "react";
 import { VList, VListHandle } from "virtua";
 import { useQuery } from "@rocicorp/zero/react";
 import { queries } from "@jupiter/sync/queries/data";
@@ -18,9 +18,10 @@ import Autoplay from "embla-carousel-autoplay";
 
 interface TaskThreadProps {
   selectedTask: Task | "new-conversation";
+  isGenerating: boolean;
 }
 
-export function TaskThread({ selectedTask }: TaskThreadProps) {
+export function TaskThread({ selectedTask, isGenerating }: TaskThreadProps) {
   const virtualizerRef = useRef<VListHandle>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -33,25 +34,6 @@ export function TaskThread({ selectedTask }: TaskThreadProps) {
       enabled: selectedTask !== "new-conversation",
     }
   );
-
-  const isGenerating = useMemo(() => {
-    if (selectedTask === "new-conversation") {
-      return false;
-    }
-
-    switch (selectedTask.status) {
-      case "available":
-        return false;
-      case "executing":
-      case "starting":
-      case "stopping":
-        return true;
-    }
-  }, [
-    selectedTask === "new-conversation"
-      ? "new-conversation"
-      : selectedTask.status,
-  ]);
 
   // Scroll to bottom when turns change
   useEffect(() => {

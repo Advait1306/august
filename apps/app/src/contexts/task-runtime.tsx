@@ -1,5 +1,5 @@
 import { Permission } from "@jupiter/shared/types";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { queries } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { Agent, Task } from "@jupiter/sync/zero/zero-schema.gen";
@@ -18,6 +18,7 @@ type TaskRuntimeState = {
   selectedTaskId: string | "new-conversation";
   selectedTask: Task | "new-conversation";
   selectTask: (task: string | "new-conversation") => void;
+  isGenerating: boolean;
   sendMessage: (message: string) => void;
   stopGeneration: (taskId: string) => void;
   composerStates: Record<string, ComposerState>;
@@ -62,6 +63,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   selectedTaskId: "new-conversation",
   selectedTask: "new-conversation",
   selectTask: () => {},
+  isGenerating: false,
   sendMessage: () => {},
   stopGeneration: () => {},
   composerStates: {},
@@ -129,6 +131,27 @@ export const TaskRuntimeProvider = ({
     selectedTaskId === "new-conversation"
       ? "new-conversation"
       : tasks?.find((task) => task.id === selectedTaskId)!;
+
+  const isGenerating = useMemo(() => {
+    if (selectedTask === "new-conversation") {
+      return false;
+    }
+
+    switch (selectedTask.status) {
+      case "available":
+        return false;
+      case "executing":
+      case "starting":
+      case "stopping":
+        return true;
+      default:
+        return false;
+    }
+  }, [
+    selectedTask === "new-conversation"
+      ? "new-conversation"
+      : selectedTask.status,
+  ]);
 
   useEffect(() => {
     // New task is added, select it
@@ -265,6 +288,7 @@ export const TaskRuntimeProvider = ({
         selectedTaskId,
         selectedTask,
         selectTask,
+        isGenerating,
         sendMessage,
         stopGeneration,
         composerStates,
