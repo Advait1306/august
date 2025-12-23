@@ -286,7 +286,6 @@ export function createServerMutators(
             processed: false,
           });
 
-          console.log("Marking complete for: ", tool_block_id);
           await tx.mutate.blocks.update({
             id: tool_block_id,
             status: "completed",

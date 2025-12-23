@@ -85,8 +85,4 @@ export const useShellTools = (
         .finally(() => {});
     });
   }, [sessionTools]);
-
-  useEffect(() => {
-    console.log("runningTools", runningTools);
-  }, [runningTools]);
 };
