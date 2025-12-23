@@ -141,11 +141,7 @@ export class AssistantTurnProcessor {
 
   processMessageStart(data: BetaRawMessageStartEvent) {
     for (const index in data.message.content) {
-      this.processBlockStart({
-        index: parseInt(index),
-        content_block: data.message.content[index],
-        type: "content_block_start",
-      });
+      this.processCompleteBlock(parseInt(index), data.message.content[index]);
     }
 
     if (data.message.container) this.setContainer(data.message.container);
@@ -165,6 +161,24 @@ export class AssistantTurnProcessor {
     this.task.status = "available";
     this.task.dirty = true;
     this.flushToDb();
+  }
+
+  processCompleteBlock(index: number, content: BetaContentBlockParam) {
+    this.blocks[index].data.content = content;
+    this.blocks[index].data.complete = true;
+    this.blocks[index].data.processed = true;
+    this.blocks[index].data.status = "none";
+
+    if (content.type === "tool_use") {
+      this.toolResponseTurnRequired = true;
+    }
+
+    if (this.blocks[index].data.content.type === "tool_use") {
+      // Permission checker goes here to check what's the status to be added to the block.
+      this.blocks[index].data.status = "client_pending";
+    }
+
+    this.blocks[index].dirty = true;
   }
 
   processBlockStart(data: BetaRawContentBlockStartEvent) {
@@ -269,6 +283,8 @@ export class AssistantTurnProcessor {
           updated_at: new Date(),
         })
         .where(eq(turns.id, this.turn.id));
+
+      this.turn.dirty = false;
     }
 
     if (this.toolResponseTurnRequired && !this.toolResponseTurnId) {
@@ -298,6 +314,7 @@ export class AssistantTurnProcessor {
           updated_at: new Date(),
           complete: block.data.complete,
           status: block.data.status,
+          processed: block.data.processed,
           // Tool use types require a response turn for clients to put result in
           response_turn_id:
             block.data.content.type === "tool_use"
@@ -319,6 +336,8 @@ export class AssistantTurnProcessor {
             updated_at: new Date(),
           })
           .where(eq(blocks.id, block.id));
+
+        block.dirty = false;
       }
     }
   }

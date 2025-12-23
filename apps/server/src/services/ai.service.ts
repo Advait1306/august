@@ -36,7 +36,6 @@ export class AiService {
   }
 
   async processBlock(taskId: string, turnId: string, blockId: string) {
-    console.log("Process Block started: ", Date.now());
     const task = await this.db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
       with: {
@@ -93,6 +92,7 @@ export class AiService {
 
     // Get last turn that should contain the corresponding tool_use
     const lastAssistantTurnToolUseBlocks = task.turns
+      .slice()
       .reverse()
       .find((turn) => turn.type === "assistant")
       ?.blocks.filter((block) => block.type === "tool_use");
@@ -125,7 +125,7 @@ export class AiService {
 
     // Check if all tool_use blocks are answered - to start the agent loop
     const toolResultBlocks = task.turns
-      .find((turn) => turn.id === turn.id)
+      .find((t) => t.id === turn.id)
       ?.blocks.filter((block) => block.type === "tool_result");
 
     if (!toolResultBlocks) {
@@ -149,8 +149,6 @@ export class AiService {
     ) {
       // All tool use blocks are answered, start the agent loop
       await this.runAgentLoop(params.task.id);
-    } else {
-      console.log("Process block ended in process result: ", Date.now());
     }
   }
 
@@ -184,8 +182,6 @@ export class AiService {
         runtime: true,
       },
     });
-
-    // console.log(JSON.stringify(task, null, 2));
 
     if (!task) {
       throw new Error("Task not found");
@@ -255,8 +251,6 @@ export class AiService {
         lastFlush = Date.now();
       }
     }
-
-    console.log("Process block ended in agent loop: ", Date.now());
 
     // }
   }
