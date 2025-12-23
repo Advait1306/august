@@ -201,6 +201,7 @@ export const runtimes = pgTable("runtimes", {
   user_id: varchar()
     .notNull()
     .references(() => users.id),
+  tools: jsonb().$type<{ name: string; version: string }[]>(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
 });
@@ -211,6 +212,10 @@ export const taskStatus = pgEnum("task_status", [
   "executing",
   "stopping",
 ]);
+
+export interface TaskMetadata {
+  cwd?: string;
+}
 
 export const tasks = pgTable("tasks", {
   id: varchar().notNull().primaryKey(),
@@ -229,6 +234,7 @@ export const tasks = pgTable("tasks", {
   runtime_id: varchar()
     .notNull()
     .references(() => runtimes.id),
+  metadata: jsonb().$type<TaskMetadata>(),
   updated_at: timestamp().notNull().defaultNow(),
 });
 
@@ -408,7 +414,7 @@ export const mcpStoreRelations = relations(mcpStore, ({ one, many }) => ({
 // OAuth Integration Details relations
 export const mcpOauthIntegrationDetailsRelations = relations(
   mcpOauthIntegrationDetails,
-  ({ one }) => ({
+({ one }) => ({
     mcpStore: one(mcpStore, {
       fields: [mcpOauthIntegrationDetails.mcp_store_id],
       references: [mcpStore.id],

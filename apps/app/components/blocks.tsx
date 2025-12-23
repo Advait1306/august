@@ -21,6 +21,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@rocicorp/zero/react";
+import { queries } from "@jupiter/sync/queries/data";
+import {
+  ToolResultBlockParam,
+  ToolUseBlockParam,
+} from "@anthropic-ai/sdk/resources";
 
 // User text block - renders user message content
 export function UserTextBlock({ block }: { block: BlockType }) {
@@ -120,9 +126,21 @@ export function ThinkingBlock({ block }: { block: BlockType }) {
   );
 }
 
+// TODO: Handle new tool use states
 // Tool use block - renders a single tool call as a chip with popover
 export function ToolUseBlock({ block }: { block: BlockType }) {
   const content = block.content as BetaToolUseBlockParam;
+  const [resultTurn] = useQuery(
+    queries.blocks.byTurn({ turnId: block.response_turn_id ?? "" }),
+    {
+      enabled: block.response_turn_id !== null,
+    }
+  );
+  const result = resultTurn.find(
+    (result) =>
+      (result.content as ToolResultBlockParam).tool_use_id ===
+      (block.content as ToolUseBlockParam).id
+  );
 
   return (
     <Popover>
@@ -153,8 +171,11 @@ export function ToolUseBlock({ block }: { block: BlockType }) {
       >
         <ToolContent>
           <ToolInput input={content.input} />
-          {block.complete && (
-            <ToolOutput errorText={undefined} output={undefined} />
+          {block.complete && result && (
+            <ToolOutput
+              errorText={undefined}
+              output={(result.content as ToolResultBlockParam).content}
+            />
           )}
         </ToolContent>
       </PopoverContent>

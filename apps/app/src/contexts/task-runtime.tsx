@@ -1,5 +1,5 @@
 import { Permission } from "@jupiter/shared/types";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { queries } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
 import { Agent, Task } from "@jupiter/sync/zero/zero-schema.gen";
@@ -8,6 +8,7 @@ import { useRuntimeId } from "@/src/hooks/useRuntimeId";
 import { useUser } from "@clerk/clerk-react";
 import { mutators } from "@jupiter/sync/mutators/data";
 import { useSessionId } from "@/src/hooks/useSessionId";
+import { useShellTools } from "@/src/hooks/useShellTools";
 
 type PermissionState = Record<string, Permission[]>;
 type PermissionIndexState = Record<string, number>;
@@ -15,8 +16,9 @@ type PermissionIndexState = Record<string, number>;
 type TaskRuntimeState = {
   tasks: Task[];
   selectedTaskId: string | "new-conversation";
-  selectedTask: Task | "new-conversation" | null;
+  selectedTask: Task | "new-conversation";
   selectTask: (task: string | "new-conversation") => void;
+  isGenerating: boolean;
   sendMessage: (message: string) => void;
   stopGeneration: (taskId: string) => void;
   composerStates: Record<string, ComposerState>;
@@ -61,6 +63,7 @@ const TaskRuntimeContext = createContext<TaskRuntimeState>({
   selectedTaskId: "new-conversation",
   selectedTask: "new-conversation",
   selectTask: () => {},
+  isGenerating: false,
   sendMessage: () => {},
   stopGeneration: () => {},
   composerStates: {},
@@ -83,6 +86,8 @@ export const TaskRuntimeProvider = ({
   const sessionId = useSessionId();
   const agents = useQuery(queries.agents.all())[0];
   const tasks = useQuery(queries.tasks.all())[0];
+
+  useShellTools(runtimeId, sessionId);
 
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
@@ -125,7 +130,28 @@ export const TaskRuntimeProvider = ({
   const selectedTask =
     selectedTaskId === "new-conversation"
       ? "new-conversation"
-      : (tasks?.find((task) => task.id === selectedTaskId) ?? null);
+      : tasks?.find((task) => task.id === selectedTaskId)!;
+
+  const isGenerating = useMemo(() => {
+    if (selectedTask === "new-conversation") {
+      return false;
+    }
+
+    switch (selectedTask.status) {
+      case "available":
+        return false;
+      case "executing":
+      case "starting":
+      case "stopping":
+        return true;
+      default:
+        return false;
+    }
+  }, [
+    selectedTask === "new-conversation"
+      ? "new-conversation"
+      : selectedTask.status,
+  ]);
 
   useEffect(() => {
     // New task is added, select it
@@ -212,6 +238,7 @@ export const TaskRuntimeProvider = ({
       const taskId = crypto.randomUUID();
       const turnId = crypto.randomUUID();
       const blockId = crypto.randomUUID();
+      const cwd = composerStates["new-conversation"]?.cwd;
 
       await z.mutate(
         mutators.tasks.create({
@@ -221,6 +248,7 @@ export const TaskRuntimeProvider = ({
           message,
           runtime_id: runtimeId,
           session_id: sessionId,
+          metadata: cwd ? { cwd } : undefined,
         })
       ).client;
 
@@ -260,6 +288,7 @@ export const TaskRuntimeProvider = ({
         selectedTaskId,
         selectedTask,
         selectTask,
+        isGenerating,
         sendMessage,
         stopGeneration,
         composerStates,

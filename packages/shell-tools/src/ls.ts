@@ -38,6 +38,7 @@ export type LsOutput = z.infer<typeof LsOutputSchema>;
 // Tool definition for Anthropic's tool use API
 export const lsToolDefinition = {
   name: "ls",
+  version: "0.0.1",
   description:
     "List files and directories in a given path. Returns entries sorted with directories first (prefixed with [DIR]), then files, both alphabetically. Hidden files are included by default. Results are limited to 100 entries.",
   inputSchema: LsInputSchema,

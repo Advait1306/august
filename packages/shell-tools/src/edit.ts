@@ -62,6 +62,7 @@ export type EditOutput = z.infer<typeof EditOutputSchema>;
 // Tool definition for Anthropic's tool use API
 export const editToolDefinition = {
   name: "edit",
+  version: "0.0.1",
   description:
     "Performs exact string replacements in files. Requires the file path, the exact text to find (oldString), and the replacement text (newString). By default requires a unique match; use replaceAll: true to replace all occurrences. Supports cascading match strategies for handling whitespace/indentation differences.",
   inputSchema: EditInputSchema,

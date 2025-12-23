@@ -37,6 +37,7 @@ export type GrepOutput = z.infer<typeof GrepOutputSchema>;
 // Tool definition for Anthropic's tool use API
 export const grepToolDefinition = {
   name: "grep",
+  version: "0.0.1",
   description:
     "Fast content search tool that works with any codebase size. Searches file contents using regular expressions. Supports full regex syntax (e.g. 'log.*Error', 'function\\s+\\w+'). Filter files by pattern with the include parameter (e.g. '*.js', '*.{ts,tsx}'). Returns file paths and line numbers with matches sorted by modification time.",
   inputSchema: GrepInputSchema,

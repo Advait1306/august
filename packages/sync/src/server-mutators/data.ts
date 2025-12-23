@@ -3,6 +3,7 @@ import { z } from "zod";
 import { builder } from "../zero/schema";
 import { mutators as clientMutators } from "../mutators/data";
 import mixpanel from "mixpanel";
+import { ToolUseBlockParam } from "@anthropic-ai/sdk/resources";
 
 type AsyncTask = Array<() => Promise<void>>;
 
@@ -47,11 +48,20 @@ export function createServerMutators(
           block_id: z.string(),
           runtime_id: z.string(),
           session_id: z.string(),
+          metadata: z.object({ cwd: z.string().optional() }).optional(),
         }),
         async ({
           tx,
           ctx,
-          args: { message, task_id, turn_id, block_id, runtime_id, session_id },
+          args: {
+            message,
+            task_id,
+            turn_id,
+            block_id,
+            runtime_id,
+            session_id,
+            metadata,
+          },
         }) => {
           // Run the base mutator
           await clientMutators.tasks.create.fn({
@@ -64,6 +74,7 @@ export function createServerMutators(
               block_id,
               runtime_id,
               session_id,
+              metadata,
             },
           });
 
@@ -201,13 +212,14 @@ export function createServerMutators(
       register: defineMutator(
         z.object({
           runtime_id: z.string(),
+          tools: z.array(z.object({ name: z.string(), version: z.string() })),
         }),
-        async ({ tx, ctx, args: { runtime_id } }) => {
+        async ({ tx, ctx, args: { runtime_id, tools } }) => {
           // Run the base mutator
           await clientMutators.runtimes.register.fn({
             tx,
             ctx,
-            args: { runtime_id },
+            args: { runtime_id, tools },
           });
         }
       ),
@@ -215,15 +227,16 @@ export function createServerMutators(
     tools: {
       submitResult: defineMutator(
         z.object({
-          tool_use_id: z.string(),
+          tool_block_id: z.string(),
           turn_id: z.string(),
           result: z.string(),
           block_id: z.string(),
+          is_error: z.boolean(),
         }),
         async ({
           tx,
           ctx,
-          args: { tool_use_id, turn_id, result, block_id },
+          args: { tool_block_id, turn_id, result, block_id, is_error },
         }) => {
           const turn = await tx.run(
             builder.turns
@@ -233,6 +246,17 @@ export function createServerMutators(
               })
               .one()
           );
+
+          const tool = await tx.run(
+            builder.blocks
+              .where("id", tool_block_id)
+              .where("type", "tool_use")
+              .one()
+          );
+
+          if (!tool) {
+            throw new Error("Tool block not found");
+          }
 
           if (!turn) {
             throw new Error("Turn not found");
@@ -250,15 +274,21 @@ export function createServerMutators(
             id: block_id,
             turn_id: turn_id,
             type: "tool_result",
-            status: "completed",
+            status: "none",
             content: {
               type: "tool_result",
-              tool_use_id: tool_use_id,
+              tool_use_id: (tool.content as ToolUseBlockParam).id,
               content: result,
+              is_error,
             },
             created_at: Date.now(),
             updated_at: Date.now(),
             processed: false,
+          });
+
+          await tx.mutate.blocks.update({
+            id: tool_block_id,
+            status: "completed",
           });
 
           asyncTasks.push(async () => {

@@ -2,7 +2,7 @@ import { useRef, useEffect } from "react";
 import { VList, VListHandle } from "virtua";
 import { useQuery } from "@rocicorp/zero/react";
 import { queries } from "@jupiter/sync/queries/data";
-import { Turn as TurnType } from "@jupiter/sync/zero/zero-schema.gen";
+import { Task, Turn as TurnType } from "@jupiter/sync/zero/zero-schema.gen";
 import { ConversationEmptyState } from "@/components/ai-elements/conversation";
 import { Turn } from "./turn";
 import { BlinkingCursor } from "./blinking-cursor";
@@ -17,24 +17,23 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 
 interface TaskThreadProps {
-  selectedTaskId: string;
+  selectedTask: Task | "new-conversation";
+  isGenerating: boolean;
 }
 
-export function TaskThread({ selectedTaskId }: TaskThreadProps) {
+export function TaskThread({ selectedTask, isGenerating }: TaskThreadProps) {
   const virtualizerRef = useRef<VListHandle>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch turns for the selected task
   const [turns] = useQuery(
-    selectedTaskId !== "new-conversation"
-      ? queries.turns.byTask({ taskId: selectedTaskId })
-      : queries.turns.byTask({ taskId: "" })
+    selectedTask !== "new-conversation"
+      ? queries.turns.byTask({ taskId: selectedTask.id })
+      : queries.turns.byTask({ taskId: "" }),
+    {
+      enabled: selectedTask !== "new-conversation",
+    }
   );
-
-  // Check if the last turn is incomplete (still generating)
-  const lastTurn = turns[turns.length - 1] as TurnType | undefined;
-  const isGenerating =
-    lastTurn?.type === "assistant" && lastTurn?.complete === false;
 
   // Scroll to bottom when turns change
   useEffect(() => {
@@ -43,9 +42,12 @@ export function TaskThread({ selectedTaskId }: TaskThreadProps) {
         align: "end",
       });
     }
-  }, [turns.length, selectedTaskId]);
+  }, [
+    turns.length,
+    selectedTask === "new-conversation" ? "new-conversation" : selectedTask.id,
+  ]);
 
-  if (selectedTaskId === "new-conversation") {
+  if (selectedTask === "new-conversation") {
     {
       /* The -translate-y-20 is to account for optical weight of the composer */
     }

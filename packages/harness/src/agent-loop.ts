@@ -25,38 +25,13 @@ const CODE_EXECUTION_TOOL = {
 };
 
 /**
- * Generate system prompt based on available tools
+ * Generate system prompt based on available tools and context
  */
-function generateSystemPrompt(mcpTools: Tool[], localTools: Tool[]): string {
+function generateSystemPrompt(cwd?: string): string {
   let prompt = `You are a helpful assistant with access to various tools.`;
 
-  if (mcpTools.length > 0) {
-    const toolList = mcpTools
-      .map((t) => `- ${t.name}: ${t.description || "No description"}`)
-      .join("\n");
-
-    prompt += `
-
-You have access to MCP (Model Context Protocol) tools that MUST be called programmatically via code execution.
-To use these tools, write Python code that calls them using await syntax.
-
-Available MCP tools:
-${toolList}
-
-Example usage in code execution:
-\`\`\`python
-# Call an MCP tool
-result = await tool_name(param1="value1", param2="value2")
-print(result)
-\`\`\`
-
-Important: These MCP tools can ONLY be called from within code execution, not directly.`;
-  }
-
-  if (localTools.length > 0) {
-    prompt += `
-
-You also have access to local tools for file system operations that can be called directly or via code execution.`;
+  if (cwd) {
+    prompt += `\n\nCurrent working directory: ${cwd}`;
   }
 
   return prompt;
@@ -80,6 +55,8 @@ export interface AgentLoopConfig {
   client?: Anthropic;
   /** Optional container ID for code execution persistence */
   container?: string;
+  /** Optional current working directory to include in the system prompt */
+  cwd?: string;
 }
 
 /**
@@ -99,6 +76,7 @@ export async function* agentLoop(
     maxTokens = 8192,
     client = new Anthropic(),
     container,
+    cwd,
   } = config;
 
   // Enable programmatic tool calling when MCP tools are provided
@@ -125,13 +103,18 @@ export async function* agentLoop(
     };
     // Add allowed_callers if programmatic calling is enabled
     if (useProgrammaticCalling) {
-      (converted as Tool & { allowed_callers: string[] }).allowed_callers = ["code_execution_20250825"];
+      (converted as Tool & { allowed_callers: string[] }).allowed_callers = [
+        "code_execution_20250825",
+      ];
     }
     return converted;
   });
 
   // Combine local tools with MCP tools (MCP tools already have allowed_callers set)
-  let allTools: (Tool | typeof CODE_EXECUTION_TOOL)[] = [...convertedTools, ...mcpTools];
+  let allTools: (Tool | typeof CODE_EXECUTION_TOOL)[] = [
+    ...convertedTools,
+    ...mcpTools,
+  ];
 
   // Add code execution tool if using programmatic calling
   if (useProgrammaticCalling) {
@@ -144,8 +127,8 @@ export async function* agentLoop(
     betas.push("advanced-tool-use-2025-11-20");
   }
 
-  // Generate dynamic system prompt based on available tools
-  const systemPrompt = generateSystemPrompt(mcpTools, convertedTools);
+  // Generate dynamic system prompt based on available tools and context
+  const systemPrompt = generateSystemPrompt(cwd);
 
   const stream = await client.beta.messages.create({
     model,

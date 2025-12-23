@@ -54,6 +54,12 @@ export class AssistantTurnProcessor {
         content: BetaContentBlockParam;
         complete: boolean;
         processed: boolean;
+        status:
+          | "none"
+          | "permission_pending"
+          | "client_pending"
+          | "server_pending"
+          | "completed";
       };
     }
   > = {};
@@ -65,23 +71,77 @@ export class AssistantTurnProcessor {
     this.task.dirty = true;
   }
 
-  setContainer(container: BetaContainer) {
+  private setContainer(container: BetaContainer) {
     this.turn.metadata.container = container;
     this.turn.dirty = true;
   }
 
-  setStopReason(stopReason: BetaStopReason) {
+  private setStopReason(stopReason: BetaStopReason) {
     this.turn.metadata.stopReason = stopReason;
     this.turn.dirty = true;
   }
 
+  /**
+   * Destroys the current object and replaces its value with an empty string.
+   * Should be used when partial_json is being sent for a tool use block.
+   *
+   * @param index - The index of the block to convert.
+   *
+   * Only affects the block if it's a tool where the input is an object, otherwise it does nothing.
+   */
+  private convertToolUseBlockInputToString(index: number) {
+    if (
+      (this.blocks[index].data.content.type === "tool_use" ||
+        this.blocks[index].data.content.type === "server_tool_use") &&
+      typeof (
+        this.blocks[index].data.content as
+          | BetaToolUseBlockParam
+          | BetaServerToolUseBlockParam
+      ).input === "object"
+    ) {
+      (
+        this.blocks[index].data.content as
+          | BetaToolUseBlockParam
+          | BetaServerToolUseBlockParam
+      ).input = "";
+    }
+  }
+
+  /**
+   * Parses the string available in the `input` field of a tool use block and replaces it with the parsed object.
+   * Should be used when the input is a stringified JSON.
+   *
+   * @param index - The index of the block to convert.
+   *
+   * Only affects the block if it's a tool where the input is a string, otherwise it does nothing.
+   */
+  private convertToolUseBlockInputToObject(index: number) {
+    if (
+      (this.blocks[index].data.content.type === "tool_use" ||
+        this.blocks[index].data.content.type === "server_tool_use") &&
+      typeof (
+        this.blocks[index].data.content as
+          | BetaToolUseBlockParam
+          | BetaServerToolUseBlockParam
+      ).input === "string"
+    ) {
+      (
+        this.blocks[index].data.content as
+          | BetaToolUseBlockParam
+          | BetaServerToolUseBlockParam
+      ).input = JSON.parse(
+        (
+          this.blocks[index].data.content as
+            | BetaToolUseBlockParam
+            | BetaServerToolUseBlockParam
+        ).input as string
+      );
+    }
+  }
+
   processMessageStart(data: BetaRawMessageStartEvent) {
     for (const index in data.message.content) {
-      this.processBlockStart({
-        index: parseInt(index),
-        content_block: data.message.content[index],
-        type: "content_block_start",
-      });
+      this.processCompleteBlock(parseInt(index), data.message.content[index]);
     }
 
     if (data.message.container) this.setContainer(data.message.container);
@@ -103,6 +163,24 @@ export class AssistantTurnProcessor {
     this.flushToDb();
   }
 
+  processCompleteBlock(index: number, content: BetaContentBlockParam) {
+    this.blocks[index].data.content = content;
+    this.blocks[index].data.complete = true;
+    this.blocks[index].data.processed = true;
+    this.blocks[index].data.status = "none";
+
+    if (content.type === "tool_use") {
+      this.toolResponseTurnRequired = true;
+    }
+
+    if (this.blocks[index].data.content.type === "tool_use") {
+      // Permission checker goes here to check what's the status to be added to the block.
+      this.blocks[index].data.status = "client_pending";
+    }
+
+    this.blocks[index].dirty = true;
+  }
+
   processBlockStart(data: BetaRawContentBlockStartEvent) {
     const content = data.content_block;
 
@@ -113,6 +191,7 @@ export class AssistantTurnProcessor {
         content: content,
         complete: false,
         processed: false,
+        status: "none",
       },
     };
 
@@ -130,6 +209,9 @@ export class AssistantTurnProcessor {
         break;
       }
       case "input_json_delta": {
+        // When starting the block, the input is an empty object,
+        // in order to process partial JSON we must convert it to a string.
+        this.convertToolUseBlockInputToString(data.index);
         (
           this.blocks[data.index].data.content as
             | BetaToolUseBlockParam
@@ -145,6 +227,19 @@ export class AssistantTurnProcessor {
   }
 
   processBlockStop(data: BetaRawContentBlockStopEvent) {
+    // Tool use blocks might have JSON that's accumulated in string format and needs to be parsed
+    if (
+      this.blocks[data.index].data.content.type === "tool_use" ||
+      this.blocks[data.index].data.content.type === "server_tool_use"
+    ) {
+      this.convertToolUseBlockInputToObject(data.index);
+    }
+
+    if (this.blocks[data.index].data.content.type === "tool_use") {
+      // Permission checker goes here to check what's the status to be added to the block.
+      this.blocks[data.index].data.status = "client_pending";
+    }
+
     this.blocks[data.index].data.complete = true;
     this.blocks[data.index].data.processed = true;
     this.blocks[data.index].dirty = true;
@@ -188,6 +283,8 @@ export class AssistantTurnProcessor {
           updated_at: new Date(),
         })
         .where(eq(turns.id, this.turn.id));
+
+      this.turn.dirty = false;
     }
 
     if (this.toolResponseTurnRequired && !this.toolResponseTurnId) {
@@ -216,6 +313,8 @@ export class AssistantTurnProcessor {
           created_at: new Date(),
           updated_at: new Date(),
           complete: block.data.complete,
+          status: block.data.status,
+          processed: block.data.processed,
           // Tool use types require a response turn for clients to put result in
           response_turn_id:
             block.data.content.type === "tool_use"
@@ -233,9 +332,12 @@ export class AssistantTurnProcessor {
             content: block.data.content,
             complete: block.data.complete,
             processed: block.data.processed,
+            status: block.data.status,
             updated_at: new Date(),
           })
           .where(eq(blocks.id, block.id));
+
+        block.dirty = false;
       }
     }
   }

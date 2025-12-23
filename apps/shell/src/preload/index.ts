@@ -1,7 +1,6 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { IPC_CHANNELS } from '@jupiter/shared/ipc'
-import { agent } from './agent'
+import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
 
 // Custom APIs for renderer
 const api = {
@@ -22,13 +21,17 @@ const api = {
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.QUIT_AND_INSTALL),
     getUpdateInfo: () => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.AUTO_UPDATER.GET_INFO)
   },
-  agent: agent,
-  claudeCode: {
-    discoverInstallations: () =>
-      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.CLAUDE_CODE.DISCOVER_INSTALLATIONS)
-  },
   browser: {
     openUrl: (url: string) => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.BROWSER.OPEN_URL, url)
+  },
+  shellTools: {
+    getManifest: (): Promise<IPC.ShellTools.GetManifestResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.SHELL_TOOLS.GET_MANIFEST),
+    execute: <T extends keyof IPC.ShellTools.ToolInputMap>(
+      name: T,
+      input: IPC.ShellTools.ToolInputMap[T]
+    ): Promise<IPC.ShellTools.ToolOutputMap[T]> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.SHELL_TOOLS.EXECUTE, { name, input })
   }
 }
 

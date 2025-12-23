@@ -1,5 +1,5 @@
 {
-  "name": "@august/litmus",
+  "name": "litmus",
   "version": "1.0.0",
   "type": "module",
   "private": true,

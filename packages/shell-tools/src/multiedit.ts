@@ -102,6 +102,7 @@ export class MultiEditError extends Error {
 // Tool definition for Anthropic's tool use API
 export const multieditToolDefinition = {
   name: "multiedit",
+  version: "0.0.1",
   description: `Performs multiple exact string replacements in a single file in one operation.
 
 Use this tool instead of multiple 'edit' calls when making several changes to the same file. All edits are applied sequentially in the order provided.

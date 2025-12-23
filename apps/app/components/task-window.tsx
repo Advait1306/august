@@ -14,6 +14,8 @@ export default function TaskWindow() {
 
   const {
     selectedTaskId,
+    selectedTask,
+    isGenerating,
     sendMessage,
     stopGeneration,
     composerStates,
@@ -60,13 +62,13 @@ export default function TaskWindow() {
           cwd={cwd}
           defaultCwd={defaultCwd}
           todoState={[]}
-          isGenerating={false}
+          isGenerating={isGenerating}
         />
       )}
 
       {/* Thread */}
       <motion.div layout className="grow w-full flex justify-center">
-        <TaskThread selectedTaskId={selectedTaskId} />
+        <TaskThread selectedTask={selectedTask} isGenerating={isGenerating} />
       </motion.div>
 
       {/* Composer & Permission Container */}
@@ -75,7 +77,7 @@ export default function TaskWindow() {
         <TaskComposer
           prompt={prompt}
           setPrompt={setPrompt}
-          isGenerating={false}
+          isGenerating={isGenerating}
           sendMessage={sendMessage}
           stopGeneration={stopGeneration}
           selectedTaskId={selectedTaskId}

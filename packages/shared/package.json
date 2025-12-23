@@ -1,15 +1,19 @@
 {
   "name": "@jupiter/shared",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "dependencies": {
+    "@august/shell-tools": "*",
     "electron": "^38.0.0",
     "@jupiter/typescript-config": "*",
     "typescript": "latest"
   },
+  "devDependencies": {
+    "tsc-esm-fix": "^3.1.2"
+  },
   "scripts": {
-    "dev": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc && tsc-esm-fix --target=dist"
   },
   "exports": {
     "./agent-request-permission-over-ipc": {

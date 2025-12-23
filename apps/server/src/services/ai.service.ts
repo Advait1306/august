@@ -1,9 +1,14 @@
-import { eq, InferSelectModel } from "drizzle-orm";
+import { asc, eq, InferSelectModel } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { blocks, tasks, turns } from "@jupiter/sync/db/schema";
 import { agentLoop } from "@august/harness";
 import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { AssistantTurnProcessor } from "../processors/assistant-turn-processor";
+import { toolDefinitions } from "@august/shell-tools";
+import {
+  ToolResultBlockParam,
+  ToolUseBlockParam,
+} from "@anthropic-ai/sdk/resources";
 
 // const MAX_ITERATIONS = 50;
 
@@ -38,8 +43,10 @@ export class AiService {
           with: {
             blocks: {
               where: eq(blocks.processed, true),
+              orderBy: [asc(blocks.created_at)],
             },
           },
+          orderBy: [asc(turns.created_at)],
         },
       },
     });
@@ -85,6 +92,7 @@ export class AiService {
 
     // Get last turn that should contain the corresponding tool_use
     const lastAssistantTurnToolUseBlocks = task.turns
+      .slice()
       .reverse()
       .find((turn) => turn.type === "assistant")
       ?.blocks.filter((block) => block.type === "tool_use");
@@ -97,11 +105,10 @@ export class AiService {
     }
 
     // Match tool_use_id from tool_result to tool_use
-    const toolUseId = (block.content as { tool_use_id: string }).tool_use_id;
+    const toolUseId = (block.content as ToolResultBlockParam).tool_use_id;
 
     const toolUseBlock = lastAssistantTurnToolUseBlocks.find(
-      (block) =>
-        (block.content as { tool_use_id: string }).tool_use_id === toolUseId
+      (block) => (block.content as ToolUseBlockParam).id === toolUseId
     );
 
     if (!toolUseBlock) {
@@ -118,7 +125,7 @@ export class AiService {
 
     // Check if all tool_use blocks are answered - to start the agent loop
     const toolResultBlocks = task.turns
-      .find((turn) => turn.id === turn.id)
+      .find((t) => t.id === turn.id)
       ?.blocks.filter((block) => block.type === "tool_result");
 
     if (!toolResultBlocks) {
@@ -130,12 +137,11 @@ export class AiService {
     // TODO: Find a better array matching algorithm, this is O(n^2)
     if (
       lastAssistantTurnToolUseBlocks.every((block) => {
-        const tool_use_id = (block.content as { tool_use_id: string })
-          .tool_use_id;
+        const tool_use_id = (block.content as ToolUseBlockParam).id;
 
         return appendedToolResultBlocks.some((toolResultBlock) => {
           const result_tool_use_id = (
-            toolResultBlock.content as { tool_use_id: string }
+            toolResultBlock.content as ToolResultBlockParam
           ).tool_use_id;
           return result_tool_use_id === tool_use_id;
         });
@@ -148,7 +154,7 @@ export class AiService {
 
   private async processTextBlock(params: ProcessBlockParams) {
     // TODO: We might have to check for integrity here
-    
+
     await this.db
       .update(blocks)
       .set({
@@ -168,15 +174,25 @@ export class AiService {
           with: {
             blocks: {
               where: eq(blocks.processed, true),
+              orderBy: [asc(blocks.created_at)],
             },
           },
+          orderBy: [asc(turns.created_at)],
         },
+        runtime: true,
       },
     });
 
     if (!task) {
       throw new Error("Task not found");
     }
+
+    // Get tools from runtime and map to tool definitions
+    // TODO: Check version numbers here to verify correct tools are being used
+    const runtimeTools = task.runtime?.tools ?? [];
+    const tools = toolDefinitions.filter((toolDef) =>
+      runtimeTools.some((rt) => rt.name === toolDef.name)
+    );
 
     // TODO: Use iterations once pause_turn is implemented
     // let iterations = 0;
@@ -200,6 +216,8 @@ export class AiService {
 
     for await (const event of agentLoop({
       messages,
+      tools,
+      cwd: task.metadata?.cwd,
     })) {
       switch (event.type) {
         case "message_start": {
@@ -216,7 +234,6 @@ export class AiService {
         }
         case "content_block_start": {
           assistantTurnProcessor.processBlockStart(event);
-          // Handle content block start
           break;
         }
         case "content_block_delta": {

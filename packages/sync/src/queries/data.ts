@@ -35,6 +35,17 @@ export const queries = defineQueries({
           .orderBy("created_at", "asc");
       }
     ),
+    getPendingShellTools: defineQuery(({ ctx }) => {
+      return builder.blocks
+        .where("status", "client_pending")
+        .where("type", "tool_use")
+        .where("complete", true)
+        .related("turn", (q) => {
+          return q.related("task", (s) => {
+            return s.where("author_id", ctx.userId);
+          });
+        });
+    }),
   },
   organisations: {
     current: defineQuery(({ ctx }) => {

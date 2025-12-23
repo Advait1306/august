@@ -55,3 +55,16 @@ export {
   type WriteOutput,
 } from "./write";
 export { rgPath } from "@vscode/ripgrep";
+
+// Manifest and types
+export {
+  toolDefinitions,
+  getShellToolsManifest,
+  shellToolsManifest,
+  type ToolName,
+} from "./manifest";
+export type {
+  ToolMetadata,
+  ToolDefinition,
+  ShellToolsManifest,
+} from "./types";
