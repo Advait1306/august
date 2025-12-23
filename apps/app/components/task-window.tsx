@@ -14,6 +14,7 @@ export default function TaskWindow() {
 
   const {
     selectedTaskId,
+    selectedTask,
     sendMessage,
     stopGeneration,
     composerStates,
@@ -66,7 +67,7 @@ export default function TaskWindow() {
 
       {/* Thread */}
       <motion.div layout className="grow w-full flex justify-center">
-        <TaskThread selectedTaskId={selectedTaskId} />
+        <TaskThread selectedTask={selectedTask} />
       </motion.div>
 
       {/* Composer & Permission Container */}

@@ -16,7 +16,7 @@ type PermissionIndexState = Record<string, number>;
 type TaskRuntimeState = {
   tasks: Task[];
   selectedTaskId: string | "new-conversation";
-  selectedTask: Task | "new-conversation" | null;
+  selectedTask: Task | "new-conversation";
   selectTask: (task: string | "new-conversation") => void;
   sendMessage: (message: string) => void;
   stopGeneration: (taskId: string) => void;
@@ -86,7 +86,7 @@ export const TaskRuntimeProvider = ({
   const tasks = useQuery(queries.tasks.all())[0];
 
   useShellTools(runtimeId, sessionId);
-  
+
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
   >({
@@ -128,7 +128,7 @@ export const TaskRuntimeProvider = ({
   const selectedTask =
     selectedTaskId === "new-conversation"
       ? "new-conversation"
-      : (tasks?.find((task) => task.id === selectedTaskId) ?? null);
+      : tasks?.find((task) => task.id === selectedTaskId)!;
 
   useEffect(() => {
     // New task is added, select it

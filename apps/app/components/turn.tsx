@@ -4,7 +4,10 @@ import {
   BetaContentBlockParam,
   BetaToolUseBlockParam,
 } from "@anthropic-ai/sdk/resources/beta";
-import { Turn as TurnType, Block as BlockType } from "@jupiter/sync/zero/zero-schema.gen";
+import {
+  Turn as TurnType,
+  Block as BlockType,
+} from "@jupiter/sync/zero/zero-schema.gen";
 import {
   UserTextBlock,
   AssistantTextBlock,
@@ -22,12 +25,20 @@ export function Turn({ turn }: TurnProps) {
   // Fetch blocks for this turn
   const [blocks] = useQuery(queries.blocks.byTurn({ turnId: turn.id }));
 
-  // Render based on turn type
-  if (turn.type === "user") {
-    return <UserTurn blocks={blocks as BlockType[]} />;
+  // Skip turns with tool result blocks,
+  // they will be shown along with tool_use block
+  if (blocks.find((block) => block.type === "tool_result")) {
+    return null;
   }
 
-  return <AssistantTurn blocks={blocks as BlockType[]} />;
+  switch (turn.type) {
+    case "user":
+      return <UserTurn blocks={blocks as BlockType[]} />;
+    case "assistant":
+      return <AssistantTurn blocks={blocks as BlockType[]} />;
+    default:
+      return <div>Unknown turn type found: {turn.type}</div>;
+  }
 }
 
 function UserTurn({ blocks }: { blocks: BlockType[] }) {
@@ -40,45 +51,60 @@ function UserTurn({ blocks }: { blocks: BlockType[] }) {
   );
 }
 
-function AssistantTurn({ blocks }: { blocks: BlockType[] }) {
-  const elements: React.ReactNode[] = [];
-  let toolGroup: BlockType[] = [];
+type GroupedBlock =
+  | { type: "text"; block: BlockType }
+  | { type: "thinking"; block: BlockType }
+  | { type: "tool_group"; blocks: BlockType[] };
 
-  const flushToolGroup = () => {
-    if (toolGroup.length > 0) {
-      elements.push(
-        <div key={`tool-group-${toolGroup[0].id}`} className="w-full flex gap-2 flex-wrap pb-2">
-          {toolGroup.map((block) => (
-            <ToolUseBlock key={block.id} block={block} />
-          ))}
-        </div>
-      );
-      toolGroup = [];
-    }
-  };
-
-  blocks.forEach((block) => {
+function groupBlocks(blocks: BlockType[]): GroupedBlock[] {
+  return blocks.reduce<GroupedBlock[]>((acc, block) => {
     const content = block.content as BetaContentBlockParam;
 
     if (content.type === "tool_use") {
-      // Filter out certain tools
       const toolContent = content as BetaToolUseBlockParam;
-      if (!FILTERED_TOOL_NAMES.includes(toolContent.name)) {
-        toolGroup.push(block);
-      }
-    } else {
-      flushToolGroup();
+      if (FILTERED_TOOL_NAMES.includes(toolContent.name)) return acc;
 
-      if (content.type === "text") {
-        elements.push(<AssistantTextBlock key={block.id} block={block} />);
-      } else if (content.type === "thinking") {
-        elements.push(<ThinkingBlock key={block.id} block={block} />);
+      const last = acc[acc.length - 1];
+      if (last?.type === "tool_group") {
+        last.blocks.push(block);
+        return acc;
       }
-      // tool_result blocks are skipped as they're shown with their tool_use
+      return [...acc, { type: "tool_group", blocks: [block] }];
     }
-  });
 
-  flushToolGroup();
+    if (content.type === "text") return [...acc, { type: "text", block }];
+    if (content.type === "thinking")
+      return [...acc, { type: "thinking", block }];
+    return acc;
+  }, []);
+}
 
-  return <div className="flex flex-col gap-2">{elements}</div>;
+function AssistantTurn({ blocks }: { blocks: BlockType[] }) {
+  const grouped = groupBlocks(blocks);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {grouped.map((item) => {
+        switch (item.type) {
+          case "text":
+            return (
+              <AssistantTextBlock key={item.block.id} block={item.block} />
+            );
+          case "thinking":
+            return <ThinkingBlock key={item.block.id} block={item.block} />;
+          case "tool_group":
+            return (
+              <div
+                key={`tool-group-${item.blocks[0].id}`}
+                className="w-full flex gap-2 flex-wrap pb-2"
+              >
+                {item.blocks.map((b) => (
+                  <ToolUseBlock key={b.id} block={b} />
+                ))}
+              </div>
+            );
+        }
+      })}
+    </div>
+  );
 }
