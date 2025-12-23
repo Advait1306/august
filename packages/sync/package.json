@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
     "@jupiter/typescript-config": "*",
     "@rocicorp/zero": "0.25.5",
     "electron": "^38.0.0",

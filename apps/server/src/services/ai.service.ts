@@ -1,10 +1,14 @@
-import { eq, InferSelectModel } from "drizzle-orm";
+import { asc, eq, InferSelectModel } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { blocks, tasks, turns } from "@jupiter/sync/db/schema";
 import { agentLoop } from "@august/harness";
 import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { AssistantTurnProcessor } from "../processors/assistant-turn-processor";
 import { toolDefinitions } from "@august/shell-tools";
+import {
+  ToolResultBlockParam,
+  ToolUseBlockParam,
+} from "@anthropic-ai/sdk/resources";
 
 // const MAX_ITERATIONS = 50;
 
@@ -32,6 +36,7 @@ export class AiService {
   }
 
   async processBlock(taskId: string, turnId: string, blockId: string) {
+    console.log("Process Block started: ", Date.now());
     const task = await this.db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
       with: {
@@ -39,8 +44,10 @@ export class AiService {
           with: {
             blocks: {
               where: eq(blocks.processed, true),
+              orderBy: [asc(blocks.created_at)],
             },
           },
+          orderBy: [asc(turns.created_at)],
         },
       },
     });
@@ -98,11 +105,10 @@ export class AiService {
     }
 
     // Match tool_use_id from tool_result to tool_use
-    const toolUseId = (block.content as { tool_use_id: string }).tool_use_id;
+    const toolUseId = (block.content as ToolResultBlockParam).tool_use_id;
 
     const toolUseBlock = lastAssistantTurnToolUseBlocks.find(
-      (block) =>
-        (block.content as { tool_use_id: string }).tool_use_id === toolUseId
+      (block) => (block.content as ToolUseBlockParam).id === toolUseId
     );
 
     if (!toolUseBlock) {
@@ -131,12 +137,11 @@ export class AiService {
     // TODO: Find a better array matching algorithm, this is O(n^2)
     if (
       lastAssistantTurnToolUseBlocks.every((block) => {
-        const tool_use_id = (block.content as { tool_use_id: string })
-          .tool_use_id;
+        const tool_use_id = (block.content as ToolUseBlockParam).id;
 
         return appendedToolResultBlocks.some((toolResultBlock) => {
           const result_tool_use_id = (
-            toolResultBlock.content as { tool_use_id: string }
+            toolResultBlock.content as ToolResultBlockParam
           ).tool_use_id;
           return result_tool_use_id === tool_use_id;
         });
@@ -144,6 +149,8 @@ export class AiService {
     ) {
       // All tool use blocks are answered, start the agent loop
       await this.runAgentLoop(params.task.id);
+    } else {
+      console.log("Process block ended in process result: ", Date.now());
     }
   }
 
@@ -169,12 +176,16 @@ export class AiService {
           with: {
             blocks: {
               where: eq(blocks.processed, true),
+              orderBy: [asc(blocks.created_at)],
             },
           },
+          orderBy: [asc(turns.created_at)],
         },
         runtime: true,
       },
     });
+
+    // console.log(JSON.stringify(task, null, 2));
 
     if (!task) {
       throw new Error("Task not found");
@@ -244,6 +255,8 @@ export class AiService {
         lastFlush = Date.now();
       }
     }
+
+    console.log("Process block ended in agent loop: ", Date.now());
 
     // }
   }
