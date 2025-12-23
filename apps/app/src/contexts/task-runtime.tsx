@@ -50,14 +50,6 @@ type ComposerState = {
   cwd: string;
 };
 
-export type Todo = {
-  status: "pending" | "in_progress" | "completed";
-  content: string;
-  activeForm: string;
-};
-
-export type TodoState = Todo[];
-
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
   tasks: [],
   selectedTaskId: "new-conversation",

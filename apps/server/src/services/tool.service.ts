@@ -12,14 +12,6 @@ import type {
   ToolUseBlockParam,
 } from "@anthropic-ai/sdk/resources";
 
-export interface ServerToolJobData {
-  task_id: string;
-  turn_id: string; // The response turn (user turn waiting for results)
-  block_id: string; // The tool_use block (database ID)
-  tool_name: string;
-  tool_input: unknown;
-}
-
 export class ToolService {
   private static instance: ToolService;
   private constructor(private db: AppState["db"]) {}

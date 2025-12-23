@@ -1,14 +1,19 @@
 import { state } from "../../config/state";
 import { createQueue, createWorker } from "../factory";
 import { ReservedJob } from "groupmq";
-import {
-  ToolService,
-  ServerToolJobData,
-} from "../../services/tool.service";
+import { ToolService } from "../../services/tool.service";
 
 const queueName = "server-tool-executor";
 
 const queue = createQueue(queueName);
+
+interface ServerToolJobData {
+  task_id: string;
+  turn_id: string; // The response turn (user turn waiting for results)
+  block_id: string; // The tool_use block (database ID)
+  tool_name: string;
+  tool_input: unknown;
+}
 
 const worker = createWorker(
   queue,
