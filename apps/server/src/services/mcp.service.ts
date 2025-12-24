@@ -41,10 +41,10 @@ export class McpService {
       return { connections: [], tools: [], toolToMcpId: new Map() };
     }
 
-    const connections: McpConnection[] = [];
     const toolToMcpId = new Map<string, string>();
 
-    for (const mcp of userMcps) {
+    // Connect to all MCPs in parallel for better performance
+    const connectionPromises = userMcps.map(async (mcp) => {
       try {
         let serverUrl: string | null = null;
         let authToken: string | null = null;
@@ -69,7 +69,7 @@ export class McpService {
 
           if (!serverUrl) {
             console.warn(`[McpService] No server URL found for OAuth MCP: ${mcp.id}`);
-            continue;
+            return null;
           }
 
           // Get the access token
@@ -77,7 +77,7 @@ export class McpService {
 
           if (!authToken) {
             console.warn(`[McpService] No access token found for MCP: ${mcp.id}`);
-            continue;
+            return null;
           }
         } else if (mcp.integration_type === "composio") {
           // Get the Composio connection URL
@@ -85,7 +85,7 @@ export class McpService {
 
           if (!serverUrl) {
             console.warn(`[McpService] No Composio connection URL found for MCP: ${mcp.id}`);
-            continue;
+            return null;
           }
 
           // Composio MCPs don't need auth tokens - the URL contains the auth
@@ -93,7 +93,7 @@ export class McpService {
 
         if (!serverUrl) {
           console.warn(`[McpService] No server URL found for MCP: ${mcp.id}`);
-          continue;
+          return null;
         }
 
         console.log(`[McpService] Connecting to MCP: ${mcp.name} (${mcp.id})`);
@@ -104,17 +104,28 @@ export class McpService {
           authToken: authToken ?? undefined,
         });
 
-        connections.push(connection);
-
-        // Map each tool name to its MCP ID
-        for (const tool of connection.tools) {
-          toolToMcpId.set(tool.name, mcp.id);
-        }
-
         console.log(`[McpService] Connected to MCP: ${mcp.name}, tools: ${connection.tools.length}`);
+
+        return { connection, mcpId: mcp.id };
       } catch (error) {
         // Log error but continue with other MCPs (graceful degradation)
         console.error(`[McpService] Failed to connect to MCP ${mcp.name} (${mcp.id}):`, error);
+        return null;
+      }
+    });
+
+    // Wait for all connections to complete
+    const results = await Promise.all(connectionPromises);
+
+    // Filter out failed connections and build the connections array and tool mapping
+    const connections: McpConnection[] = [];
+    for (const result of results) {
+      if (result) {
+        connections.push(result.connection);
+        // Map each tool name to its MCP ID
+        for (const tool of result.connection.tools) {
+          toolToMcpId.set(tool.name, result.mcpId);
+        }
       }
     }
 
