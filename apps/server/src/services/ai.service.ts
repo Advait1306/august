@@ -1,7 +1,7 @@
 import { asc, eq, InferSelectModel } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { blocks, tasks, turns } from "@jupiter/sync/db/schema";
- import { agentLoop, McpConnection, getMcpTools } from "@august/harness";
+import { agentLoop, McpConnection, getMcpTools } from "@august/harness";
 import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { AssistantTurnProcessor } from "../processors/assistant-turn-processor";
 import { toolDefinitions } from "@august/shell-tools";
