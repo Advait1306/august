@@ -49,46 +49,51 @@ export class McpService {
         let serverUrl: string | null = null;
         let authToken: string | null = null;
 
-        if (mcp.integration_type === "oauth") {
-          // Get the MCP server URL
-          if (mcp.mcp_store_id) {
-            // Store MCP - fetch from oauth integration details
-            const [oauthDetails] = await this.db
-              .select()
-              .from(mcpOauthIntegrationDetails)
-              .where(eq(mcpOauthIntegrationDetails.mcp_store_id, mcp.mcp_store_id))
-              .limit(1);
+        switch (mcp.integration_type) {
+          case "oauth": {
+            // Get the MCP server URL
+            if (mcp.mcp_store_id) {
+              // Store MCP - fetch from oauth integration details
+              const [oauthDetails] = await this.db
+                .select()
+                .from(mcpOauthIntegrationDetails)
+                .where(eq(mcpOauthIntegrationDetails.mcp_store_id, mcp.mcp_store_id))
+                .limit(1);
 
-            if (oauthDetails) {
-              serverUrl = oauthDetails.mcp_server_url;
+              if (oauthDetails) {
+                serverUrl = oauthDetails.mcp_server_url;
+              }
+            } else if (mcp.custom_mcp_server_url) {
+              // Custom MCP
+              serverUrl = mcp.custom_mcp_server_url;
             }
-          } else if (mcp.custom_mcp_server_url) {
-            // Custom MCP
-            serverUrl = mcp.custom_mcp_server_url;
+
+            if (!serverUrl) {
+              console.warn(`[McpService] No server URL found for OAuth MCP: ${mcp.id}`);
+              return null;
+            }
+
+            // Get the access token
+            authToken = await this.oauthService.getAccessToken({ mcpId: mcp.id });
+
+            if (!authToken) {
+              console.warn(`[McpService] No access token found for MCP: ${mcp.id}`);
+              return null;
+            }
+            break;
           }
+          case "composio": {
+            // Get the Composio connection URL
+            serverUrl = await this.composioService.getConnectionUrl({ mcpId: mcp.id });
 
-          if (!serverUrl) {
-            console.warn(`[McpService] No server URL found for OAuth MCP: ${mcp.id}`);
-            return null;
+            if (!serverUrl) {
+              console.warn(`[McpService] No Composio connection URL found for MCP: ${mcp.id}`);
+              return null;
+            }
+
+            // Composio MCPs don't need auth tokens - the URL contains the auth
+            break;
           }
-
-          // Get the access token
-          authToken = await this.oauthService.getAccessToken({ mcpId: mcp.id });
-
-          if (!authToken) {
-            console.warn(`[McpService] No access token found for MCP: ${mcp.id}`);
-            return null;
-          }
-        } else if (mcp.integration_type === "composio") {
-          // Get the Composio connection URL
-          serverUrl = await this.composioService.getConnectionUrl({ mcpId: mcp.id });
-
-          if (!serverUrl) {
-            console.warn(`[McpService] No Composio connection URL found for MCP: ${mcp.id}`);
-            return null;
-          }
-
-          // Composio MCPs don't need auth tokens - the URL contains the auth
         }
 
         if (!serverUrl) {
@@ -149,86 +154,4 @@ export class McpService {
     await disconnectAll(connections);
   }
 
-  /**
-   * Execute a single MCP tool by mcpId
-   * Creates a temporary connection, executes the tool, and disconnects
-   */
-  async executeTool(params: {
-    mcpId: string;
-    toolName: string;
-    args: Record<string, unknown>;
-  }): Promise<unknown> {
-    const { mcpId, toolName, args } = params;
-
-    // Fetch the MCP
-    const [mcp] = await this.db
-      .select()
-      .from(mcps)
-      .where(eq(mcps.id, mcpId))
-      .limit(1);
-
-    if (!mcp) {
-      throw new Error(`MCP not found: ${mcpId}`);
-    }
-
-    let serverUrl: string | null = null;
-    let authToken: string | null = null;
-
-    if (mcp.integration_type === "oauth") {
-      // Get the MCP server URL
-      if (mcp.mcp_store_id) {
-        const [oauthDetails] = await this.db
-          .select()
-          .from(mcpOauthIntegrationDetails)
-          .where(eq(mcpOauthIntegrationDetails.mcp_store_id, mcp.mcp_store_id))
-          .limit(1);
-
-        if (oauthDetails) {
-          serverUrl = oauthDetails.mcp_server_url;
-        }
-      } else if (mcp.custom_mcp_server_url) {
-        serverUrl = mcp.custom_mcp_server_url;
-      }
-
-      if (!serverUrl) {
-        throw new Error(`No server URL found for OAuth MCP: ${mcpId}`);
-      }
-
-      // Get the access token
-      authToken = await this.oauthService.getAccessToken({ mcpId });
-
-      if (!authToken) {
-        throw new Error(`No access token found for MCP: ${mcpId}`);
-      }
-    } else if (mcp.integration_type === "composio") {
-      serverUrl = await this.composioService.getConnectionUrl({ mcpId });
-
-      if (!serverUrl) {
-        throw new Error(`No Composio connection URL found for MCP: ${mcpId}`);
-      }
-    }
-
-    if (!serverUrl) {
-      throw new Error(`No server URL found for MCP: ${mcpId}`);
-    }
-
-    console.log(`[McpService] Executing tool ${toolName} on MCP: ${mcp.name} (${mcpId})`);
-
-    // Connect to the MCP
-    const connection = await connectMcpServer({
-      name: mcp.name,
-      url: serverUrl,
-      authToken: authToken ?? undefined,
-    });
-
-    try {
-      // Execute the tool
-      const result = await connection.execute(toolName, args);
-      console.log(`[McpService] Tool ${toolName} executed successfully`);
-      return result;
-    } finally {
-      // Always disconnect
-      await connection.disconnect();
-    }
-  }
 }

@@ -5,9 +5,15 @@
 import { eq } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { getServerTool } from "../server-tools";
-import { blocks } from "@jupiter/sync/db/schema";
+import {
+  blocks,
+  mcps,
+  mcpOauthIntegrationDetails,
+} from "@jupiter/sync/db/schema";
 import { addToAgentLoopQueue } from "../queues/workers/agentLoopWorker";
-import { McpService } from "./mcp.service";
+import { OAuthService } from "./oauth.service";
+import { ComposioService } from "./composio.service";
+import { connectMcpServer } from "@august/harness";
 import type {
   ToolResultBlockParam,
   ToolUseBlockParam,
@@ -152,9 +158,7 @@ export class ToolService {
     let isError = false;
 
     try {
-      const mcpService = new McpService(this.db);
-
-      result = await mcpService.executeTool({
+      result = await this.executeToolOnMcp({
         mcpId,
         toolName,
         args: toolInput as Record<string, unknown>,
@@ -201,5 +205,96 @@ export class ToolService {
       turn_id: turnId,
       block_id: resultBlockId,
     });
+  }
+
+  /**
+   * Execute a tool on an MCP server
+   * Creates a temporary connection, executes the tool, and disconnects
+   */
+  private async executeToolOnMcp(params: {
+    mcpId: string;
+    toolName: string;
+    args: Record<string, unknown>;
+  }): Promise<unknown> {
+    const { mcpId, toolName, args } = params;
+
+    // Fetch the MCP
+    const [mcp] = await this.db
+      .select()
+      .from(mcps)
+      .where(eq(mcps.id, mcpId))
+      .limit(1);
+
+    if (!mcp) {
+      throw new Error(`MCP not found: ${mcpId}`);
+    }
+
+    const oauthService = new OAuthService(this.db);
+    const composioService = new ComposioService(this.db);
+
+    let serverUrl: string | null = null;
+    let authToken: string | null = null;
+
+    switch (mcp.integration_type) {
+      case "oauth": {
+        // Get the MCP server URL
+        if (mcp.mcp_store_id) {
+          const [oauthDetails] = await this.db
+            .select()
+            .from(mcpOauthIntegrationDetails)
+            .where(eq(mcpOauthIntegrationDetails.mcp_store_id, mcp.mcp_store_id))
+            .limit(1);
+
+          if (oauthDetails) {
+            serverUrl = oauthDetails.mcp_server_url;
+          }
+        } else if (mcp.custom_mcp_server_url) {
+          serverUrl = mcp.custom_mcp_server_url;
+        }
+
+        if (!serverUrl) {
+          throw new Error(`No server URL found for OAuth MCP: ${mcpId}`);
+        }
+
+        // Get the access token
+        authToken = await oauthService.getAccessToken({ mcpId });
+
+        if (!authToken) {
+          throw new Error(`No access token found for MCP: ${mcpId}`);
+        }
+        break;
+      }
+      case "composio": {
+        serverUrl = await composioService.getConnectionUrl({ mcpId });
+
+        if (!serverUrl) {
+          throw new Error(`No Composio connection URL found for MCP: ${mcpId}`);
+        }
+        break;
+      }
+    }
+
+    if (!serverUrl) {
+      throw new Error(`No server URL found for MCP: ${mcpId}`);
+    }
+
+    console.log(`[ToolService] Executing tool ${toolName} on MCP: ${mcp.name} (${mcpId})`);
+
+    // Connect to the MCP
+    const connection = await connectMcpServer({
+      name: mcp.name,
+      url: serverUrl,
+      authToken: authToken ?? undefined,
+    });
+
+    try {
+      // Execute the tool
+      const result = await connection.execute(toolName, args);
+      console.log(`[ToolService] Tool ${toolName} executed successfully`);
+      return result;
+    } finally {
+      // Always disconnect
+      await connection.disconnect();
+    }
   }
 }
