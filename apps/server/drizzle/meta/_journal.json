@@ -64,6 +64,13 @@
       "when": 1766489590746,
       "tag": "0008_natural_gwen_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1766581842484,
+      "tag": "0009_safe_white_tiger",
+      "breakpoints": true
     }
   ]
 }
