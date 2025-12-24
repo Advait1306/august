@@ -75,6 +75,17 @@ export const queries = defineQueries({
         .orderBy("created_at", "desc");
     }),
   },
+  todos: {
+    byTask: defineQuery(
+      z.object({ taskId: z.string() }),
+      ({ args: { taskId } }) => {
+        return builder.turns
+          .where("task_id", taskId)
+          .related("blocks", (q) => q.where("type", "tool_use"))
+          .orderBy("created_at", "desc");
+      }
+    ),
+  },
 });
 
 export type Queries = typeof queries;

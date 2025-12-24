@@ -59,9 +59,9 @@ export default function TaskWindow() {
       {/* Header */}
       {selectedTaskId !== "new-conversation" && (
         <TaskHeader
+          taskId={selectedTaskId}
           cwd={cwd}
           defaultCwd={defaultCwd}
-          todoState={[]}
           isGenerating={isGenerating}
         />
       )}

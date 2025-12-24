@@ -14,41 +14,38 @@ import {
 import { AppState } from "../config/state";
 import { blocks, blockType, tasks, turns } from "@jupiter/sync/db/schema";
 import { eq } from "drizzle-orm";
+import { isServerTool } from "../server-tools";
+import { addToServerToolExecutorQueue } from "../queues/workers/serverToolExecutorWorker";
 
 export class AssistantTurnProcessor {
   private db: AppState["db"];
 
   private task: {
-    id?: string;
+    id: string;
     status: "available" | "executing" | "starting";
     dirty: boolean;
-  } = {
-    status: "starting",
-    dirty: false,
   };
 
   // Internal state
   private turn: {
-    id?: string;
+    id: string;
     metadata: {
       container?: BetaContainer;
       stopReason?: BetaStopReason;
     };
     complete: boolean;
     dirty: boolean;
-  } = {
-    metadata: {},
-    complete: false,
-    dirty: true,
   };
 
-  private toolResponseTurnRequired = false;
-  private toolResponseTurnId?: string;
+  private toolResponseTurn: {
+    id: string;
+    dirty: boolean;
+  } | null = null;
 
   private blocks: Record<
     number,
     {
-      id?: string;
+      id: string;
       dirty: boolean;
       data: {
         content: BetaContentBlockParam;
@@ -66,9 +63,17 @@ export class AssistantTurnProcessor {
 
   constructor(db: AppState["db"], taskId: string) {
     this.db = db;
-    this.task.id = taskId;
-    this.task.status = "executing";
-    this.task.dirty = true;
+    this.task = {
+      id: taskId,
+      status: "executing",
+      dirty: true,
+    };
+    this.turn = {
+      id: crypto.randomUUID(),
+      metadata: {},
+      complete: false,
+      dirty: true,
+    };
   }
 
   private setContainer(container: BetaContainer) {
@@ -125,17 +130,18 @@ export class AssistantTurnProcessor {
           | BetaServerToolUseBlockParam
       ).input === "string"
     ) {
+      const inputString = (
+        this.blocks[index].data.content as
+          | BetaToolUseBlockParam
+          | BetaServerToolUseBlockParam
+      ).input as string;
+
+      // Handle empty input strings (tools with no parameters)
       (
         this.blocks[index].data.content as
           | BetaToolUseBlockParam
           | BetaServerToolUseBlockParam
-      ).input = JSON.parse(
-        (
-          this.blocks[index].data.content as
-            | BetaToolUseBlockParam
-            | BetaServerToolUseBlockParam
-        ).input as string
-      );
+      ).input = inputString === "" ? {} : JSON.parse(inputString);
     }
   }
 
@@ -158,34 +164,76 @@ export class AssistantTurnProcessor {
   processMessageStop() {
     this.turn.complete = true;
     this.turn.dirty = true;
-    this.task.status = "available";
+
+    if (
+      this.turn.metadata.stopReason === "end_turn" ||
+      this.turn.metadata.stopReason === "max_tokens" ||
+      this.turn.metadata.stopReason === "stop_sequence" ||
+      this.turn.metadata.stopReason === "refusal"
+    ) {
+      this.task.status = "available";
+    }
+
     this.task.dirty = true;
     this.flushToDb();
   }
 
   processCompleteBlock(index: number, content: BetaContentBlockParam) {
-    this.blocks[index].data.content = content;
-    this.blocks[index].data.complete = true;
-    this.blocks[index].data.processed = true;
-    this.blocks[index].data.status = "none";
+    // Generate toolResponseTurn if this is a tool_use block
+    if (content.type === "tool_use" && !this.toolResponseTurn) {
+      this.toolResponseTurn = {
+        id: crypto.randomUUID(),
+        dirty: true,
+      };
+    }
+
+    // Initialize block if it doesn't exist (complete blocks can come without streaming)
+    if (!this.blocks[index]) {
+      this.blocks[index] = {
+        id: crypto.randomUUID(),
+        dirty: true,
+        data: {
+          content: content,
+          complete: true,
+          processed: true,
+          status: "none",
+        },
+      };
+    } else {
+      this.blocks[index].data.content = content;
+      this.blocks[index].data.complete = true;
+      this.blocks[index].data.processed = true;
+      this.blocks[index].data.status = "none";
+      this.blocks[index].dirty = true;
+    }
 
     if (content.type === "tool_use") {
-      this.toolResponseTurnRequired = true;
-    }
+      const toolName = (content as BetaToolUseBlockParam).name;
 
-    if (this.blocks[index].data.content.type === "tool_use") {
-      // Permission checker goes here to check what's the status to be added to the block.
-      this.blocks[index].data.status = "client_pending";
+      if (isServerTool(toolName)) {
+        // Server tools are executed on the server via a queue
+        this.blocks[index].data.status = "server_pending";
+      } else {
+        // Permission checker goes here to check what's the status to be added to the block.
+        this.blocks[index].data.status = "client_pending";
+      }
     }
-
-    this.blocks[index].dirty = true;
   }
 
   processBlockStart(data: BetaRawContentBlockStartEvent) {
     const content = data.content_block;
 
-    // Add block to our internal state
+    // Generate toolResponseTurn if this is a tool_use block
+    if (content.type === "tool_use" && !this.toolResponseTurn) {
+      this.toolResponseTurn = {
+        id: crypto.randomUUID(),
+        dirty: true,
+      };
+    }
+
+    // Add block to our internal state with generated ID
     this.blocks[data.index] = {
+      id: crypto.randomUUID(),
       dirty: true,
       data: {
         content: content,
@@ -194,10 +242,6 @@ export class AssistantTurnProcessor {
         status: "none",
       },
     };
-
-    if (content.type === "tool_use") {
-      this.toolResponseTurnRequired = true;
-    }
   }
 
   processBlockDelta(data: BetaRawContentBlockDeltaEvent) {
@@ -236,106 +280,127 @@ export class AssistantTurnProcessor {
     }
 
     if (this.blocks[data.index].data.content.type === "tool_use") {
-      // Permission checker goes here to check what's the status to be added to the block.
-      this.blocks[data.index].data.status = "client_pending";
+      const toolName = (
+        this.blocks[data.index].data.content as BetaToolUseBlockParam
+      ).name;
+
+      if (isServerTool(toolName)) {
+        // Server tools are executed on the server via a queue
+        this.blocks[data.index].data.status = "server_pending";
+      } else {
+        // Permission checker goes here to check what's the status to be added to the block.
+        this.blocks[data.index].data.status = "client_pending";
+      }
     }
 
     this.blocks[data.index].data.complete = true;
     this.blocks[data.index].data.processed = true;
     this.blocks[data.index].dirty = true;
-
-    // TODO: Add check for tools that can be executed on August servers
   }
 
   async flushToDb() {
+    const now = new Date();
+
+    // Update task status
     if (this.task.dirty) {
       await this.db
         .update(tasks)
         .set({
           status: this.task.status,
-          updated_at: new Date(),
+          updated_at: now,
         })
-        .where(eq(tasks.id, this.task.id!));
+        .where(eq(tasks.id, this.task.id));
       this.task.dirty = false;
     }
 
-    if (!this.turn.id) {
-      const turnId = crypto.randomUUID();
-      await this.db.insert(turns).values({
-        id: turnId,
-        type: "assistant",
-        complete: this.turn.complete,
-        metadata: this.turn.metadata,
-        task_id: this.task.id!,
-        created_at: new Date(),
-        updated_at: new Date(),
-      });
-      this.turn.id = turnId;
-      this.turn.dirty = false;
-    }
-
-    if (this.turn.dirty && this.turn.id) {
+    // Upsert assistant turn
+    if (this.turn.dirty) {
       await this.db
-        .update(turns)
-        .set({
+        .insert(turns)
+        .values({
+          id: this.turn.id,
+          type: "assistant",
           complete: this.turn.complete,
           metadata: this.turn.metadata,
-          updated_at: new Date(),
+          task_id: this.task.id,
+          created_at: now,
+          updated_at: now,
         })
-        .where(eq(turns.id, this.turn.id));
-
+        .onConflictDoUpdate({
+          target: turns.id,
+          set: {
+            complete: this.turn.complete,
+            metadata: this.turn.metadata,
+            updated_at: now,
+          },
+        });
       this.turn.dirty = false;
     }
 
-    if (this.toolResponseTurnRequired && !this.toolResponseTurnId) {
-      const toolResponseTurnId = crypto.randomUUID();
-      await this.db.insert(turns).values({
-        id: toolResponseTurnId,
-        type: "user",
-        task_id: this.task.id!,
-        created_at: new Date(),
-        updated_at: new Date(),
-      });
-      this.toolResponseTurnId = toolResponseTurnId;
+    // Upsert tool response turn if needed
+    if (this.toolResponseTurn?.dirty) {
+      await this.db
+        .insert(turns)
+        .values({
+          id: this.toolResponseTurn.id,
+          type: "user",
+          task_id: this.task.id,
+          created_at: now,
+          updated_at: now,
+        })
+        .onConflictDoNothing();
+      this.toolResponseTurn.dirty = false;
     }
 
+    // Upsert blocks
     for (const block of Object.values(this.blocks)) {
-      // Block isn't made yet create and add initial values
-      if (!block.id) {
-        const blockId = crypto.randomUUID();
-        await this.db.insert(blocks).values({
-          id: blockId,
-          turn_id: this.turn.id,
-          // TODO: Fix types here
-          type: block.data.content
-            .type as (typeof blockType.enumValues)[number],
-          content: block.data.content,
-          created_at: new Date(),
-          updated_at: new Date(),
-          complete: block.data.complete,
-          status: block.data.status,
-          processed: block.data.processed,
-          // Tool use types require a response turn for clients to put result in
-          response_turn_id:
-            block.data.content.type === "tool_use"
-              ? this.toolResponseTurnId
-              : undefined,
-        });
-        block.id = blockId;
-        block.dirty = false;
-      }
-
-      if (block.dirty && block.id) {
+      if (block.dirty) {
         await this.db
-          .update(blocks)
-          .set({
+          .insert(blocks)
+          .values({
+            id: block.id,
+            turn_id: this.turn.id,
+            type: block.data.content
+              .type as (typeof blockType.enumValues)[number],
             content: block.data.content,
             complete: block.data.complete,
-            processed: block.data.processed,
             status: block.data.status,
-            updated_at: new Date(),
+            processed: block.data.processed,
+            response_turn_id:
+              block.data.content.type === "tool_use"
+                ? this.toolResponseTurn?.id
+                : null,
+            created_at: now,
+            updated_at: now,
           })
-          .where(eq(blocks.id, block.id));
+          .onConflictDoUpdate({
+            target: blocks.id,
+            set: {
+              content: block.data.content,
+              complete: block.data.complete,
+              processed: block.data.processed,
+              status: block.data.status,
+              updated_at: now,
+            },
+          });
+
+        // Queue server tool execution if block is complete and status is server_pending
+        if (
+          block.data.content.type === "tool_use" &&
+          block.data.complete &&
+          block.data.status === "server_pending"
+        ) {
+          const toolName = (block.data.content as BetaToolUseBlockParam).name;
+          const toolInput = (block.data.content as BetaToolUseBlockParam).input;
+
+          await addToServerToolExecutorQueue({
+            task_id: this.task.id,
+            turn_id: this.toolResponseTurn!.id,
+            block_id: block.id,
+            tool_name: toolName,
+            tool_input: toolInput,
+          });
+        }
 
         block.dirty = false;
       }

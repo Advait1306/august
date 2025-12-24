@@ -1,6 +1,8 @@
+import { useMemo } from "react";
+import { useQuery } from "@rocicorp/zero/react";
+import { queries } from "@jupiter/sync/queries/data";
 import { Button } from "./ui/button";
 import { CheckCircle2Icon, CircleIcon, Loader2Icon } from "lucide-react";
-import { TodoState } from "@/src/contexts/task-runtime";
 import {
   Popover,
   PopoverContent,
@@ -8,19 +10,55 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+type TodoItem = {
+  content: string;
+  status: "pending" | "in_progress" | "completed";
+  activeForm?: string;
+};
+
 interface TaskHeaderProps {
+  taskId: string;
   cwd: string;
   defaultCwd: string;
-  todoState: TodoState;
   isGenerating: boolean;
 }
 
 export function TaskHeader({
+  taskId,
   cwd,
   defaultCwd,
-  todoState,
   isGenerating,
 }: TaskHeaderProps) {
+  // Query turns with tool_use blocks for the task to extract todos
+  const [turnsWithBlocks] = useQuery(queries.todos.byTask({ taskId }));
+
+  // Extract todos from the latest todo_write block
+  const todoState = useMemo<TodoItem[]>(() => {
+    if (!turnsWithBlocks || turnsWithBlocks.length === 0) return [];
+
+    // Flatten blocks from all turns (turns are ordered desc by created_at)
+    // Check each turn's blocks for the latest todo_write
+    for (const turn of turnsWithBlocks) {
+      const blocks = turn.blocks ?? [];
+      // Sort blocks by created_at desc to get latest first
+      const sortedBlocks = [...blocks].sort(
+        (a, b) => (b.created_at ?? 0) - (a.created_at ?? 0)
+      );
+
+      for (const block of sortedBlocks) {
+        const content = block.content as {
+          name?: string;
+          input?: { todos?: TodoItem[] };
+        };
+        if (content?.name === "todo_write" && content.input?.todos) {
+          return content.input.todos;
+        }
+      }
+    }
+
+    return [];
+  }, [turnsWithBlocks]);
+  
   const isTodoAvailable = todoState.length > 0;
   const completedCount = todoState.filter(
     (todo) => todo.status === "completed"
@@ -29,6 +67,7 @@ export function TaskHeader({
   const inProgressTodo = todoState.find(
     (todo) => todo.status === "in_progress"
   );
+
   const progressPercentage =
     totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
