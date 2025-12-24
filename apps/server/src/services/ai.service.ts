@@ -1,7 +1,7 @@
 import { asc, eq, InferSelectModel } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { blocks, tasks, turns } from "@jupiter/sync/db/schema";
-import { agentLoop } from "@august/harness";
+ import { agentLoop, McpConnection, getMcpTools } from "@august/harness";
 import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { AssistantTurnProcessor } from "../processors/assistant-turn-processor";
 import { toolDefinitions } from "@august/shell-tools";
@@ -10,6 +10,7 @@ import {
   ToolResultBlockParam,
   ToolUseBlockParam,
 } from "@anthropic-ai/sdk/resources";
+import { McpService } from "./mcp.service";
 
 // const MAX_ITERATIONS = 50;
 
@@ -27,7 +28,11 @@ interface ProcessBlockParams {
 
 export class AiService {
   private static instance: AiService;
-  private constructor(private db: AppState["db"]) {}
+  private mcpService: McpService;
+
+  private constructor(private db: AppState["db"]) {
+    this.mcpService = new McpService(db);
+  }
 
   public static getInstance(state: AppState) {
     if (!AiService.instance) {
@@ -198,6 +203,21 @@ export class AiService {
     // Server tools are always available
     const tools = [...shellTools, ...serverToolDefinitions];
 
+    // Connect to user's MCP servers and get their tools
+    let mcpConnections: McpConnection[] = [];
+    let mcpTools: ReturnType<typeof getMcpTools> = [];
+    let toolToMcpId = new Map<string, string>();
+
+    try {
+      const mcpResult = await this.mcpService.connectUserMcps(task.author_id);
+      mcpConnections = mcpResult.connections;
+      mcpTools = mcpResult.tools;
+      toolToMcpId = mcpResult.toolToMcpId;
+    } catch (error) {
+      console.error("[AiService] Failed to connect to MCP servers:", error);
+      // Continue without MCP tools - graceful degradation
+    }
+
     // TODO: Use iterations once pause_turn is implemented
     // let iterations = 0;
 
@@ -214,46 +234,66 @@ export class AiService {
       }
     );
 
-    const assistantTurnProcessor = new AssistantTurnProcessor(this.db, taskId);
+    // Get container ID from the last assistant turn's metadata (for code execution continuity)
+    const lastAssistantTurn = task.turns
+      .slice()
+      .reverse()
+      .find((turn) => turn.type === "assistant");
+    const containerId = (
+      lastAssistantTurn?.metadata as { container?: { id: string } } | null
+    )?.container?.id;
+
+    const assistantTurnProcessor = new AssistantTurnProcessor(
+      this.db,
+      taskId,
+      toolToMcpId
+    );
 
     let lastFlush = Date.now();
 
-    for await (const event of agentLoop({
-      messages,
-      tools,
-      cwd: task.metadata?.cwd,
-    })) {
-      switch (event.type) {
-        case "message_start": {
-          assistantTurnProcessor.processMessageStart(event);
-          break;
+    try {
+      for await (const event of agentLoop({
+        messages,
+        tools,
+        mcpTools,
+        cwd: task.metadata?.cwd,
+        container: containerId,
+      })) {
+        switch (event.type) {
+          case "message_start": {
+            assistantTurnProcessor.processMessageStart(event);
+            break;
+          }
+          case "message_delta": {
+            assistantTurnProcessor.processMessageDelta(event);
+            break;
+          }
+          case "message_stop": {
+            assistantTurnProcessor.processMessageStop();
+            break;
+          }
+          case "content_block_start": {
+            assistantTurnProcessor.processBlockStart(event);
+            break;
+          }
+          case "content_block_delta": {
+            assistantTurnProcessor.processBlockDelta(event);
+            break;
+          }
+          case "content_block_stop": {
+            assistantTurnProcessor.processBlockStop(event);
+            break;
+          }
         }
-        case "message_delta": {
-          assistantTurnProcessor.processMessageDelta(event);
-          break;
-        }
-        case "message_stop": {
-          assistantTurnProcessor.processMessageStop();
-          break;
-        }
-        case "content_block_start": {
-          assistantTurnProcessor.processBlockStart(event);
-          break;
-        }
-        case "content_block_delta": {
-          assistantTurnProcessor.processBlockDelta(event);
-          break;
-        }
-        case "content_block_stop": {
-          assistantTurnProcessor.processBlockStop(event);
-          break;
-        }
-      }
 
-      if (Date.now() - lastFlush > 200) {
-        await assistantTurnProcessor.flushToDb();
-        lastFlush = Date.now();
+        if (Date.now() - lastFlush > 200) {
+          await assistantTurnProcessor.flushToDb();
+          lastFlush = Date.now();
+        }
       }
+    } finally {
+      // Always disconnect MCP connections when done
+      await this.mcpService.disconnectAllConnections(mcpConnections);
     }
 
     // }
