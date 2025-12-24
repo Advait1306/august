@@ -130,17 +130,18 @@ export class AssistantTurnProcessor {
           | BetaServerToolUseBlockParam
       ).input === "string"
     ) {
+      const inputString = (
+        this.blocks[index].data.content as
+          | BetaToolUseBlockParam
+          | BetaServerToolUseBlockParam
+      ).input as string;
+
+      // Handle empty input strings (tools with no parameters)
       (
         this.blocks[index].data.content as
           | BetaToolUseBlockParam
           | BetaServerToolUseBlockParam
-      ).input = JSON.parse(
-        (
-          this.blocks[index].data.content as
-            | BetaToolUseBlockParam
-            | BetaServerToolUseBlockParam
-        ).input as string
-      );
+      ).input = inputString === "" ? {} : JSON.parse(inputString);
     }
   }
 
