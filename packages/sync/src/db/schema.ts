@@ -268,8 +268,13 @@ export const blockStatus = pgEnum("block_status", [
   "permission_pending",
   "client_pending",
   "server_pending",
+  "mcp_pending",
   "completed",
 ]);
+
+export interface BlockMetadata {
+  mcpId?: string;
+}
 
 export const blocks = pgTable("blocks", {
   id: varchar().notNull().primaryKey(),
@@ -280,6 +285,7 @@ export const blocks = pgTable("blocks", {
   status: blockStatus().notNull().default("none"),
   complete: boolean().notNull().default(false),
   content: jsonb().$type<BetaContentBlockParam>().notNull(),
+  metadata: jsonb().$type<BlockMetadata>(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
   processed: boolean().notNull().default(false),

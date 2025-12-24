@@ -12,10 +12,17 @@ import {
   BetaToolUseBlockParam,
 } from "@anthropic-ai/sdk/resources/beta";
 import { AppState } from "../config/state";
-import { blocks, blockType, tasks, turns } from "@jupiter/sync/db/schema";
+import {
+  blocks,
+  blockType,
+  BlockMetadata,
+  tasks,
+  turns,
+} from "@jupiter/sync/db/schema";
 import { eq } from "drizzle-orm";
 import { isServerTool } from "../server-tools";
 import { addToServerToolExecutorQueue } from "../queues/workers/serverToolExecutorWorker";
+import { addToMcpToolExecutorQueue } from "../queues/workers/mcpToolExecutorWorker";
 
 export class AssistantTurnProcessor {
   private db: AppState["db"];
@@ -56,13 +63,23 @@ export class AssistantTurnProcessor {
           | "permission_pending"
           | "client_pending"
           | "server_pending"
+          | "mcp_pending"
           | "completed";
+        metadata?: BlockMetadata;
       };
     }
   > = {};
 
-  constructor(db: AppState["db"], taskId: string) {
+  // Mapping from MCP tool name to MCP ID
+  private toolToMcpId: Map<string, string>;
+
+  constructor(
+    db: AppState["db"],
+    taskId: string,
+    toolToMcpId: Map<string, string> = new Map()
+  ) {
     this.db = db;
+    this.toolToMcpId = toolToMcpId;
     this.task = {
       id: taskId,
       status: "executing",
@@ -213,6 +230,12 @@ export class AssistantTurnProcessor {
       if (isServerTool(toolName)) {
         // Server tools are executed on the server via a queue
         this.blocks[index].data.status = "server_pending";
+      } else if (this.toolToMcpId.has(toolName)) {
+        // MCP tools are executed on the server via a separate queue
+        this.blocks[index].data.status = "mcp_pending";
+        this.blocks[index].data.metadata = {
+          mcpId: this.toolToMcpId.get(toolName),
+        };
       } else {
         // Permission checker goes here to check what's the status to be added to the block.
         this.blocks[index].data.status = "client_pending";
@@ -287,6 +310,12 @@ export class AssistantTurnProcessor {
       if (isServerTool(toolName)) {
         // Server tools are executed on the server via a queue
         this.blocks[data.index].data.status = "server_pending";
+      } else if (this.toolToMcpId.has(toolName)) {
+        // MCP tools are executed on the server via a separate queue
+        this.blocks[data.index].data.status = "mcp_pending";
+        this.blocks[data.index].data.metadata = {
+          mcpId: this.toolToMcpId.get(toolName),
+        };
       } else {
         // Permission checker goes here to check what's the status to be added to the block.
         this.blocks[data.index].data.status = "client_pending";
@@ -339,6 +368,11 @@ export class AssistantTurnProcessor {
 
     // Upsert tool response turn if needed
     if (this.toolResponseTurn?.dirty) {
+      // Note: Sometimes assistant turns and their response turns are created at the same time,
+      // so we need to wait a bit to ensure the response turn is created after the assistant turn
+      // to ensure ordering. This is a temporary workaround until we have a better solution for ordering.
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
       await this.db
         .insert(turns)
         .values({
@@ -363,6 +397,7 @@ export class AssistantTurnProcessor {
             type: block.data.content
               .type as (typeof blockType.enumValues)[number],
             content: block.data.content,
+            metadata: block.data.metadata,
             complete: block.data.complete,
             status: block.data.status,
             processed: block.data.processed,
@@ -377,6 +412,7 @@ export class AssistantTurnProcessor {
             target: blocks.id,
             set: {
               content: block.data.content,
+              metadata: block.data.metadata,
               complete: block.data.complete,
               processed: block.data.processed,
               status: block.data.status,
@@ -399,6 +435,26 @@ export class AssistantTurnProcessor {
             block_id: block.id,
             tool_name: toolName,
             tool_input: toolInput,
+          });
+        }
+
+        // Queue MCP tool execution if block is complete and status is mcp_pending
+        if (
+          block.data.content.type === "tool_use" &&
+          block.data.complete &&
+          block.data.status === "mcp_pending" &&
+          block.data.metadata?.mcpId
+        ) {
+          const toolName = (block.data.content as BetaToolUseBlockParam).name;
+          const toolInput = (block.data.content as BetaToolUseBlockParam).input;
+
+          await addToMcpToolExecutorQueue({
+            task_id: this.task.id,
+            turn_id: this.toolResponseTurn!.id,
+            block_id: block.id,
+            tool_name: toolName,
+            tool_input: toolInput,
+            mcp_id: block.data.metadata.mcpId,
           });
         }
 

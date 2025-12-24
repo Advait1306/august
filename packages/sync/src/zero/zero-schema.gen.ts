@@ -84,6 +84,7 @@ const blocksTable = {
         | "permission_pending"
         | "client_pending"
         | "server_pending"
+        | "mcp_pending"
         | "completed",
     },
     complete: {
@@ -98,6 +99,15 @@ const blocksTable = {
         typeof drizzleSchema,
         "blocks",
         "content"
+      >,
+    },
+    metadata: {
+      type: "json",
+      optional: true,
+      customType: null as unknown as CustomType<
+        typeof drizzleSchema,
+        "blocks",
+        "metadata"
       >,
     },
     created_at: {
