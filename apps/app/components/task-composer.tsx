@@ -72,7 +72,7 @@ export function TaskComposer({
       >
         <PromptInputBody>
           <PromptInputTextarea
-            onChange={(e) => setPrompt(e.target.value)}
+            onInputChange={setPrompt}
             disabled={isGenerating}
             value={prompt}
             hotkey={selectedTaskId === "new-conversation" ? "/" : undefined}

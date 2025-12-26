@@ -19,12 +19,7 @@ import { cn } from "@/lib/utils";
 import type { ChatStatus, FileUIPart } from "ai";
 import { Popover, PopoverAnchor } from "@/components/ui/popover";
 import { createPortal } from "react-dom";
-import {
-  Mention,
-  MentionContent,
-  MentionInput,
-  MentionItem,
-} from "@/components/ui/mention";
+import { useMention } from "@/hooks/use-mention";
 import {
   ArrowUp,
   ImageIcon,
@@ -571,7 +566,10 @@ export type SelectedSkill = {
   description?: string | null;
 };
 
-export type PromptInputTextareaProps = ComponentProps<typeof Textarea> & {
+export type PromptInputTextareaProps = Omit<
+  ComponentProps<typeof Textarea>,
+  "value" | "onChange"
+> & {
   hotkey?: string;
   hotkeyMenu?: (params: {
     onQuery: (query: string) => void;
@@ -581,20 +579,17 @@ export type PromptInputTextareaProps = ComponentProps<typeof Textarea> & {
   skills?: SelectedSkill[];
   selectedSkills?: SelectedSkill[];
   onSkillsChange?: (skills: SelectedSkill[]) => void;
+  value: string;
+  onInputChange: (value: string) => void;
 };
 
-// NOTE: This component exists in a controlled/uncontrolled hybrid state. It can accept a `value` prop
-// from the parent (controlled), but uses direct DOM manipulation via nativeInputValueSetter for hotkey
-// menu interactions. This can cause issues with cursor positioning or state synchronization in some cases.
-// For now, this serves our purpose as FormData handles submission and the parent can optionally control
-// the value. A full refactor to purely controlled with cursor management would be needed for complex use cases.
 export const PromptInputTextarea = ({
-  onChange,
+  onInputChange,
   className,
   placeholder = "What would you like me to do?",
   hotkey = "/",
   hotkeyMenu,
-  skills,
+  skills = [],
   selectedSkills = [],
   onSkillsChange,
   value,
@@ -603,44 +598,79 @@ export const PromptInputTextarea = ({
   const attachments = usePromptInputAttachments();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const anchorRef = useRef<HTMLSpanElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [triggerPos, setTriggerPos] = useState(0);
   const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
-  const [isMentionOpen, setIsMentionOpen] = useState(false);
+  const [mentionAnchorPosition, setMentionAnchorPosition] = useState({
+    top: 0,
+    left: 0,
+  });
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const { getCaretCoordinates, MeasurementPortal } = useCaretPosition();
 
-  // Track selected skill names for the Mention component
-  const mentionValues = useMemo(
-    () => selectedSkills.map((s) => s.name),
-    [selectedSkills]
-  );
+  // Use our custom mention hook
+  const mention = useMention({
+    options: skills,
+    selectedMentions: selectedSkills,
+    onSelectedMentionsChange: onSkillsChange ?? (() => {}),
+    inputValue: value,
+    onInputValueChange: onInputChange,
+    trigger: "@",
+  });
 
-  // Handle mention value change
-  const handleMentionValueChange = useCallback(
-    (newMentionValues: string[]) => {
-      if (!skills || !onSkillsChange) return;
+  // Reset highlighted index and calculate position when mention menu opens
+  useEffect(() => {
+    if (
+      mention.isOpen &&
+      mention.triggerIndex !== null &&
+      textareaRef.current
+    ) {
+      setHighlightedIndex(0);
 
-      const newSelectedSkills: SelectedSkill[] = [];
-      for (const name of newMentionValues) {
-        const skill = skills.find((s) => s.name === name);
-        if (skill) {
-          newSelectedSkills.push({
-            id: skill.id,
-            name: skill.name,
-            description: skill.description,
-          });
-        }
-      }
+      // Calculate position at the @ trigger
+      const textarea = textareaRef.current;
+      const coords = getCaretCoordinates(textarea, mention.triggerIndex + 1);
+      const rect = textarea.getBoundingClientRect();
 
-      onSkillsChange(newSelectedSkills);
-    },
-    [skills, onSkillsChange]
-  );
+      setMentionAnchorPosition({
+        top: rect.top + coords.top,
+        left: rect.left + coords.left,
+      });
+    }
+  }, [mention.isOpen, mention.triggerIndex, getCaretCoordinates]);
 
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
+    // Handle mention menu keyboard navigation
+    if (mention.isOpen && mention.filteredOptions.length > 0) {
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setHighlightedIndex((i) =>
+            i < mention.filteredOptions.length - 1 ? i + 1 : 0
+          );
+          return;
+        case "ArrowUp":
+          e.preventDefault();
+          setHighlightedIndex((i) =>
+            i > 0 ? i - 1 : mention.filteredOptions.length - 1
+          );
+          return;
+        case "Enter":
+        case "Tab":
+          e.preventDefault();
+          mention.selectOption(mention.filteredOptions[highlightedIndex]);
+          return;
+        case "Escape":
+          e.preventDefault();
+          mention.close();
+          return;
+      }
+    }
+
     // Don't handle Enter if any menu is open (let menu handle it)
-    if ((showMenu || isMentionOpen) && e.key === "Enter") {
+    if ((showMenu || mention.isOpen) && e.key === "Enter") {
       return;
     }
 
@@ -679,6 +709,9 @@ export const PromptInputTextarea = ({
         form.requestSubmit();
       }
     }
+
+    // Let mention hook handle its keyboard events
+    mention.onKeyDown(e);
   };
 
   const handlePaste: ClipboardEventHandler<HTMLTextAreaElement> = (event) => {
@@ -705,74 +738,41 @@ export const PromptInputTextarea = ({
     }
   };
 
-  // Handle query updates from menu - update textarea value
+  // Handle query updates from hotkey menu - update textarea value
   const handleQuery = useCallback(
     (query: string) => {
       const textarea = textareaRef.current;
       if (!textarea) return;
 
-      const currentValue = textarea.value;
-      const beforeTrigger = currentValue.substring(0, triggerPos + 1); // Include the @ symbol
-      const afterCursor = currentValue.substring(textarea.selectionStart);
+      const currentValue = value;
+      const beforeTrigger = currentValue.substring(0, triggerPos + 1);
+      const afterCursor = currentValue.substring(triggerPos + 1);
 
       const newValue = beforeTrigger + query + afterCursor;
-
-      // Use native setter for React controlled components
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLTextAreaElement.prototype,
-        "value"
-      )?.set;
-
-      if (nativeInputValueSetter) {
-        nativeInputValueSetter.call(textarea, newValue);
-      } else {
-        textarea.value = newValue;
-      }
-
-      // Trigger input event for React
-      const event = new Event("input", { bubbles: true });
-      textarea.dispatchEvent(event);
+      onInputChange(newValue);
 
       // Set cursor position after the query
-      const newCursorPos = triggerPos + 1 + query.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      setTimeout(() => {
+        const newCursorPos = triggerPos + 1 + query.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
     },
-    [triggerPos]
+    [triggerPos, value, onInputChange]
   );
 
-  // Handle removing hotkey character (@ and query) - does NOT close menu
+  // Handle removing hotkey character
   const removeHotkeyCharacter = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const currentValue = textarea.value;
+    const currentValue = value;
     const beforeTrigger = currentValue.substring(0, triggerPos);
-    // Find where the query ends (cursor position)
-    const afterQuery = currentValue.substring(textarea.selectionStart);
+    const afterTrigger = currentValue.substring(triggerPos + 1);
 
-    const newValue = beforeTrigger + afterQuery;
+    onInputChange(beforeTrigger + afterTrigger);
 
-    // Use native setter for React controlled components
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      "value"
-    )?.set;
-
-    if (nativeInputValueSetter) {
-      nativeInputValueSetter.call(textarea, newValue);
-    } else {
-      textarea.value = newValue;
-    }
-
-    // Trigger input event for React
-    const event = new Event("input", { bubbles: true });
-    textarea.dispatchEvent(event);
-
-    // Set cursor position after removing the trigger and query
-    const newCursorPos = triggerPos;
-    textarea.setSelectionRange(newCursorPos, newCursorPos);
-    textarea.focus();
-  }, [triggerPos]);
+    setTimeout(() => {
+      textareaRef.current?.setSelectionRange(triggerPos, triggerPos);
+      textareaRef.current?.focus();
+    }, 0);
+  }, [triggerPos, value, onInputChange]);
 
   // Handle closing menu without selection
   const handleClose = useCallback(() => {
@@ -780,64 +780,143 @@ export const PromptInputTextarea = ({
     textareaRef.current?.focus();
   }, []);
 
+  // Build highlighted text with styled mentions
+  const renderHighlightedText = () => {
+    if (!value || mention.matches.length === 0) {
+      return (
+        <span className="invisible whitespace-pre-wrap">{value || " "}</span>
+      );
+    }
+
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    // Sort matches by start position
+    const sortedMatches = [...mention.matches].sort(
+      (a, b) => a.start - b.start
+    );
+
+    for (const match of sortedMatches) {
+      // Add text before this match
+      if (match.start > lastIndex) {
+        parts.push(
+          <span
+            key={`text-${lastIndex}`}
+            className="invisible whitespace-pre-wrap"
+          >
+            {value.slice(lastIndex, match.start)}
+          </span>
+        );
+      }
+
+      // Add the highlighted mention
+      parts.push(
+        <mark
+          key={`mention-${match.start}`}
+          className="rounded bg-blue-200 text-blue-950 dark:bg-blue-800 dark:text-blue-50"
+        >
+          {value.slice(match.start, match.end)}
+        </mark>
+      );
+
+      lastIndex = match.end;
+    }
+
+    // Add remaining text
+    if (lastIndex < value.length) {
+      parts.push(
+        <span
+          key={`text-${lastIndex}`}
+          className="invisible whitespace-pre-wrap"
+        >
+          {value.slice(lastIndex)}
+        </span>
+      );
+    }
+
+    return parts;
+  };
+
   return (
     <>
       <MeasurementPortal />
       <div className="relative">
-        <Mention
-          value={mentionValues}
-          onValueChange={handleMentionValueChange}
-          inputValue={typeof value === "string" ? value : ""}
-          onInputValueChange={(newValue) => {
-            // Create a synthetic event to call the parent onChange
-            const syntheticEvent = {
-              target: { value: newValue },
-              currentTarget: { value: newValue },
-            } as React.ChangeEvent<HTMLTextAreaElement>;
-            onChange?.(syntheticEvent);
-          }}
-          open={isMentionOpen}
-          onOpenChange={setIsMentionOpen}
-          trigger="@"
+        {/* Highlight overlay - positioned behind textarea */}
+        <div
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap wrap-break-word",
+            "p-3 text-sm",
+            className
+          )}
         >
-          <MentionInput asChild>
-            <Textarea
-              ref={textareaRef}
+          {renderHighlightedText()}
+        </div>
+
+        {/* Actual textarea */}
+        <Textarea
+          ref={textareaRef}
+          value={value}
+          onChange={mention.onInputChange}
+          className={cn(
+            "relative w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
+            "field-sizing-content bg-transparent dark:bg-transparent",
+            "max-h-48 min-h-16",
+            "focus-visible:ring-0",
+            className
+          )}
+          name="message"
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          placeholder={placeholder}
+          {...props}
+        />
+
+        {/* Mention menu dropdown - using Portal to escape overflow:hidden */}
+        {mention.isOpen &&
+          mention.filteredOptions.length > 0 &&
+          createPortal(
+            <div
+              ref={menuRef}
               className={cn(
-                "w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
-                "field-sizing-content bg-transparent dark:bg-transparent",
-                "max-h-48 min-h-16",
-                "focus-visible:ring-0",
-                className
+                "absolute min-w-48 max-h-64 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
+                "animate-in fade-in-0 zoom-in-95"
               )}
-              name="message"
-              onKeyDown={handleKeyDown}
-              onPaste={handlePaste}
-              placeholder={placeholder}
-              {...props}
-            />
-          </MentionInput>
-          <MentionContent sideOffset={8}>
-            {skills && skills.length > 0 ? (
-              skills.map((skill) => (
-                <MentionItem key={skill.id} value={skill.name}>
+              style={{
+                top: mentionAnchorPosition.top - 8,
+                left: mentionAnchorPosition.left,
+                transform: "translateY(-100%)",
+              }}
+            >
+              {mention.filteredOptions.map((option, index) => (
+                <div
+                  key={option.id}
+                  className={cn(
+                    "relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none",
+                    index === highlightedIndex &&
+                      "bg-accent text-accent-foreground"
+                  )}
+                  onMouseEnter={() => setHighlightedIndex(index)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    mention.selectOption(option);
+                  }}
+                >
                   <div className="flex flex-col">
-                    <span className="font-medium">{skill.name}</span>
-                    {skill.description && (
+                    <span className="font-medium">{option.name}</span>
+                    {option.description && (
                       <span className="text-xs text-muted-foreground line-clamp-1">
-                        {skill.description}
+                        {option.description}
                       </span>
                     )}
                   </div>
-                </MentionItem>
-              ))
-            ) : (
-              <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                No skills available
-              </div>
-            )}
-          </MentionContent>
-        </Mention>
+                </div>
+              ))}
+            </div>,
+            document.body
+          )}
+
+        {/* Hotkey menu (/) */}
         {showMenu && hotkeyMenu && (
           <Popover open={true} modal={false}>
             <PopoverAnchor asChild>

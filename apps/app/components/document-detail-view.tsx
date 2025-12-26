@@ -1,16 +1,13 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { SkillDocument } from "@jupiter/sync/zero/zero-schema.gen";
 
 export interface DocumentDetailViewProps {
-  document: SkillDocument;
   localName: string;
   setLocalName: (name: string) => void;
   localDescription: string;
   setLocalDescription: (desc: string) => void;
   localContent: string;
   setLocalContent: (content: string) => void;
-  isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
   onUpdateDocument: (
     updates: Partial<{ name: string; content: string; description: string }>
@@ -18,14 +15,12 @@ export interface DocumentDetailViewProps {
 }
 
 export function DocumentDetailView({
-  document,
   localName,
   setLocalName,
   localDescription,
   setLocalDescription,
   localContent,
   setLocalContent,
-  isEditing,
   setIsEditing,
   onUpdateDocument,
 }: DocumentDetailViewProps) {
