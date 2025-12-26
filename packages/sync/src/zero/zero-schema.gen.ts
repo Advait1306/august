@@ -74,7 +74,8 @@ const blocksTable = {
         | "tool_result"
         | "server_tool_use"
         | "web_search_tool_result"
-        | "code_execution_tool_result",
+        | "code_execution_tool_result"
+        | "bash_code_execution_tool_result",
     },
     status: {
       type: "string",

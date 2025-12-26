@@ -54,6 +54,17 @@ export {
   type WriteInput,
   type WriteOutput,
 } from "./write";
+export {
+  bash,
+  bashToolDefinition,
+  BashInputSchema,
+  BashOutputSchema,
+  BashError,
+  BashErrorType,
+  type BashInput,
+  type BashOutput,
+  type BashStreamOptions,
+} from "./bash";
 export { rgPath } from "@vscode/ripgrep";
 
 // Manifest and types
