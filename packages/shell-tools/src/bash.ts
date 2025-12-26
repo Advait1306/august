@@ -12,6 +12,7 @@
 import { spawn, type ChildProcess } from "child_process";
 import { stat } from "fs/promises";
 import { isAbsolute, basename } from "path";
+import { homedir } from "os";
 import { z } from "zod";
 import {
   BashError,
@@ -46,7 +47,7 @@ export const BashInputSchema = z.object({
     .string()
     .optional()
     .describe(
-      "The working directory to run the command in. Must be an absolute path. Defaults to current working directory."
+      "The working directory to run the command in. Must be an absolute path. Defaults to user's home folder."
     ),
   description: z
     .string()
@@ -80,7 +81,7 @@ export const bashToolDefinition = {
   name: "bash",
   version: "0.0.1",
   description:
-    "Executes shell commands in a bash/zsh environment. Supports configurable timeouts, working directory, and captures combined stdout/stderr output. Output is truncated if it exceeds 30KB. Use this for running system commands, build tools, git operations, and other CLI tasks.",
+    "Executes shell commands on the user's local machine. Use this tool (not code execution) when you need to run commands in the user's actual environment - for git operations, npm/yarn commands, build tools, file system access, or any task requiring access to the user's local files and installed tools. Supports configurable timeouts and working directory. Output is truncated if it exceeds 30KB.",
   inputSchema: BashInputSchema,
   outputSchema: BashOutputSchema,
 };
@@ -190,7 +191,8 @@ export async function bash(
   const timeout = timeoutInput ?? DEFAULT_TIMEOUT_MS;
 
   // Validate and resolve working directory
-  let cwd = workdir || process.cwd();
+  // Default to user's home folder if no workdir specified
+  let cwd = workdir || homedir();
   if (workdir) {
     if (!isAbsolute(workdir)) {
       throw createInvalidWorkdirError(workdir);
