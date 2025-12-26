@@ -1,0 +1,1 @@
+ALTER TYPE "public"."block_type" ADD VALUE 'bash_code_execution_tool_result' BEFORE 'web_search_tool_result';

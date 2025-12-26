@@ -71,6 +71,13 @@
       "when": 1766581842484,
       "tag": "0009_safe_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1766739394001,
+      "tag": "0010_sleepy_darkhawk",
+      "breakpoints": true
     }
   ]
 }
