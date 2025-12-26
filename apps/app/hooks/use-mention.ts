@@ -50,12 +50,10 @@ export function useMention({
   const matches = useMemo<MentionMatch[]>(() => {
     if (!inputValue || selectedMentions.length === 0) return [];
 
-    const result: MentionMatch[] = [];
-    const mentionPattern = new RegExp(
-      `${trigger}(${selectedMentions.map((m) => escapeRegExp(m.name)).join("|")})(?=\\s|$)`,
-      "g"
-    );
+    const mentionPattern = buildMentionPattern(trigger, selectedMentions);
+    if (!mentionPattern) return [];
 
+    const result: MentionMatch[] = [];
     let match: RegExpExecArray | null;
     while ((match = mentionPattern.exec(inputValue)) !== null) {
       const name = match[1];
@@ -135,13 +133,12 @@ export function useMention({
 
       // Check if any existing mentions were deleted
       const currentMentionNames = new Set<string>();
-      const mentionPattern = new RegExp(
-        `${trigger}(${selectedMentions.map((m) => escapeRegExp(m.name)).join("|")})(?=\\s|$)`,
-        "g"
-      );
-      let match: RegExpExecArray | null;
-      while ((match = mentionPattern.exec(newValue)) !== null) {
-        currentMentionNames.add(match[1]);
+      const mentionPattern = buildMentionPattern(trigger, selectedMentions);
+      if (mentionPattern) {
+        let match: RegExpExecArray | null;
+        while ((match = mentionPattern.exec(newValue)) !== null) {
+          currentMentionNames.add(match[1]);
+        }
       }
 
       const remainingMentions = selectedMentions.filter((m) =>
@@ -221,4 +218,20 @@ export function useMention({
 
 function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Build a regex pattern to match mentions in text
+ */
+function buildMentionPattern(
+  trigger: string,
+  mentions: MentionOption[]
+): RegExp | null {
+  const validMentions = mentions.filter((m) => m.name);
+  if (validMentions.length === 0) return null;
+
+  return new RegExp(
+    `${trigger}(${validMentions.map((m) => escapeRegExp(m.name)).join("|")})(?=\\s|$)`,
+    "g"
+  );
 }

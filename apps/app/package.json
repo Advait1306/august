@@ -15,7 +15,6 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@clerk/clerk-react": "^5.47.0",
     "@clerk/themes": "^2.4.21",
-    "@diceui/mention": "^0.8.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@jupiter/shared": "*",
     "@jupiter/sync": "*",

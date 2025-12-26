@@ -41,7 +41,7 @@ function generateSystemPrompt(cwd?: string, skills?: SkillSummary[]): string {
 
   if (skills && skills.length > 0) {
     prompt += `\n\n## Available Skills\n`;
-    prompt += `The following skills are available for this task. Use the get_skill tool to retrieve the full skill prompt and discover its supporting documents. Use the get_document tool to retrieve specific document contents.\n`;
+    prompt += `The following skills are available for this task. Use the \`get_skill\` tool to retrieve the full skill prompt and discover its supporting documents. Use the \`get_document\` tool to retrieve specific document contents.\n`;
     for (const skill of skills) {
       prompt += `\n### ${skill.name} (ID: ${skill.id})`;
       if (skill.description) {
