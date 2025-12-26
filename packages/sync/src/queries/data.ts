@@ -11,6 +11,23 @@ export const queries = defineQueries({
         .orderBy("created_at", "desc");
     }),
   },
+  skills: {
+    all: defineQuery(({ ctx }) => {
+      return builder.skills
+        .where("organisation_id", ctx.orgId)
+        .orderBy("created_at", "desc");
+    }),
+  },
+  skillDocuments: {
+    bySkill: defineQuery(
+      z.object({ skillId: z.string() }),
+      ({ args: { skillId } }) => {
+        return builder.skillDocuments
+          .where("skill_id", skillId)
+          .orderBy("created_at", "asc");
+      }
+    ),
+  },
   turns: {
     byTask: defineQuery(
       z.object({ taskId: z.string() }),

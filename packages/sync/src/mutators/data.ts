@@ -14,6 +14,7 @@ export const mutators = defineMutators({
         runtime_id: z.string(),
         session_id: z.string(),
         metadata: z.object({ cwd: z.string().optional() }).optional(),
+        skill_ids: z.array(z.string()).optional(),
       }),
       async ({
         tx,
@@ -26,6 +27,7 @@ export const mutators = defineMutators({
           runtime_id,
           session_id,
           metadata,
+          skill_ids,
         },
       }) => {
         await tx.mutate.tasks.insert({
@@ -64,6 +66,15 @@ export const mutators = defineMutators({
           complete: true,
           processed: false,
         });
+
+        if (skill_ids && skill_ids.length > 0) {
+          for (const skill_id of skill_ids) {
+            await tx.mutate.taskSkills.upsert({
+              task_id,
+              skill_id,
+            });
+          }
+        }
       }
     ),
     abort: defineMutator(
@@ -101,11 +112,12 @@ export const mutators = defineMutators({
         turn_id: z.string(),
         block_id: z.string(),
         session_id: z.string(),
+        skill_ids: z.array(z.string()).optional(),
       }),
       async ({
         tx,
         ctx,
-        args: { message, task_id, turn_id, block_id, session_id },
+        args: { message, task_id, turn_id, block_id, session_id, skill_ids },
       }) => {
         const task = await tx.run(
           builder.tasks
@@ -151,6 +163,15 @@ export const mutators = defineMutators({
           created_at: Date.now(),
           updated_at: Date.now(),
         });
+
+        if (skill_ids && skill_ids.length > 0) {
+          for (const skill_id of skill_ids) {
+            await tx.mutate.taskSkills.upsert({
+              task_id,
+              skill_id,
+            });
+          }
+        }
       }
     ),
   },
@@ -315,6 +336,155 @@ export const mutators = defineMutators({
           created_at: Date.now(),
           updated_at: Date.now(),
         });
+      }
+    ),
+  },
+  skills: {
+    create: defineMutator(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        prompt: z.string(),
+        description: z.string(),
+      }),
+      async ({ tx, ctx, args: { id, name, prompt, description } }) => {
+        await tx.mutate.skills.insert({
+          id,
+          organisation_id: ctx.orgId,
+          author_id: ctx.userId,
+          name,
+          prompt,
+          description,
+          created_at: Date.now(),
+          updated_at: Date.now(),
+        });
+      }
+    ),
+    update: defineMutator(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        prompt: z.string().optional(),
+        description: z.string().optional(),
+      }),
+      async ({ tx, ctx, args: { id, name, prompt, description } }) => {
+        const skill = await tx.run(
+          builder.skills
+            .where("id", id)
+            .where("organisation_id", ctx.orgId)
+            .one()
+        );
+
+        if (!skill) {
+          throw new Error("Skill not found");
+        }
+
+        await tx.mutate.skills.update({
+          id,
+          ...(name !== undefined && { name }),
+          ...(prompt !== undefined && { prompt }),
+          ...(description !== undefined && { description }),
+          updated_at: Date.now(),
+        });
+      }
+    ),
+    delete: defineMutator(
+      z.object({
+        id: z.string(),
+      }),
+      async ({ tx, ctx, args: { id } }) => {
+        const skill = await tx.run(
+          builder.skills
+            .where("id", id)
+            .where("organisation_id", ctx.orgId)
+            .one()
+        );
+
+        if (!skill) {
+          throw new Error("Skill not found");
+        }
+
+        await tx.mutate.skills.delete({ id });
+      }
+    ),
+  },
+  skillDocuments: {
+    create: defineMutator(
+      z.object({
+        id: z.string(),
+        skill_id: z.string(),
+        name: z.string(),
+        content: z.string(),
+        description: z.string(),
+      }),
+      async ({ tx, ctx, args: { id, skill_id, name, content, description } }) => {
+        const skill = await tx.run(
+          builder.skills
+            .where("id", skill_id)
+            .where("organisation_id", ctx.orgId)
+            .one()
+        );
+
+        if (!skill) {
+          throw new Error("Skill not found");
+        }
+
+        await tx.mutate.skillDocuments.insert({
+          id,
+          skill_id,
+          name,
+          content,
+          description,
+          created_at: Date.now(),
+          updated_at: Date.now(),
+        });
+      }
+    ),
+    update: defineMutator(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        content: z.string().optional(),
+        description: z.string().optional(),
+      }),
+      async ({ tx, ctx, args: { id, name, content, description } }) => {
+        const doc = await tx.run(
+          builder.skillDocuments
+            .where("id", id)
+            .related("skill", (q) => q.where("organisation_id", ctx.orgId))
+            .one()
+        );
+
+        if (!doc || !doc.skill) {
+          throw new Error("Document not found or access denied");
+        }
+
+        await tx.mutate.skillDocuments.update({
+          id,
+          ...(name !== undefined && { name }),
+          ...(content !== undefined && { content }),
+          ...(description !== undefined && { description }),
+          updated_at: Date.now(),
+        });
+      }
+    ),
+    delete: defineMutator(
+      z.object({
+        id: z.string(),
+      }),
+      async ({ tx, ctx, args: { id } }) => {
+        const doc = await tx.run(
+          builder.skillDocuments
+            .where("id", id)
+            .related("skill", (q) => q.where("organisation_id", ctx.orgId))
+            .one()
+        );
+
+        if (!doc || !doc.skill) {
+          throw new Error("Document not found or access denied");
+        }
+
+        await tx.mutate.skillDocuments.delete({ id });
       }
     ),
   },

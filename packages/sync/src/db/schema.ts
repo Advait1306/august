@@ -6,6 +6,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   serial,
   timestamp,
   varchar,
@@ -197,6 +198,49 @@ export interface TaskMetadata {
   cwd?: string;
 }
 
+// Skills - Main skill definitions with prompt and metadata
+export const skills = pgTable("skills", {
+  id: varchar().primaryKey().notNull(),
+  organisation_id: varchar()
+    .notNull()
+    .references(() => organisations.id),
+  author_id: varchar()
+    .notNull()
+    .references(() => users.id),
+  name: varchar().notNull(),
+  prompt: varchar().notNull(),
+  description: varchar(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+// Skill Documents - Supporting documents for skills
+export const skillDocuments = pgTable("skill_documents", {
+  id: varchar().primaryKey().notNull(),
+  skill_id: varchar()
+    .notNull()
+    .references(() => skills.id),
+  name: varchar().notNull(),
+  content: varchar().notNull(),
+  description: varchar(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+// Task Skills - Junction table for many-to-many relationship between tasks and skills
+export const taskSkills = pgTable(
+  "task_skills",
+  {
+    task_id: varchar()
+      .notNull()
+      .references(() => tasks.id),
+    skill_id: varchar()
+      .notNull()
+      .references(() => skills.id),
+  },
+  (table) => [primaryKey({ columns: [table.task_id, table.skill_id] })]
+);
+
 export const tasks = pgTable("tasks", {
   id: varchar().notNull().primaryKey(),
   name: varchar().notNull(),
@@ -290,6 +334,7 @@ export const userRelations = relations(users, ({ many }) => ({
   oauthStates: many(oauthStates),
   composioStates: many(composioStates),
   runtimes: many(runtimes),
+  skills: many(skills),
 }));
 
 // Organisation relations
@@ -299,6 +344,7 @@ export const organisationRelations = relations(organisations, ({ many }) => ({
   mcps: many(mcps),
   oauthStates: many(oauthStates),
   composioStates: many(composioStates),
+  skills: many(skills),
 }));
 
 // Runtime relations
@@ -326,6 +372,7 @@ export const taskRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.runtime_id],
     references: [runtimes.id],
   }),
+  taskSkills: many(taskSkills),
 }));
 
 // Turn relations
@@ -468,5 +515,39 @@ export const composioStatesRelations = relations(composioStates, ({ one }) => ({
   mcpStore: one(mcpStore, {
     fields: [composioStates.mcp_store_id],
     references: [mcpStore.id],
+  }),
+}));
+
+// Skills relations
+export const skillsRelations = relations(skills, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [skills.organisation_id],
+    references: [organisations.id],
+  }),
+  author: one(users, {
+    fields: [skills.author_id],
+    references: [users.id],
+  }),
+  documents: many(skillDocuments),
+  taskSkills: many(taskSkills),
+}));
+
+// Skill Documents relations
+export const skillDocumentsRelations = relations(skillDocuments, ({ one }) => ({
+  skill: one(skills, {
+    fields: [skillDocuments.skill_id],
+    references: [skills.id],
+  }),
+}));
+
+// Task Skills relations (junction table)
+export const taskSkillsRelations = relations(taskSkills, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskSkills.task_id],
+    references: [tasks.id],
+  }),
+  skill: one(skills, {
+    fields: [taskSkills.skill_id],
+    references: [skills.id],
   }),
 }));
