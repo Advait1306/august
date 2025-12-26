@@ -606,6 +606,7 @@ export const PromptInputTextarea = ({
   const [showMenu, setShowMenu] = useState(false);
   const [triggerPos, setTriggerPos] = useState(0);
   const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
+  const [isMentionOpen, setIsMentionOpen] = useState(false);
 
   const { getCaretCoordinates, MeasurementPortal } = useCaretPosition();
 
@@ -638,8 +639,8 @@ export const PromptInputTextarea = ({
   );
 
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
-    // Don't handle Enter if menu is open (let menu handle it)
-    if (showMenu && e.key === "Enter") {
+    // Don't handle Enter if any menu is open (let menu handle it)
+    if ((showMenu || isMentionOpen) && e.key === "Enter") {
       return;
     }
 
@@ -795,6 +796,8 @@ export const PromptInputTextarea = ({
             } as React.ChangeEvent<HTMLTextAreaElement>;
             onChange?.(syntheticEvent);
           }}
+          open={isMentionOpen}
+          onOpenChange={setIsMentionOpen}
           trigger="@"
         >
           <MentionInput asChild>
