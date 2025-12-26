@@ -186,6 +186,11 @@ export class AiService {
           orderBy: [asc(turns.created_at)],
         },
         runtime: true,
+        taskSkills: {
+          with: {
+            skill: true,
+          },
+        },
       },
     });
 
@@ -251,6 +256,13 @@ export class AiService {
 
     let lastFlush = Date.now();
 
+    // Extract skills for this task
+    const taskSkillsList = task.taskSkills?.map((ts) => ({
+      id: ts.skill.id,
+      name: ts.skill.name,
+      description: ts.skill.description,
+    })) ?? [];
+
     try {
       for await (const event of agentLoop({
         messages,
@@ -258,6 +270,7 @@ export class AiService {
         mcpTools,
         cwd: task.metadata?.cwd,
         container: containerId,
+        skills: taskSkillsList,
       })) {
         switch (event.type) {
           case "message_start": {

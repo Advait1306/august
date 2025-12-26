@@ -4,6 +4,8 @@
 
 import { todoWriteToolDefinition } from "./tools/todo-write";
 import { todoReadToolDefinition } from "./tools/todo-read";
+import { getSkillToolDefinition } from "./tools/get-skill";
+import { getDocumentToolDefinition } from "./tools/get-document";
 import type { ServerToolDefinition } from "./types";
 
 /**
@@ -12,6 +14,8 @@ import type { ServerToolDefinition } from "./types";
 export const serverToolDefinitions = [
   todoWriteToolDefinition,
   todoReadToolDefinition,
+  getSkillToolDefinition,
+  getDocumentToolDefinition,
 ] as const satisfies readonly ServerToolDefinition[];
 
 /**
@@ -46,3 +50,5 @@ export function getServerTool(
 export * from "./types";
 export { todoWriteToolDefinition } from "./tools/todo-write";
 export { todoReadToolDefinition } from "./tools/todo-read";
+export { getSkillToolDefinition } from "./tools/get-skill";
+export { getDocumentToolDefinition } from "./tools/get-document";
