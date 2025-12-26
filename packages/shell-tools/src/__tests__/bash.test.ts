@@ -67,6 +67,7 @@ describe("bash", () => {
     it("should execute a simple echo command", async () => {
       const result = await bash({
         command: "echo 'Hello World'",
+        workdir: fixturesPath,
         description: "Echo hello",
       });
 
@@ -80,6 +81,7 @@ describe("bash", () => {
     it("should capture exit code", async () => {
       const result = await bash({
         command: "exit 5",
+        workdir: fixturesPath,
         description: "Exit with code 5",
       });
 
@@ -89,6 +91,7 @@ describe("bash", () => {
     it("should capture both stdout and stderr", async () => {
       const result = await bash({
         command: "echo 'stdout' && echo 'stderr' >&2",
+        workdir: fixturesPath,
         description: "Echo to both streams",
       });
 
@@ -99,6 +102,7 @@ describe("bash", () => {
     it("should execute commands with pipes", async () => {
       const result = await bash({
         command: "echo 'line1\nline2\nline3' | wc -l",
+        workdir: fixturesPath,
         description: "Count lines with pipe",
       });
 
@@ -110,6 +114,7 @@ describe("bash", () => {
     it("should execute commands with && chaining", async () => {
       const result = await bash({
         command: "echo 'first' && echo 'second'",
+        workdir: fixturesPath,
         description: "Chained commands",
       });
 
@@ -121,6 +126,7 @@ describe("bash", () => {
     it("should stop && chain on first failure", async () => {
       const result = await bash({
         command: "exit 1 && echo 'should not appear'",
+        workdir: fixturesPath,
         description: "Chain with failure",
       });
 
@@ -230,6 +236,7 @@ describe("bash", () => {
     it("should complete before timeout", async () => {
       const result = await bash({
         command: "echo 'quick'",
+        workdir: fixturesPath,
         timeout: 5000,
         description: "Quick command",
       });
@@ -243,6 +250,7 @@ describe("bash", () => {
 
       const result = await bash({
         command: "sleep 30",
+        workdir: fixturesPath,
         timeout: 500,
         description: "Timeout test",
       });
@@ -257,6 +265,7 @@ describe("bash", () => {
     it("should not timeout when timeout is 0 (disabled)", async () => {
       const result = await bash({
         command: "echo 'no timeout'",
+        workdir: fixturesPath,
         timeout: 0,
         description: "No timeout",
       });
@@ -269,6 +278,7 @@ describe("bash", () => {
       await expect(
         bash({
           command: "echo 'test'",
+          workdir: fixturesPath,
           timeout: -1,
           description: "Negative timeout",
         })
@@ -277,6 +287,7 @@ describe("bash", () => {
       try {
         await bash({
           command: "echo 'test'",
+          workdir: fixturesPath,
           timeout: -100,
           description: "Negative timeout",
         });
@@ -297,6 +308,7 @@ describe("bash", () => {
       const result = await bash(
         {
           command: "sleep 30",
+          workdir: fixturesPath,
           description: "Abort test",
         },
         { signal: controller.signal }
@@ -313,6 +325,7 @@ describe("bash", () => {
       const result = await bash(
         {
           command: "sleep 30",
+          workdir: fixturesPath,
           description: "Pre-aborted test",
         },
         { signal: controller.signal }
@@ -329,6 +342,7 @@ describe("bash", () => {
       await bash(
         {
           command: "echo 'line1' && echo 'line2'",
+          workdir: fixturesPath,
           description: "Streaming test",
         },
         {
@@ -351,6 +365,7 @@ describe("bash", () => {
         {
           command:
             "echo 'first' && sleep 0.1 && echo 'second' && sleep 0.1 && echo 'third'",
+          workdir: fixturesPath,
           description: "Incremental streaming",
         },
         {
@@ -371,6 +386,7 @@ describe("bash", () => {
       // Each line from yes is 2 chars ("x\n"), so 20000 lines = 40KB
       const result = await bash({
         command: "yes 'x' | head -20000",
+        workdir: fixturesPath,
         description: "Long output test",
       });
 
@@ -382,6 +398,7 @@ describe("bash", () => {
     it("should not truncate short output", async () => {
       const result = await bash({
         command: "echo 'short'",
+        workdir: fixturesPath,
         description: "Short output",
       });
 
@@ -394,6 +411,7 @@ describe("bash", () => {
       await expect(
         bash({
           command: "",
+          workdir: fixturesPath,
           description: "Empty command",
         })
       ).rejects.toThrow(BashError);
@@ -401,6 +419,7 @@ describe("bash", () => {
       try {
         await bash({
           command: "",
+          workdir: fixturesPath,
           description: "Empty command",
         });
       } catch (err) {
@@ -413,6 +432,7 @@ describe("bash", () => {
       await expect(
         bash({
           command: "   ",
+          workdir: fixturesPath,
           description: "Whitespace command",
         })
       ).rejects.toThrow(BashError);
@@ -423,6 +443,7 @@ describe("bash", () => {
     it("should pass through environment variables", async () => {
       const result = await bash({
         command: "echo $HOME",
+        workdir: fixturesPath,
         description: "Echo HOME",
       });
 
@@ -433,6 +454,7 @@ describe("bash", () => {
     it("should expand shell variables", async () => {
       const result = await bash({
         command: "echo $PWD",
+        workdir: fixturesPath,
         description: "Echo PWD",
       });
 
@@ -445,6 +467,7 @@ describe("bash", () => {
     it("should handle quoted strings", async () => {
       const result = await bash({
         command: `echo "Hello World"`,
+        workdir: fixturesPath,
         description: "Quoted string",
       });
 
@@ -454,6 +477,7 @@ describe("bash", () => {
     it("should handle single quoted strings", async () => {
       const result = await bash({
         command: `echo 'Hello $USER'`,
+        workdir: fixturesPath,
         description: "Single quoted",
       });
 
@@ -463,6 +487,7 @@ describe("bash", () => {
     it("should handle command substitution", async () => {
       const result = await bash({
         command: "echo $(echo nested)",
+        workdir: fixturesPath,
         description: "Command substitution",
       });
 
@@ -472,6 +497,7 @@ describe("bash", () => {
     it("should handle backticks", async () => {
       const result = await bash({
         command: "echo `echo backticks`",
+        workdir: fixturesPath,
         description: "Backticks",
       });
 
@@ -509,6 +535,7 @@ describe("bash", () => {
     it("should use description as title when provided", async () => {
       const result = await bash({
         command: "echo test",
+        workdir: fixturesPath,
         description: "My custom description",
       });
 
@@ -518,6 +545,7 @@ describe("bash", () => {
     it("should use truncated command as title when description not provided", async () => {
       const result = await bash({
         command: "echo test",
+        workdir: fixturesPath,
       });
 
       expect(result.title).toContain("Executed:");
@@ -549,22 +577,24 @@ describe("BashInputSchema", () => {
     expect(() =>
       BashInputSchema.parse({
         command: "echo test",
+        workdir: "/tmp",
       })
     ).not.toThrow();
   });
 
-  it("should allow optional workdir", () => {
+  it("should require workdir", () => {
     expect(() =>
       BashInputSchema.parse({
         command: "echo test",
       })
-    ).not.toThrow();
+    ).toThrow();
   });
 
   it("should allow optional description", () => {
     expect(() =>
       BashInputSchema.parse({
         command: "echo test",
+        workdir: "/tmp",
       })
     ).not.toThrow();
   });

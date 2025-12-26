@@ -12,7 +12,6 @@
 import { spawn, type ChildProcess } from "child_process";
 import { stat } from "fs/promises";
 import { isAbsolute, basename } from "path";
-import { homedir } from "os";
 import { z } from "zod";
 import {
   BashError,
@@ -45,9 +44,8 @@ export const BashInputSchema = z.object({
     ),
   workdir: z
     .string()
-    .optional()
     .describe(
-      "The working directory to run the command in. Must be an absolute path. Defaults to user's home folder."
+      "The working directory to run the command in. Must be an absolute path."
     ),
   description: z
     .string()
@@ -190,24 +188,21 @@ export async function bash(
   }
   const timeout = timeoutInput ?? DEFAULT_TIMEOUT_MS;
 
-  // Validate and resolve working directory
-  // Default to user's home folder if no workdir specified
-  let cwd = workdir || homedir();
-  if (workdir) {
-    if (!isAbsolute(workdir)) {
-      throw createInvalidWorkdirError(workdir);
+  // Validate working directory
+  if (!isAbsolute(workdir)) {
+    throw createInvalidWorkdirError(workdir);
+  }
+  let cwd = workdir;
+  try {
+    const stats = await stat(workdir);
+    if (!stats.isDirectory()) {
+      throw createWorkdirNotDirectoryError(workdir);
     }
-    try {
-      const stats = await stat(workdir);
-      if (!stats.isDirectory()) {
-        throw createWorkdirNotDirectoryError(workdir);
-      }
-    } catch (err) {
-      if (err instanceof BashError) {
-        throw err;
-      }
-      throw createWorkdirNotFoundError(workdir);
+  } catch (err) {
+    if (err instanceof BashError) {
+      throw err;
     }
+    throw createWorkdirNotFoundError(workdir);
   }
 
   const shell = getShell();
