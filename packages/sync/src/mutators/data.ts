@@ -4,52 +4,6 @@ import { builder } from "../zero/schema";
 import { ToolUseBlockParam } from "@anthropic-ai/sdk/resources";
 
 export const mutators = defineMutators({
-  agents: {
-    create: defineMutator(
-      z.object({
-        agent_id: z.string(),
-        name: z.string(),
-        system_prompt: z.string(),
-        base_agent: z.enum(["claude-code", "codex", "opencode"]),
-      }),
-      async ({
-        tx,
-        ctx,
-        args: { agent_id, name, system_prompt, base_agent },
-      }) => {
-        await tx.mutate.agents.insert({
-          id: agent_id,
-          name,
-          system_prompt,
-          base_agent,
-          author_id: ctx.userId,
-          organisation_id: ctx.orgId,
-        });
-      }
-    ),
-    update: defineMutator(
-      z.object({
-        agent_id: z.string(),
-        name: z.string().optional(),
-        system_prompt: z.string().optional(),
-      }),
-      async ({ tx, args: { agent_id, name, system_prompt } }) => {
-        await tx.mutate.agents.update({
-          id: agent_id,
-          name,
-          system_prompt,
-        });
-      }
-    ),
-    delete: defineMutator(
-      z.object({
-        agent_id: z.string(),
-      }),
-      async ({ tx, args: { agent_id } }) => {
-        await tx.mutate.agents.delete({ id: agent_id });
-      }
-    ),
-  },
   tasks: {
     create: defineMutator(
       z.object({

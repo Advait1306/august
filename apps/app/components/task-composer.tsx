@@ -12,8 +12,7 @@ import { Button } from "./ui/button";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";
 import { ComposerBadge } from "./composer-badge";
-import { PlusIcon, FolderIcon, BotIcon } from "lucide-react";
-import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
+import { PlusIcon, FolderIcon } from "lucide-react";
 import { Permission } from "@jupiter/shared/types";
 
 interface TaskComposerProps {
@@ -23,11 +22,9 @@ interface TaskComposerProps {
   sendMessage: (prompt: string) => void;
   stopGeneration: (taskId: string) => void;
   selectedTaskId: string;
-  agent?: Agent;
   cwd: string;
   defaultCwd: string;
   menuOptions: PromptMenuOption[];
-  clearAgent: () => void;
   clearCwd: () => void;
   currentPermission: Permission | undefined;
 }
@@ -39,15 +36,12 @@ export function TaskComposer({
   sendMessage,
   stopGeneration,
   selectedTaskId,
-  agent,
   cwd,
   defaultCwd,
   menuOptions,
-  clearAgent,
   clearCwd,
   currentPermission,
 }: TaskComposerProps) {
-  const [isAgentBadgeHovered, setIsAgentBadgeHovered] = useState(false);
   const [isCwdBadgeHovered, setIsCwdBadgeHovered] = useState(false);
 
   return (
@@ -116,15 +110,6 @@ export function TaskComposer({
                     </PopoverTrigger>
                     <PromptMenu options={menuOptions} />
                   </Popover>
-                )}
-                {selectedTaskId === "new-conversation" && agent && (
-                  <ComposerBadge
-                    icon={<BotIcon className="w-4 h-4" />}
-                    label={agent?.name || "Agent"}
-                    onClear={clearAgent}
-                    isHovered={isAgentBadgeHovered}
-                    setIsHovered={setIsAgentBadgeHovered}
-                  />
                 )}
                 {selectedTaskId === "new-conversation" &&
                   cwd &&

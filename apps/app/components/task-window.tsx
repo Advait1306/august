@@ -1,6 +1,4 @@
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
-import { useQuery } from "@rocicorp/zero/react";
-import { queries } from "@jupiter/sync/queries/data";
 import { motion } from "motion/react";
 import { useComposerState } from "@/hooks/use-composer-state";
 import { usePromptMenu } from "@/hooks/use-prompt-menu";
@@ -10,8 +8,6 @@ import { TaskComposer } from "./task-composer";
 import { PermissionDialog } from "./permission-dialog";
 
 export default function TaskWindow() {
-  const [agents] = useQuery(queries.agents.all());
-
   const {
     selectedTaskId,
     selectedTask,
@@ -28,16 +24,7 @@ export default function TaskWindow() {
   } = useTaskRuntime();
 
   // Custom hooks for state management
-  const {
-    prompt,
-    agent,
-    cwd,
-    setPrompt,
-    setAgent,
-    selectFolder,
-    clearAgent,
-    clearCwd,
-  } = useComposerState({
+  const { prompt, cwd, setPrompt, selectFolder, clearCwd } = useComposerState({
     selectedTaskId,
     composerStates,
     setComposerStates,
@@ -45,8 +32,6 @@ export default function TaskWindow() {
   });
 
   const { menuOptions } = usePromptMenu({
-    agents,
-    setAgent,
     selectFolder,
   });
 
@@ -81,11 +66,9 @@ export default function TaskWindow() {
           sendMessage={sendMessage}
           stopGeneration={stopGeneration}
           selectedTaskId={selectedTaskId}
-          agent={agent}
           cwd={cwd}
           defaultCwd={defaultCwd}
           menuOptions={menuOptions}
-          clearAgent={clearAgent}
           clearCwd={clearCwd}
           currentPermission={currentPermission}
         />

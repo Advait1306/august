@@ -3,11 +3,6 @@ import { z } from "zod";
 import { builder } from "../zero/schema";
 
 export const queries = defineQueries({
-  agents: {
-    all: defineQuery(({ ctx }) => {
-      return builder.agents.where("organisation_id", ctx.orgId);
-    }),
-  },
   tasks: {
     all: defineQuery(({ ctx }) => {
       return builder.tasks

@@ -1,9 +1,7 @@
 import { useCallback } from "react";
-import { Agent } from "@jupiter/sync/zero/zero-schema.gen";
 
 interface ComposerState {
   prompt: string;
-  agent?: Agent;
   cwd: string;
 }
 
@@ -24,7 +22,6 @@ export function useComposerState({
 }: UseComposerStateProps) {
   const composerState = composerStates[selectedTaskId];
   const prompt = composerState?.prompt ?? "";
-  const agent = composerState?.agent;
   const cwd = composerState?.cwd ?? "";
 
   const setPrompt = useCallback(
@@ -35,21 +32,6 @@ export function useComposerState({
           [selectedTaskId]: {
             ...prev[selectedTaskId],
             prompt,
-          },
-        };
-      });
-    },
-    [setComposerStates, selectedTaskId]
-  );
-
-  const setAgent = useCallback(
-    (agent: Agent) => {
-      setComposerStates((prev) => {
-        return {
-          ...prev,
-          [selectedTaskId]: {
-            ...prev[selectedTaskId],
-            agent,
           },
         };
       });
@@ -72,18 +54,6 @@ export function useComposerState({
     }
   }, [setComposerStates, selectedTaskId]);
 
-  const clearAgent = useCallback(() => {
-    setComposerStates((prev) => {
-      return {
-        ...prev,
-        [selectedTaskId]: {
-          ...prev[selectedTaskId],
-          agent: undefined,
-        },
-      };
-    });
-  }, [setComposerStates, selectedTaskId]);
-
   const clearCwd = useCallback(() => {
     setComposerStates((prev) => {
       return {
@@ -98,12 +68,9 @@ export function useComposerState({
 
   return {
     prompt,
-    agent,
     cwd,
     setPrompt,
-    setAgent,
     selectFolder,
-    clearAgent,
     clearCwd,
   };
 }

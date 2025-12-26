@@ -176,26 +176,6 @@ export const composioStates = pgTable("composio_states", {
   expires_at: timestamp().notNull(),
 });
 
-export const baseAgent = pgEnum("base_agent", [
-  "claude-code",
-  "codex",
-  "opencode",
-]);
-
-export const agents = pgTable("agents", {
-  id: varchar().notNull().primaryKey(),
-  name: varchar().notNull(),
-  system_prompt: varchar().notNull(),
-  base_agent: baseAgent().notNull(),
-  created_at: timestamp().notNull().defaultNow(),
-  organisation_id: varchar()
-    .notNull()
-    .references(() => organisations.id),
-  author_id: varchar()
-    .notNull()
-    .references(() => users.id),
-});
-
 export const runtimes = pgTable("runtimes", {
   id: varchar().notNull().primaryKey(),
   user_id: varchar()
@@ -227,9 +207,7 @@ export const tasks = pgTable("tasks", {
     .notNull()
     .references(() => users.id),
   created_at: timestamp().notNull().defaultNow(),
-  agent_id: varchar().references(() => agents.id),
   last_session_id: varchar(),
-  worker_id: varchar(),
   status: taskStatus().notNull().default("available"),
   runtime_id: varchar()
     .notNull()
@@ -308,7 +286,6 @@ export const messages = pgTable("messages", {
 // User relations
 export const userRelations = relations(users, ({ many }) => ({
   tasks: many(tasks),
-  agents: many(agents),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
   composioStates: many(composioStates),
@@ -317,25 +294,11 @@ export const userRelations = relations(users, ({ many }) => ({
 
 // Organisation relations
 export const organisationRelations = relations(organisations, ({ many }) => ({
-  agents: many(agents),
   tasks: many(tasks),
   usage: many(usage),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
   composioStates: many(composioStates),
-}));
-
-// Agent relations
-export const agentRelations = relations(agents, ({ one, many }) => ({
-  user: one(users, {
-    fields: [agents.author_id],
-    references: [users.id],
-  }),
-  tasks: many(tasks),
-  organisation: one(organisations, {
-    fields: [agents.organisation_id],
-    references: [organisations.id],
-  }),
 }));
 
 // Runtime relations
@@ -352,10 +315,6 @@ export const taskRelations = relations(tasks, ({ one, many }) => ({
   user: one(users, {
     fields: [tasks.author_id],
     references: [users.id],
-  }),
-  agent: one(agents, {
-    fields: [tasks.agent_id],
-    references: [agents.id],
   }),
   messages: many(messages),
   organisation: one(organisations, {

@@ -2,7 +2,7 @@ import { Permission } from "@jupiter/shared/types";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { queries } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
-import { Agent, Task } from "@jupiter/sync/zero/zero-schema.gen";
+import { Task } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "@/src/hooks/useZero";
 import { useRuntimeId } from "@/src/hooks/useRuntimeId";
 import { useUser } from "@clerk/clerk-react";
@@ -46,7 +46,6 @@ const getDefaultCwd = async (): Promise<string> => {
 
 type ComposerState = {
   prompt: string;
-  agent?: Agent;
   cwd: string;
 };
 
@@ -76,7 +75,6 @@ export const TaskRuntimeProvider = ({
   const { user } = useUser();
   const runtimeId = useRuntimeId(user?.id);
   const sessionId = useSessionId();
-  const agents = useQuery(queries.agents.all())[0];
   const tasks = useQuery(queries.tasks.all())[0];
 
   const [composerStates, setComposerStates] = useState<
@@ -84,7 +82,6 @@ export const TaskRuntimeProvider = ({
   >({
     "new-conversation": {
       prompt: "",
-      agent: agents[0],
       cwd: "", // This will be set to defaultCwd once it's loaded in the useEffect below
     },
   });
@@ -266,7 +263,6 @@ export const TaskRuntimeProvider = ({
       const newState = { ...prev };
       newState["new-conversation"] = {
         prompt: "",
-        agent: undefined,
         cwd: defaultCwd,
       };
       return newState;

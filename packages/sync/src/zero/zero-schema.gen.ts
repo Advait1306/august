@@ -6,51 +6,6 @@ import { createBuilder } from "@rocicorp/zero";
 import type { CustomType } from "drizzle-zero";
 import type * as drizzleSchema from "../db/schema";
 
-const agentsTable = {
-  name: "agents",
-  columns: {
-    id: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-    name: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-    system_prompt: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-    base_agent: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as CustomType<
-        typeof drizzleSchema,
-        "agents",
-        "base_agent"
-      >,
-    },
-    created_at: {
-      type: "number",
-      optional: true,
-      customType: null as unknown as number,
-    },
-    organisation_id: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-    author_id: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-  },
-  primaryKey: ["id"],
-} as const;
 const blocksTable = {
   name: "blocks",
   columns: {
@@ -665,17 +620,7 @@ const tasksTable = {
       optional: true,
       customType: null as unknown as number,
     },
-    agent_id: {
-      type: "string",
-      optional: true,
-      customType: null as unknown as string,
-    },
     last_session_id: {
-      type: "string",
-      optional: true,
-      customType: null as unknown as string,
-    },
-    worker_id: {
       type: "string",
       optional: true,
       customType: null as unknown as string,
@@ -818,32 +763,6 @@ const usersTable = {
     },
   },
   primaryKey: ["id"],
-} as const;
-const agentsRelationships = {
-  user: [
-    {
-      sourceField: ["author_id"],
-      destField: ["id"],
-      destSchema: "users",
-      cardinality: "one",
-    },
-  ],
-  tasks: [
-    {
-      sourceField: ["id"],
-      destField: ["agent_id"],
-      destSchema: "tasks",
-      cardinality: "many",
-    },
-  ],
-  organisation: [
-    {
-      sourceField: ["organisation_id"],
-      destField: ["id"],
-      destSchema: "organisations",
-      cardinality: "one",
-    },
-  ],
 } as const;
 const blocksRelationships = {
   turn: [
@@ -1050,14 +969,6 @@ const oauthStatesRelationships = {
   ],
 } as const;
 const organisationsRelationships = {
-  agents: [
-    {
-      sourceField: ["id"],
-      destField: ["organisation_id"],
-      destSchema: "agents",
-      cardinality: "many",
-    },
-  ],
   tasks: [
     {
       sourceField: ["id"],
@@ -1123,14 +1034,6 @@ const tasksRelationships = {
       sourceField: ["author_id"],
       destField: ["id"],
       destSchema: "users",
-      cardinality: "one",
-    },
-  ],
-  agent: [
-    {
-      sourceField: ["agent_id"],
-      destField: ["id"],
-      destSchema: "agents",
       cardinality: "one",
     },
   ],
@@ -1212,14 +1115,6 @@ const usersRelationships = {
       cardinality: "many",
     },
   ],
-  agents: [
-    {
-      sourceField: ["id"],
-      destField: ["author_id"],
-      destSchema: "agents",
-      cardinality: "many",
-    },
-  ],
   mcps: [
     {
       sourceField: ["id"],
@@ -1259,7 +1154,6 @@ const usersRelationships = {
  */
 export const schema = {
   tables: {
-    agents: agentsTable,
     blocks: blocksTable,
     composioStates: composioStatesTable,
     mcpComposioConnections: mcpComposioConnectionsTable,
@@ -1278,7 +1172,6 @@ export const schema = {
     users: usersTable,
   },
   relationships: {
-    agents: agentsRelationships,
     blocks: blocksRelationships,
     composioStates: composioStatesRelationships,
     mcpComposioConnections: mcpComposioConnectionsRelationships,
@@ -1305,13 +1198,6 @@ export const schema = {
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Schema = typeof schema;
-/**
- * Represents a row from the "agents" table.
- * This type is auto-generated from your Drizzle schema definition.
- *
- * @deprecated Use Row["agents"] instead from "@rocicorp/zero".
- */
-export type Agent = Row["agents"];
 /**
  * Represents a row from the "blocks" table.
  * This type is auto-generated from your Drizzle schema definition.
