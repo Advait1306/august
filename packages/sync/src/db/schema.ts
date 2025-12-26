@@ -259,6 +259,7 @@ export const blockType = pgEnum("block_type", [
   "tool_result",
   "server_tool_use",
   "code_execution_tool_result",
+  "bash_code_execution_tool_result",
   "web_search_tool_result",
   "thinking",
 ] as const satisfies readonly BetaContentBlockParam["type"][]);
@@ -420,7 +421,7 @@ export const mcpStoreRelations = relations(mcpStore, ({ one, many }) => ({
 // OAuth Integration Details relations
 export const mcpOauthIntegrationDetailsRelations = relations(
   mcpOauthIntegrationDetails,
-({ one }) => ({
+  ({ one }) => ({
     mcpStore: one(mcpStore, {
       fields: [mcpOauthIntegrationDetails.mcp_store_id],
       references: [mcpStore.id],

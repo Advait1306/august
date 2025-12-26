@@ -13,6 +13,8 @@ import type {
   WriteOutput,
   MultiEditInput,
   MultiEditOutput,
+  BashInput,
+  BashOutput,
 } from "@august/shell-tools";
 
 // Type-safe IPC request/response definitions
@@ -85,6 +87,7 @@ export namespace IPC {
       edit: EditInput;
       write: WriteInput;
       multiedit: MultiEditInput;
+      bash: BashInput;
     }
 
     export interface ToolOutputMap {
@@ -94,6 +97,7 @@ export namespace IPC {
       edit: EditOutput;
       write: WriteOutput;
       multiedit: MultiEditOutput;
+      bash: BashOutput;
     }
 
     // Execute request

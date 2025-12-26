@@ -8,7 +8,8 @@ import { mutators } from "@jupiter/sync/mutators/data";
 
 export const useShellTools = (
   runtimeId: string | null,
-  sessionId: string
+  sessionId: string,
+  defaultCwd: string
 ): void => {
   const z = useZero();
   const [runningTools, setRunningTools] = useState<ToolUseBlockParam["id"][]>(
@@ -51,13 +52,24 @@ export const useShellTools = (
         | "ls"
         | "edit"
         | "write"
-        | "multiedit";
+        | "multiedit"
+        | "bash";
+
+      // Prepare the input, injecting workdir for bash tools
+      let input = toolBlock.input as IPC.ShellTools.ToolInputMap[typeof name];
+      if (name === "bash") {
+        const taskMetadata = tool.turn?.task?.metadata as
+          | { cwd?: string }
+          | undefined;
+        const cwd = taskMetadata?.cwd || defaultCwd;
+        input = {
+          ...(input as IPC.ShellTools.ToolInputMap["bash"]),
+          workdir: cwd,
+        } as IPC.ShellTools.ToolInputMap[typeof name];
+      }
 
       window.api.shellTools
-        .execute(
-          name,
-          toolBlock.input as IPC.ShellTools.ToolInputMap[typeof name]
-        )
+        .execute(name, input)
         .then((result) => {
           const blockId = crypto.randomUUID();
           z.mutate(

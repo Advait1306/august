@@ -8,6 +8,7 @@ import {
   edit,
   write,
   multiedit,
+  bash,
   type GrepInput,
   type GrepOutput,
   type GlobInput,
@@ -19,14 +20,16 @@ import {
   type WriteInput,
   type WriteOutput,
   type MultiEditInput,
-  type MultiEditOutput
+  type MultiEditOutput,
+  type BashInput,
+  type BashOutput
 } from '@august/shell-tools'
 
 /**
  * Union types for all tool inputs and outputs
  */
-type ToolInput = GrepInput | GlobInput | LsInput | EditInput | WriteInput | MultiEditInput
-type ToolOutput = GrepOutput | GlobOutput | LsOutput | EditOutput | WriteOutput | MultiEditOutput
+type ToolInput = GrepInput | GlobInput | LsInput | EditInput | WriteInput | MultiEditInput | BashInput
+type ToolOutput = GrepOutput | GlobOutput | LsOutput | EditOutput | WriteOutput | MultiEditOutput | BashOutput
 
 /**
  * Type mapping from tool names to their input/output types
@@ -38,6 +41,7 @@ type ToolExecutorMap = {
   edit: (input: EditInput) => Promise<EditOutput>
   write: (input: WriteInput) => Promise<WriteOutput>
   multiedit: (input: MultiEditInput) => Promise<MultiEditOutput>
+  bash: (input: BashInput) => Promise<BashOutput>
 }
 
 /**
@@ -49,7 +53,8 @@ const toolExecutors: ToolExecutorMap = {
   ls,
   edit,
   write,
-  multiedit
+  multiedit,
+  bash
 }
 
 export function registerShellToolsIpcHandlers(): void {

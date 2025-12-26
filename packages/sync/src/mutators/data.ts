@@ -107,6 +107,7 @@ export const mutators = defineMutators({
           },
           created_at: Date.now(),
           updated_at: Date.now(),
+          complete: true,
           processed: false,
         });
       }
@@ -191,6 +192,7 @@ export const mutators = defineMutators({
             type: "text",
             text: message,
           },
+          complete: true,
           processed: false,
           created_at: Date.now(),
           updated_at: Date.now(),

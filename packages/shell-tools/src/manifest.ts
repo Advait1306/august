@@ -8,6 +8,7 @@ import { lsToolDefinition } from "./ls";
 import { editToolDefinition } from "./edit";
 import { writeToolDefinition } from "./write";
 import { multieditToolDefinition } from "./multiedit";
+import { bashToolDefinition } from "./bash";
 import type { ShellToolsManifest, ToolDefinition } from "./types";
 
 /**
@@ -20,6 +21,7 @@ export const toolDefinitions = [
   editToolDefinition,
   writeToolDefinition,
   multieditToolDefinition,
+  bashToolDefinition,
 ] as const satisfies readonly ToolDefinition[];
 
 /**

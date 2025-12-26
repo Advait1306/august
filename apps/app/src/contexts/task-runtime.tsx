@@ -79,8 +79,6 @@ export const TaskRuntimeProvider = ({
   const agents = useQuery(queries.agents.all())[0];
   const tasks = useQuery(queries.tasks.all())[0];
 
-  useShellTools(runtimeId, sessionId);
-
   const [composerStates, setComposerStates] = useState<
     Record<string, ComposerState>
   >({
@@ -94,6 +92,8 @@ export const TaskRuntimeProvider = ({
   const [permissionIndices, setPermissionIndices] =
     useState<PermissionIndexState>({});
   const [defaultCwd, setDefaultCwd] = useState<string>("");
+
+  useShellTools(runtimeId, sessionId, defaultCwd);
 
   // Load default cwd on mount
   useEffect(() => {
