@@ -49,6 +49,7 @@ export function createServerMutators(
           runtime_id: z.string(),
           session_id: z.string(),
           metadata: z.object({ cwd: z.string().optional() }).optional(),
+          skill_ids: z.array(z.string()).optional(),
         }),
         async ({
           tx,
@@ -61,6 +62,7 @@ export function createServerMutators(
             runtime_id,
             session_id,
             metadata,
+            skill_ids,
           },
         }) => {
           // Run the base mutator
@@ -75,6 +77,7 @@ export function createServerMutators(
               runtime_id,
               session_id,
               metadata,
+              skill_ids,
             },
           });
 
@@ -182,17 +185,18 @@ export function createServerMutators(
           turn_id: z.string(),
           block_id: z.string(),
           session_id: z.string(),
+          skill_ids: z.array(z.string()).optional(),
         }),
         async ({
           tx,
           ctx,
-          args: { message, task_id, turn_id, block_id, session_id },
+          args: { message, task_id, turn_id, block_id, session_id, skill_ids },
         }) => {
           // Run the base mutator
           await clientMutators.message.create.fn({
             tx,
             ctx,
-            args: { message, task_id, turn_id, block_id, session_id },
+            args: { message, task_id, turn_id, block_id, session_id, skill_ids },
           });
 
           // Add to agent loop queue

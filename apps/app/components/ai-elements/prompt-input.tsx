@@ -20,6 +20,12 @@ import type { ChatStatus, FileUIPart } from "ai";
 import { Popover, PopoverAnchor } from "@/components/ui/popover";
 import { createPortal } from "react-dom";
 import {
+  Mention,
+  MentionContent,
+  MentionInput,
+  MentionItem,
+} from "@/components/ui/mention";
+import {
   ArrowUp,
   ImageIcon,
   Loader2Icon,
@@ -559,6 +565,12 @@ function useCaretPosition() {
   return { getCaretCoordinates, MeasurementPortal };
 }
 
+export type SelectedSkill = {
+  id: string;
+  name: string;
+  description?: string | null;
+};
+
 export type PromptInputTextareaProps = ComponentProps<typeof Textarea> & {
   hotkey?: string;
   hotkeyMenu?: (params: {
@@ -566,6 +578,9 @@ export type PromptInputTextareaProps = ComponentProps<typeof Textarea> & {
     removeHotkeyCharacter: () => void;
     onClose: () => void;
   }) => React.ReactNode;
+  skills?: SelectedSkill[];
+  selectedSkills?: SelectedSkill[];
+  onSkillsChange?: (skills: SelectedSkill[]) => void;
 };
 
 // NOTE: This component exists in a controlled/uncontrolled hybrid state. It can accept a `value` prop
@@ -577,8 +592,12 @@ export const PromptInputTextarea = ({
   onChange,
   className,
   placeholder = "What would you like me to do?",
-  hotkey = "@",
+  hotkey = "/",
   hotkeyMenu,
+  skills,
+  selectedSkills = [],
+  onSkillsChange,
+  value,
   ...props
 }: PromptInputTextareaProps) => {
   const attachments = usePromptInputAttachments();
@@ -589,6 +608,34 @@ export const PromptInputTextarea = ({
   const [anchorPosition, setAnchorPosition] = useState({ top: 0, left: 0 });
 
   const { getCaretCoordinates, MeasurementPortal } = useCaretPosition();
+
+  // Track selected skill names for the Mention component
+  const mentionValues = useMemo(
+    () => selectedSkills.map((s) => s.name),
+    [selectedSkills]
+  );
+
+  // Handle mention value change
+  const handleMentionValueChange = useCallback(
+    (newMentionValues: string[]) => {
+      if (!skills || !onSkillsChange) return;
+
+      const newSelectedSkills: SelectedSkill[] = [];
+      for (const name of newMentionValues) {
+        const skill = skills.find((s) => s.name === name);
+        if (skill) {
+          newSelectedSkills.push({
+            id: skill.id,
+            name: skill.name,
+            description: skill.description,
+          });
+        }
+      }
+
+      onSkillsChange(newSelectedSkills);
+    },
+    [skills, onSkillsChange]
+  );
 
   const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
     // Don't handle Enter if menu is open (let menu handle it)
@@ -736,24 +783,58 @@ export const PromptInputTextarea = ({
     <>
       <MeasurementPortal />
       <div className="relative">
-        <Textarea
-          ref={textareaRef}
-          className={cn(
-            "w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
-            "field-sizing-content bg-transparent dark:bg-transparent",
-            "max-h-48 min-h-16",
-            "focus-visible:ring-0",
-            className
-          )}
-          name="message"
-          onChange={(e) => {
-            onChange?.(e);
+        <Mention
+          value={mentionValues}
+          onValueChange={handleMentionValueChange}
+          inputValue={typeof value === "string" ? value : ""}
+          onInputValueChange={(newValue) => {
+            // Create a synthetic event to call the parent onChange
+            const syntheticEvent = {
+              target: { value: newValue },
+              currentTarget: { value: newValue },
+            } as React.ChangeEvent<HTMLTextAreaElement>;
+            onChange?.(syntheticEvent);
           }}
-          onKeyDown={handleKeyDown}
-          onPaste={handlePaste}
-          placeholder={placeholder}
-          {...props}
-        />
+          trigger="@"
+        >
+          <MentionInput asChild>
+            <Textarea
+              ref={textareaRef}
+              className={cn(
+                "w-full resize-none rounded-none border-none p-3 shadow-none outline-none ring-0",
+                "field-sizing-content bg-transparent dark:bg-transparent",
+                "max-h-48 min-h-16",
+                "focus-visible:ring-0",
+                className
+              )}
+              name="message"
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={placeholder}
+              {...props}
+            />
+          </MentionInput>
+          <MentionContent sideOffset={8}>
+            {skills && skills.length > 0 ? (
+              skills.map((skill) => (
+                <MentionItem key={skill.id} value={skill.name}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{skill.name}</span>
+                    {skill.description && (
+                      <span className="text-xs text-muted-foreground line-clamp-1">
+                        {skill.description}
+                      </span>
+                    )}
+                  </div>
+                </MentionItem>
+              ))
+            ) : (
+              <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                No skills available
+              </div>
+            )}
+          </MentionContent>
+        </Mention>
         {showMenu && hotkeyMenu && (
           <Popover open={true} modal={false}>
             <PopoverAnchor asChild>
@@ -931,7 +1012,7 @@ export const PromptInputModelSelectTrigger = ({
   <SelectTrigger
     className={cn(
       "border-none bg-transparent font-medium text-muted-foreground shadow-none transition-colors",
-      'hover:bg-accent hover:text-foreground [&[aria-expanded="true"]]:bg-accent [&[aria-expanded="true"]]:text-foreground',
+      "hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground",
       className
     )}
     {...props}

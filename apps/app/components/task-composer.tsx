@@ -7,6 +7,7 @@ import {
   PromptInputToolbar,
   PromptInputTools,
   PromptInputSubmit,
+  type SelectedSkill,
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "./ui/button";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
@@ -27,6 +28,9 @@ interface TaskComposerProps {
   menuOptions: PromptMenuOption[];
   clearCwd: () => void;
   currentPermission: Permission | undefined;
+  selectedSkills: SelectedSkill[];
+  setSelectedSkills: (skills: SelectedSkill[]) => void;
+  skills: SelectedSkill[];
 }
 
 export function TaskComposer({
@@ -41,6 +45,9 @@ export function TaskComposer({
   menuOptions,
   clearCwd,
   currentPermission,
+  selectedSkills,
+  setSelectedSkills,
+  skills,
 }: TaskComposerProps) {
   const [isCwdBadgeHovered, setIsCwdBadgeHovered] = useState(false);
 
@@ -82,6 +89,9 @@ export function TaskComposer({
                   )
                 : undefined
             }
+            skills={skills}
+            selectedSkills={selectedSkills}
+            onSkillsChange={setSelectedSkills}
           />
         </PromptInputBody>
         <PromptInputToolbar>

@@ -6,6 +6,8 @@ import { TaskHeader } from "./task-header";
 import { TaskThread } from "./task-thread";
 import { TaskComposer } from "./task-composer";
 import { PermissionDialog } from "./permission-dialog";
+import { queries } from "@jupiter/sync/queries/data";
+import { useQuery } from "@rocicorp/zero/react";
 
 export default function TaskWindow() {
   const {
@@ -24,7 +26,15 @@ export default function TaskWindow() {
   } = useTaskRuntime();
 
   // Custom hooks for state management
-  const { prompt, cwd, setPrompt, selectFolder, clearCwd } = useComposerState({
+  const {
+    prompt,
+    cwd,
+    selectedSkills,
+    setPrompt,
+    selectFolder,
+    clearCwd,
+    setSelectedSkills,
+  } = useComposerState({
     selectedTaskId,
     composerStates,
     setComposerStates,
@@ -34,6 +44,9 @@ export default function TaskWindow() {
   const { menuOptions } = usePromptMenu({
     selectFolder,
   });
+
+  // Fetch skills for the @ mention
+  const [skills] = useQuery(queries.skills.all());
 
   const pendingPermissions = permissions[selectedTaskId] || [];
   const currentPermissionIndex = permissionIndices[selectedTaskId] || 0;
@@ -71,6 +84,9 @@ export default function TaskWindow() {
           menuOptions={menuOptions}
           clearCwd={clearCwd}
           currentPermission={currentPermission}
+          selectedSkills={selectedSkills}
+          setSelectedSkills={setSelectedSkills}
+          skills={skills}
         />
 
         {/* Permission */}

@@ -1,8 +1,12 @@
 import { useCallback } from "react";
+import type { SelectedSkill } from "@/components/ai-elements/prompt-input";
+
+export type { SelectedSkill };
 
 interface ComposerState {
   prompt: string;
   cwd: string;
+  selectedSkills: SelectedSkill[];
 }
 
 interface UseComposerStateProps {
@@ -23,6 +27,7 @@ export function useComposerState({
   const composerState = composerStates[selectedTaskId];
   const prompt = composerState?.prompt ?? "";
   const cwd = composerState?.cwd ?? "";
+  const selectedSkills = composerState?.selectedSkills ?? [];
 
   const setPrompt = useCallback(
     (prompt: string) => {
@@ -66,11 +71,28 @@ export function useComposerState({
     });
   }, [setComposerStates, selectedTaskId, defaultCwd]);
 
+  const setSelectedSkills = useCallback(
+    (skills: SelectedSkill[]) => {
+      setComposerStates((prev) => {
+        return {
+          ...prev,
+          [selectedTaskId]: {
+            ...prev[selectedTaskId],
+            selectedSkills: skills,
+          },
+        };
+      });
+    },
+    [setComposerStates, selectedTaskId]
+  );
+
   return {
     prompt,
     cwd,
+    selectedSkills,
     setPrompt,
     selectFolder,
     clearCwd,
+    setSelectedSkills,
   };
 }

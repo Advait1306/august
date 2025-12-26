@@ -44,9 +44,15 @@ const getDefaultCwd = async (): Promise<string> => {
   }
 };
 
+type SelectedSkill = {
+  id: string;
+  name: string;
+};
+
 type ComposerState = {
   prompt: string;
   cwd: string;
+  selectedSkills: SelectedSkill[];
 };
 
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
@@ -83,6 +89,7 @@ export const TaskRuntimeProvider = ({
     "new-conversation": {
       prompt: "",
       cwd: "", // This will be set to defaultCwd once it's loaded in the useEffect below
+      selectedSkills: [],
     },
   });
   const [permissions, setPermissions] = useState<PermissionState>({});
@@ -102,6 +109,7 @@ export const TaskRuntimeProvider = ({
         "new-conversation": {
           ...prev["new-conversation"],
           cwd: cwd,
+          selectedSkills: prev["new-conversation"]?.selectedSkills || [],
         },
       }));
     };
@@ -211,10 +219,13 @@ export const TaskRuntimeProvider = ({
   };
 
   const sendMessage = async (message: string) => {
+    const currentState = composerStates[selectedTaskId];
+    const skillIds = currentState?.selectedSkills?.map((s) => s.id) || [];
+
     setComposerStates((prev) => {
       return {
         ...prev,
-        [selectedTaskId]: { ...prev[selectedTaskId], prompt: "" },
+        [selectedTaskId]: { ...prev[selectedTaskId], prompt: "", selectedSkills: [] },
       };
     });
 
@@ -238,6 +249,7 @@ export const TaskRuntimeProvider = ({
           runtime_id: runtimeId,
           session_id: sessionId,
           metadata: cwd ? { cwd } : undefined,
+          skill_ids: skillIds.length > 0 ? skillIds : undefined,
         })
       ).client;
 
@@ -253,6 +265,7 @@ export const TaskRuntimeProvider = ({
           block_id: blockId,
           message,
           session_id: sessionId,
+          skill_ids: skillIds.length > 0 ? skillIds : undefined,
         })
       ).client;
     }
@@ -264,6 +277,7 @@ export const TaskRuntimeProvider = ({
       newState["new-conversation"] = {
         prompt: "",
         cwd: defaultCwd,
+        selectedSkills: [],
       };
       return newState;
     });
