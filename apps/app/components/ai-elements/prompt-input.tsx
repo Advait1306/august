@@ -20,6 +20,7 @@ import type { ChatStatus, FileUIPart } from "ai";
 import { Popover, PopoverAnchor } from "@/components/ui/popover";
 import { createPortal } from "react-dom";
 import { useMention } from "@/hooks/use-mention";
+import { SelectedSkill } from "@/src/contexts/task-runtime";
 import {
   ArrowUp,
   ImageIcon,
@@ -559,12 +560,6 @@ function useCaretPosition() {
 
   return { getCaretCoordinates, MeasurementPortal };
 }
-
-export type SelectedSkill = {
-  id: string;
-  name: string;
-  description?: string | null;
-};
 
 export type PromptInputTextareaProps = Omit<
   ComponentProps<typeof Textarea>,

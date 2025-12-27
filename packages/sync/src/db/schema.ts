@@ -209,7 +209,7 @@ export const skills = pgTable("skills", {
     .references(() => users.id),
   name: varchar().notNull(),
   prompt: varchar().notNull(),
-  description: varchar(),
+  description: varchar().notNull(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
 });
@@ -222,7 +222,7 @@ export const skillDocuments = pgTable("skill_documents", {
     .references(() => skills.id),
   name: varchar().notNull(),
   content: varchar().notNull(),
-  description: varchar(),
+  description: varchar().notNull(),
   created_at: timestamp().notNull().defaultNow(),
   updated_at: timestamp().notNull().defaultNow(),
 });

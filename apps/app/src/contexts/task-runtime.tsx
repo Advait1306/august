@@ -2,7 +2,7 @@ import { Permission } from "@jupiter/shared/types";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { queries } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
-import { Task } from "@jupiter/sync/zero/zero-schema.gen";
+import { Skill, Task } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "@/src/hooks/useZero";
 import { useRuntimeId } from "@/src/hooks/useRuntimeId";
 import { useUser } from "@clerk/clerk-react";
@@ -44,10 +44,7 @@ const getDefaultCwd = async (): Promise<string> => {
   }
 };
 
-type SelectedSkill = {
-  id: string;
-  name: string;
-};
+export type SelectedSkill = Pick<Skill, "id" | "name" | "description">;
 
 type ComposerState = {
   prompt: string;

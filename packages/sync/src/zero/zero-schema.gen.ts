@@ -617,7 +617,7 @@ const skillDocumentsTable = {
     },
     description: {
       type: "string",
-      optional: true,
+      optional: false,
       customType: null as unknown as string,
     },
     created_at: {
@@ -664,7 +664,7 @@ const skillsTable = {
     },
     description: {
       type: "string",
-      optional: true,
+      optional: false,
       customType: null as unknown as string,
     },
     created_at: {

@@ -7,8 +7,8 @@ import {
   PromptInputToolbar,
   PromptInputTools,
   PromptInputSubmit,
-  type SelectedSkill,
 } from "@/components/ai-elements/prompt-input";
+import type { SelectedSkill } from "@/src/contexts/task-runtime";
 import { Button } from "./ui/button";
 import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { PromptMenu, type PromptMenuOption } from "@/components/prompt-menu";

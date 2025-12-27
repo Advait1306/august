@@ -1,10 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-
-export interface MentionOption {
-  id: string;
-  name: string;
-  description?: string | null;
-}
+import type { SelectedSkill } from "@/src/contexts/task-runtime";
 
 export interface MentionMatch {
   start: number;
@@ -14,9 +9,9 @@ export interface MentionMatch {
 }
 
 interface UseMentionProps {
-  options: MentionOption[];
-  selectedMentions: MentionOption[];
-  onSelectedMentionsChange: (mentions: MentionOption[]) => void;
+  options: SelectedSkill[];
+  selectedMentions: SelectedSkill[];
+  onSelectedMentionsChange: (mentions: SelectedSkill[]) => void;
   inputValue: string;
   onInputValueChange: (value: string) => void;
   trigger?: string;
@@ -26,11 +21,11 @@ interface UseMentionReturn {
   isOpen: boolean;
   triggerIndex: number | null;
   searchQuery: string;
-  filteredOptions: MentionOption[];
+  filteredOptions: SelectedSkill[];
   matches: MentionMatch[];
   onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onInputChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  selectOption: (option: MentionOption) => void;
+  selectOption: (option: SelectedSkill) => void;
   close: () => void;
 }
 
@@ -158,7 +153,7 @@ export function useMention({
   );
 
   const selectOption = useCallback(
-    (option: MentionOption) => {
+    (option: SelectedSkill) => {
       if (triggerIndex === null) return;
 
       // Insert the mention at the trigger position
@@ -225,7 +220,7 @@ function escapeRegExp(string: string): string {
  */
 function buildMentionPattern(
   trigger: string,
-  mentions: MentionOption[]
+  mentions: SelectedSkill[]
 ): RegExp | null {
   const validMentions = mentions.filter((m) => m.name);
   if (validMentions.length === 0) return null;

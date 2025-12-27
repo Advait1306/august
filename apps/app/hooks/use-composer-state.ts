@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { SelectedSkill } from "@/components/ai-elements/prompt-input";
+import type { SelectedSkill } from "@/src/contexts/task-runtime";
 
 export type { SelectedSkill };
 
