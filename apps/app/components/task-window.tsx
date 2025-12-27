@@ -1,6 +1,4 @@
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
-import { useQuery } from "@rocicorp/zero/react";
-import { queries } from "@jupiter/sync/queries/data";
 import { motion } from "motion/react";
 import { useComposerState } from "@/hooks/use-composer-state";
 import { usePromptMenu } from "@/hooks/use-prompt-menu";
@@ -8,10 +6,10 @@ import { TaskHeader } from "./task-header";
 import { TaskThread } from "./task-thread";
 import { TaskComposer } from "./task-composer";
 import { PermissionDialog } from "./permission-dialog";
+import { queries } from "@jupiter/sync/queries/data";
+import { useQuery } from "@rocicorp/zero/react";
 
 export default function TaskWindow() {
-  const [agents] = useQuery(queries.agents.all());
-
   const {
     selectedTaskId,
     selectedTask,
@@ -30,13 +28,12 @@ export default function TaskWindow() {
   // Custom hooks for state management
   const {
     prompt,
-    agent,
     cwd,
+    selectedSkills,
     setPrompt,
-    setAgent,
     selectFolder,
-    clearAgent,
     clearCwd,
+    setSelectedSkills,
   } = useComposerState({
     selectedTaskId,
     composerStates,
@@ -45,10 +42,11 @@ export default function TaskWindow() {
   });
 
   const { menuOptions } = usePromptMenu({
-    agents,
-    setAgent,
     selectFolder,
   });
+
+  // Fetch skills for the @ mention
+  const [skills] = useQuery(queries.skills.all());
 
   const pendingPermissions = permissions[selectedTaskId] || [];
   const currentPermissionIndex = permissionIndices[selectedTaskId] || 0;
@@ -81,13 +79,14 @@ export default function TaskWindow() {
           sendMessage={sendMessage}
           stopGeneration={stopGeneration}
           selectedTaskId={selectedTaskId}
-          agent={agent}
           cwd={cwd}
           defaultCwd={defaultCwd}
           menuOptions={menuOptions}
-          clearAgent={clearAgent}
           clearCwd={clearCwd}
           currentPermission={currentPermission}
+          selectedSkills={selectedSkills}
+          setSelectedSkills={setSelectedSkills}
+          skills={skills}
         />
 
         {/* Permission */}

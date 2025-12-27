@@ -25,10 +25,30 @@ const CODE_EXECUTION_TOOL = {
 };
 
 /**
- * Generate system prompt based on available tools and context
+ * Skill definition for system prompt injection
  */
-function generateSystemPrompt(cwd?: string): string {
+export interface SkillSummary {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+/**
+ * Generate system prompt based on available tools, context, and skills
+ */
+function generateSystemPrompt(cwd?: string, skills?: SkillSummary[]): string {
   let prompt = `You are a helpful assistant with access to various tools.`;
+
+  if (skills && skills.length > 0) {
+    prompt += `\n\n## Available Skills\n`;
+    prompt += `The following skills are available for this task. Use the \`get_skill\` tool to retrieve the full skill prompt and discover its supporting documents. Use the \`get_document\` tool to retrieve specific document contents.\n`;
+    for (const skill of skills) {
+      prompt += `\n### ${skill.name} (ID: ${skill.id})`;
+      if (skill.description) {
+        prompt += `\n${skill.description}`;
+      }
+    }
+  }
 
   if (cwd) {
     prompt += `\n\nCurrent working directory: ${cwd}`;
@@ -57,6 +77,8 @@ export interface AgentLoopConfig {
   container?: string;
   /** Optional current working directory to include in the system prompt */
   cwd?: string;
+  /** Optional skills available for this task, injected into system prompt */
+  skills?: SkillSummary[];
 }
 
 /**
@@ -77,6 +99,7 @@ export async function* agentLoop(
     client = new Anthropic(),
     container,
     cwd,
+    skills,
   } = config;
 
   // Enable programmatic tool calling when MCP tools are provided
@@ -127,8 +150,8 @@ export async function* agentLoop(
     betas.push("advanced-tool-use-2025-11-20");
   }
 
-  // Generate dynamic system prompt based on available tools and context
-  const systemPrompt = generateSystemPrompt(cwd);
+  // Generate dynamic system prompt based on available tools, context, and skills
+  const systemPrompt = generateSystemPrompt(cwd, skills);
 
   const stream = await client.beta.messages.create({
     model,

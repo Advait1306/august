@@ -3,11 +3,6 @@ import { z } from "zod";
 import { builder } from "../zero/schema";
 
 export const queries = defineQueries({
-  agents: {
-    all: defineQuery(({ ctx }) => {
-      return builder.agents.where("organisation_id", ctx.orgId);
-    }),
-  },
   tasks: {
     all: defineQuery(({ ctx }) => {
       return builder.tasks
@@ -15,6 +10,23 @@ export const queries = defineQueries({
         .where("organisation_id", ctx.orgId)
         .orderBy("created_at", "desc");
     }),
+  },
+  skills: {
+    all: defineQuery(({ ctx }) => {
+      return builder.skills
+        .where("organisation_id", ctx.orgId)
+        .orderBy("created_at", "desc");
+    }),
+  },
+  skillDocuments: {
+    bySkill: defineQuery(
+      z.object({ skillId: z.string() }),
+      ({ args: { skillId } }) => {
+        return builder.skillDocuments
+          .where("skill_id", skillId)
+          .orderBy("created_at", "asc");
+      }
+    ),
   },
   turns: {
     byTask: defineQuery(

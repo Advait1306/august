@@ -6,51 +6,6 @@ import { createBuilder } from "@rocicorp/zero";
 import type { CustomType } from "drizzle-zero";
 import type * as drizzleSchema from "../db/schema";
 
-const agentsTable = {
-  name: "agents",
-  columns: {
-    id: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-    name: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-    system_prompt: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-    base_agent: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as CustomType<
-        typeof drizzleSchema,
-        "agents",
-        "base_agent"
-      >,
-    },
-    created_at: {
-      type: "number",
-      optional: true,
-      customType: null as unknown as number,
-    },
-    organisation_id: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-    author_id: {
-      type: "string",
-      optional: false,
-      customType: null as unknown as string,
-    },
-  },
-  primaryKey: ["id"],
-} as const;
 const blocksTable = {
   name: "blocks",
   columns: {
@@ -637,6 +592,111 @@ const runtimesTable = {
   },
   primaryKey: ["id"],
 } as const;
+const skillDocumentsTable = {
+  name: "skillDocuments",
+  columns: {
+    id: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    skill_id: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    name: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    content: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    description: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    created_at: {
+      type: "number",
+      optional: true,
+      customType: null as unknown as number,
+    },
+    updated_at: {
+      type: "number",
+      optional: true,
+      customType: null as unknown as number,
+    },
+  },
+  primaryKey: ["id"],
+  serverName: "skill_documents",
+} as const;
+const skillsTable = {
+  name: "skills",
+  columns: {
+    id: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    organisation_id: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    author_id: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    name: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    prompt: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    description: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    created_at: {
+      type: "number",
+      optional: true,
+      customType: null as unknown as number,
+    },
+    updated_at: {
+      type: "number",
+      optional: true,
+      customType: null as unknown as number,
+    },
+  },
+  primaryKey: ["id"],
+} as const;
+const taskSkillsTable = {
+  name: "taskSkills",
+  columns: {
+    task_id: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    skill_id: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+  },
+  primaryKey: ["task_id", "skill_id"],
+  serverName: "task_skills",
+} as const;
 const tasksTable = {
   name: "tasks",
   columns: {
@@ -665,17 +725,7 @@ const tasksTable = {
       optional: true,
       customType: null as unknown as number,
     },
-    agent_id: {
-      type: "string",
-      optional: true,
-      customType: null as unknown as string,
-    },
     last_session_id: {
-      type: "string",
-      optional: true,
-      customType: null as unknown as string,
-    },
-    worker_id: {
       type: "string",
       optional: true,
       customType: null as unknown as string,
@@ -818,32 +868,6 @@ const usersTable = {
     },
   },
   primaryKey: ["id"],
-} as const;
-const agentsRelationships = {
-  user: [
-    {
-      sourceField: ["author_id"],
-      destField: ["id"],
-      destSchema: "users",
-      cardinality: "one",
-    },
-  ],
-  tasks: [
-    {
-      sourceField: ["id"],
-      destField: ["agent_id"],
-      destSchema: "tasks",
-      cardinality: "many",
-    },
-  ],
-  organisation: [
-    {
-      sourceField: ["organisation_id"],
-      destField: ["id"],
-      destSchema: "organisations",
-      cardinality: "one",
-    },
-  ],
 } as const;
 const blocksRelationships = {
   turn: [
@@ -1050,14 +1074,6 @@ const oauthStatesRelationships = {
   ],
 } as const;
 const organisationsRelationships = {
-  agents: [
-    {
-      sourceField: ["id"],
-      destField: ["organisation_id"],
-      destSchema: "agents",
-      cardinality: "many",
-    },
-  ],
   tasks: [
     {
       sourceField: ["id"],
@@ -1098,6 +1114,14 @@ const organisationsRelationships = {
       cardinality: "many",
     },
   ],
+  skills: [
+    {
+      sourceField: ["id"],
+      destField: ["organisation_id"],
+      destSchema: "skills",
+      cardinality: "many",
+    },
+  ],
 } as const;
 const runtimesRelationships = {
   user: [
@@ -1117,8 +1141,26 @@ const runtimesRelationships = {
     },
   ],
 } as const;
-const tasksRelationships = {
-  user: [
+const skillDocumentsRelationships = {
+  skill: [
+    {
+      sourceField: ["skill_id"],
+      destField: ["id"],
+      destSchema: "skills",
+      cardinality: "one",
+    },
+  ],
+} as const;
+const skillsRelationships = {
+  organisation: [
+    {
+      sourceField: ["organisation_id"],
+      destField: ["id"],
+      destSchema: "organisations",
+      cardinality: "one",
+    },
+  ],
+  author: [
     {
       sourceField: ["author_id"],
       destField: ["id"],
@@ -1126,11 +1168,29 @@ const tasksRelationships = {
       cardinality: "one",
     },
   ],
-  agent: [
+  documents: [
     {
-      sourceField: ["agent_id"],
+      sourceField: ["id"],
+      destField: ["skill_id"],
+      destSchema: "skillDocuments",
+      cardinality: "many",
+    },
+  ],
+  taskSkills: [
+    {
+      sourceField: ["id"],
+      destField: ["skill_id"],
+      destSchema: "taskSkills",
+      cardinality: "many",
+    },
+  ],
+} as const;
+const tasksRelationships = {
+  user: [
+    {
+      sourceField: ["author_id"],
       destField: ["id"],
-      destSchema: "agents",
+      destSchema: "users",
       cardinality: "one",
     },
   ],
@@ -1163,6 +1223,32 @@ const tasksRelationships = {
       sourceField: ["runtime_id"],
       destField: ["id"],
       destSchema: "runtimes",
+      cardinality: "one",
+    },
+  ],
+  taskSkills: [
+    {
+      sourceField: ["id"],
+      destField: ["task_id"],
+      destSchema: "taskSkills",
+      cardinality: "many",
+    },
+  ],
+} as const;
+const taskSkillsRelationships = {
+  task: [
+    {
+      sourceField: ["task_id"],
+      destField: ["id"],
+      destSchema: "tasks",
+      cardinality: "one",
+    },
+  ],
+  skill: [
+    {
+      sourceField: ["skill_id"],
+      destField: ["id"],
+      destSchema: "skills",
       cardinality: "one",
     },
   ],
@@ -1212,14 +1298,6 @@ const usersRelationships = {
       cardinality: "many",
     },
   ],
-  agents: [
-    {
-      sourceField: ["id"],
-      destField: ["author_id"],
-      destSchema: "agents",
-      cardinality: "many",
-    },
-  ],
   mcps: [
     {
       sourceField: ["id"],
@@ -1252,6 +1330,14 @@ const usersRelationships = {
       cardinality: "many",
     },
   ],
+  skills: [
+    {
+      sourceField: ["id"],
+      destField: ["author_id"],
+      destSchema: "skills",
+      cardinality: "many",
+    },
+  ],
 } as const;
 /**
  * The Zero schema object.
@@ -1259,7 +1345,6 @@ const usersRelationships = {
  */
 export const schema = {
   tables: {
-    agents: agentsTable,
     blocks: blocksTable,
     composioStates: composioStatesTable,
     mcpComposioConnections: mcpComposioConnectionsTable,
@@ -1272,13 +1357,15 @@ export const schema = {
     oauthStates: oauthStatesTable,
     organisations: organisationsTable,
     runtimes: runtimesTable,
+    skillDocuments: skillDocumentsTable,
+    skills: skillsTable,
+    taskSkills: taskSkillsTable,
     tasks: tasksTable,
     turns: turnsTable,
     usage: usageTable,
     users: usersTable,
   },
   relationships: {
-    agents: agentsRelationships,
     blocks: blocksRelationships,
     composioStates: composioStatesRelationships,
     mcpComposioConnections: mcpComposioConnectionsRelationships,
@@ -1291,7 +1378,10 @@ export const schema = {
     oauthStates: oauthStatesRelationships,
     organisations: organisationsRelationships,
     runtimes: runtimesRelationships,
+    skillDocuments: skillDocumentsRelationships,
+    skills: skillsRelationships,
     tasks: tasksRelationships,
+    taskSkills: taskSkillsRelationships,
     turns: turnsRelationships,
     usage: usageRelationships,
     users: usersRelationships,
@@ -1305,13 +1395,6 @@ export const schema = {
  * This type is auto-generated from your Drizzle schema definition.
  */
 export type Schema = typeof schema;
-/**
- * Represents a row from the "agents" table.
- * This type is auto-generated from your Drizzle schema definition.
- *
- * @deprecated Use Row["agents"] instead from "@rocicorp/zero".
- */
-export type Agent = Row["agents"];
 /**
  * Represents a row from the "blocks" table.
  * This type is auto-generated from your Drizzle schema definition.
@@ -1396,6 +1479,27 @@ export type Organisation = Row["organisations"];
  * @deprecated Use Row["runtimes"] instead from "@rocicorp/zero".
  */
 export type Runtime = Row["runtimes"];
+/**
+ * Represents a row from the "skillDocuments" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ *
+ * @deprecated Use Row["skillDocuments"] instead from "@rocicorp/zero".
+ */
+export type SkillDocument = Row["skillDocuments"];
+/**
+ * Represents a row from the "skills" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ *
+ * @deprecated Use Row["skills"] instead from "@rocicorp/zero".
+ */
+export type Skill = Row["skills"];
+/**
+ * Represents a row from the "taskSkills" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ *
+ * @deprecated Use Row["taskSkills"] instead from "@rocicorp/zero".
+ */
+export type TaskSkill = Row["taskSkills"];
 /**
  * Represents a row from the "tasks" table.
  * This type is auto-generated from your Drizzle schema definition.

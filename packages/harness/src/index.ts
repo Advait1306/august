@@ -2,6 +2,7 @@ export {
   agentLoop,
   type AgentLoopConfig,
   type ZodToolDefinition,
+  type SkillSummary,
 } from "./agent-loop";
 export type { BetaRawMessageStreamEvent } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 

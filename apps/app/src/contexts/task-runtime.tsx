@@ -2,7 +2,7 @@ import { Permission } from "@jupiter/shared/types";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { queries } from "@jupiter/sync/queries/data";
 import { useQuery } from "@rocicorp/zero/react";
-import { Agent, Task } from "@jupiter/sync/zero/zero-schema.gen";
+import { Skill, Task } from "@jupiter/sync/zero/zero-schema.gen";
 import { useZero } from "@/src/hooks/useZero";
 import { useRuntimeId } from "@/src/hooks/useRuntimeId";
 import { useUser } from "@clerk/clerk-react";
@@ -44,10 +44,12 @@ const getDefaultCwd = async (): Promise<string> => {
   }
 };
 
+export type SelectedSkill = Pick<Skill, "id" | "name" | "description">;
+
 type ComposerState = {
   prompt: string;
-  agent?: Agent;
   cwd: string;
+  selectedSkills: SelectedSkill[];
 };
 
 const TaskRuntimeContext = createContext<TaskRuntimeState>({
@@ -76,7 +78,6 @@ export const TaskRuntimeProvider = ({
   const { user } = useUser();
   const runtimeId = useRuntimeId(user?.id);
   const sessionId = useSessionId();
-  const agents = useQuery(queries.agents.all())[0];
   const tasks = useQuery(queries.tasks.all())[0];
 
   const [composerStates, setComposerStates] = useState<
@@ -84,8 +85,8 @@ export const TaskRuntimeProvider = ({
   >({
     "new-conversation": {
       prompt: "",
-      agent: agents[0],
       cwd: "", // This will be set to defaultCwd once it's loaded in the useEffect below
+      selectedSkills: [],
     },
   });
   const [permissions, setPermissions] = useState<PermissionState>({});
@@ -105,6 +106,7 @@ export const TaskRuntimeProvider = ({
         "new-conversation": {
           ...prev["new-conversation"],
           cwd: cwd,
+          selectedSkills: prev["new-conversation"]?.selectedSkills || [],
         },
       }));
     };
@@ -214,10 +216,13 @@ export const TaskRuntimeProvider = ({
   };
 
   const sendMessage = async (message: string) => {
+    const currentState = composerStates[selectedTaskId];
+    const skillIds = currentState?.selectedSkills?.map((s) => s.id) || [];
+
     setComposerStates((prev) => {
       return {
         ...prev,
-        [selectedTaskId]: { ...prev[selectedTaskId], prompt: "" },
+        [selectedTaskId]: { ...prev[selectedTaskId], prompt: "", selectedSkills: [] },
       };
     });
 
@@ -241,6 +246,7 @@ export const TaskRuntimeProvider = ({
           runtime_id: runtimeId,
           session_id: sessionId,
           metadata: cwd ? { cwd } : undefined,
+          skill_ids: skillIds.length > 0 ? skillIds : undefined,
         })
       ).client;
 
@@ -256,6 +262,7 @@ export const TaskRuntimeProvider = ({
           block_id: blockId,
           message,
           session_id: sessionId,
+          skill_ids: skillIds.length > 0 ? skillIds : undefined,
         })
       ).client;
     }
@@ -266,8 +273,8 @@ export const TaskRuntimeProvider = ({
       const newState = { ...prev };
       newState["new-conversation"] = {
         prompt: "",
-        agent: undefined,
         cwd: defaultCwd,
+        selectedSkills: [],
       };
       return newState;
     });

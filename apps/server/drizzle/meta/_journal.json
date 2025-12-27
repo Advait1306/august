@@ -78,6 +78,20 @@
       "when": 1766739394001,
       "tag": "0010_sleepy_darkhawk",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1766779593844,
+      "tag": "0011_uneven_paibok",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1766811366921,
+      "tag": "0012_red_fenris",
+      "breakpoints": true
     }
   ]
 }
