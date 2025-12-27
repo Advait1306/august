@@ -1,8 +1,5 @@
 import { useCallback } from "react";
 import type { SelectedSkill } from "@/src/contexts/task-runtime";
-
-export type { SelectedSkill };
-
 interface ComposerState {
   prompt: string;
   cwd: string;
