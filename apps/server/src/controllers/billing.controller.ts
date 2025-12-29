@@ -140,7 +140,10 @@ export function createBillingController(
 
         // Get organisation ID from metadata (set during checkout)
         // Fallback: look up org by subscription_id for existing subscriptions
-        let orgId = (metadata as Record<string, string>)?.organisation_id;
+        let orgId =
+          metadata && typeof metadata === "object"
+            ? (metadata as Record<string, string>)?.organisation_id
+            : undefined;
 
         if (!orgId) {
           // Look up org by subscription_id

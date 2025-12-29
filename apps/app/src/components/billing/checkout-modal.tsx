@@ -19,6 +19,7 @@ export function CheckoutModal({ url, onClose }: CheckoutModalProps) {
           src={url}
           className="h-full w-full rounded-lg"
           title="Checkout"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
         />
       </div>
     </div>
