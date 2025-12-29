@@ -22,7 +22,6 @@ interface BillingGuardProps {
 
 export function BillingGuard({ children }: BillingGuardProps) {
   const [organisation, result] = useQuery(queries.organisations.current());
-
   const isComplete = result.type === "complete";
 
   // Wait for organisation data to load
@@ -33,14 +32,11 @@ export function BillingGuard({ children }: BillingGuardProps) {
   const { billing_exempt, subscription_status } = organisation ?? {};
 
   // Billing exempt orgs have full access
-  if (billing_exempt) {
-    return <>{children}</>;
-  }
-
-  const status = subscription_status as SubscriptionStatus;
-
   // Allowed statuses have full access (can show before result is complete)
-  if (status && ALLOWED_STATUSES.includes(status)) {
+  if (
+    billing_exempt ||
+    (subscription_status && ALLOWED_STATUSES.includes(subscription_status))
+  ) {
     return <>{children}</>;
   }
 
@@ -49,16 +45,12 @@ export function BillingGuard({ children }: BillingGuardProps) {
     return null;
   }
 
-  // If org doesn't exist (new org not synced), show welcome
-  if (organisation === null) {
-    return <WelcomeScreen />;
-  }
-
   // Blocked statuses show resubscribe screen
-  if (status && BLOCKED_STATUSES.includes(status)) {
+  if (subscription_status && BLOCKED_STATUSES.includes(subscription_status)) {
     return <ResubscribeScreen />;
   }
 
+  // If org doesn't exist (new org not synced), show welcome
   // No subscription - show welcome screen
   return <WelcomeScreen />;
 }
