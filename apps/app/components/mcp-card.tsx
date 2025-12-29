@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Loader2, Check } from "lucide-react";
 import { useZero } from "@/src/hooks/useZero";
+import { mutators } from "@jupiter/sync/mutators/data";
 import { useAuth } from "@clerk/clerk-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -91,7 +92,7 @@ export function MCPCard({ mcpStoreItem, connectedMcp }: MCPCardProps) {
     if (!connectedMcp) return;
 
     try {
-      await z.mutate.mcps.delete({ mcp_id: connectedMcp.id });
+      await z.mutate(mutators.mcps.delete({ mcp_id: connectedMcp.id })).client;
       toast.success("Integration disconnected successfully");
     } catch (error) {
       console.error("Failed to delete connection:", error);
@@ -103,7 +104,7 @@ export function MCPCard({ mcpStoreItem, connectedMcp }: MCPCardProps) {
     <>
       <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 hover:bg-muted transition-all border border-border">
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center shrink-0">
             {mcpStoreItem.logo_url ? (
               <img
                 src={mcpStoreItem.logo_url}
@@ -119,7 +120,7 @@ export function MCPCard({ mcpStoreItem, connectedMcp }: MCPCardProps) {
           </div>
         </div>
 
-        <div className="flex-shrink-0">
+        <div className="shrink-0">
           {isConnecting ? (
             <Button
               variant="ghost"

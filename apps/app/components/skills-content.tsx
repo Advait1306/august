@@ -485,7 +485,6 @@ export function SkillsContent() {
           {/* Content based on view mode */}
           {viewMode === "skills" && selectedSkill ? (
             <SkillDetailView
-              skill={selectedSkill}
               documents={documents || []}
               localName={localName}
               setLocalName={setLocalName}
@@ -493,7 +492,6 @@ export function SkillsContent() {
               setLocalDescription={setLocalDescription}
               localPrompt={localPrompt}
               setLocalPrompt={setLocalPrompt}
-              isEditing={isEditing}
               setIsEditing={setIsEditing}
               onUpdateSkill={handleUpdateSkill}
               onDocumentClick={(docId) => {
@@ -504,14 +502,12 @@ export function SkillsContent() {
             />
           ) : viewMode === "documents" && selectedDocument ? (
             <DocumentDetailView
-              document={selectedDocument}
               localName={localName}
               setLocalName={setLocalName}
               localDescription={localDescription}
               setLocalDescription={setLocalDescription}
               localContent={localContent}
               setLocalContent={setLocalContent}
-              isEditing={isEditing}
               setIsEditing={setIsEditing}
               onUpdateDocument={handleUpdateDocument}
             />
