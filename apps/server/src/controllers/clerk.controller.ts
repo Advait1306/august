@@ -2,8 +2,12 @@ import { Request, Response, Router } from "express";
 import { Webhook } from "svix";
 import { getAuth } from "@clerk/express";
 import { ClerkService } from "../services/clerk.service";
+import { SubscriptionService } from "../services/subscription.service";
 
-export function createClerkController(clerkService: ClerkService): Router {
+export function createClerkController(
+  clerkService: ClerkService,
+  subscriptionService: SubscriptionService
+): Router {
   const router = Router();
   const wh = new Webhook(process.env.CLERK_WEBHOOK_KEY!);
 
@@ -51,8 +55,26 @@ export function createClerkController(clerkService: ClerkService): Router {
         break;
       }
 
+      case "organizationMembership.created":
+      case "organizationMembership.deleted": {
+        // Extract org ID and member count from the payload
+        const orgId = parsedPayload.data.organization?.id;
+        const membersCount = parsedPayload.data.organization?.members_count;
+
+        if (!orgId) {
+          console.error("No organization ID in membership webhook payload");
+          return res.sendStatus(400);
+        }
+
+        await subscriptionService.handleMemberChange(orgId, membersCount);
+        res.sendStatus(200);
+        break;
+      }
+
       default: {
-        res.sendStatus(400);
+        // Return 200 for unhandled events to acknowledge receipt
+        console.log(`Unhandled Clerk webhook event: ${parsedPayload.type}`);
+        res.sendStatus(200);
         break;
       }
     }

@@ -15,7 +15,6 @@ import { Route as AuthoriseRouteImport } from './routes/authorise'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
-import { Route as SettingsWalletRouteImport } from './routes/settings/wallet'
 import { Route as SettingsClaudeCodeRouteImport } from './routes/settings/claude-code'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 
@@ -49,11 +48,6 @@ const SignInSplatRoute = SignInSplatRouteImport.update({
   path: '/sign-in/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsWalletRoute = SettingsWalletRouteImport.update({
-  id: '/settings/wallet',
-  path: '/settings/wallet',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SettingsClaudeCodeRoute = SettingsClaudeCodeRouteImport.update({
   id: '/settings/claude-code',
   path: '/settings/claude-code',
@@ -72,7 +66,6 @@ export interface FileRoutesByFullPath {
   '/tasks': typeof TasksRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/claude-code': typeof SettingsClaudeCodeRoute
-  '/settings/wallet': typeof SettingsWalletRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
 }
@@ -83,7 +76,6 @@ export interface FileRoutesByTo {
   '/tasks': typeof TasksRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/claude-code': typeof SettingsClaudeCodeRoute
-  '/settings/wallet': typeof SettingsWalletRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
 }
@@ -95,7 +87,6 @@ export interface FileRoutesById {
   '/tasks': typeof TasksRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/claude-code': typeof SettingsClaudeCodeRoute
-  '/settings/wallet': typeof SettingsWalletRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
 }
@@ -108,7 +99,6 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/settings/appearance'
     | '/settings/claude-code'
-    | '/settings/wallet'
     | '/sign-in/$'
     | '/sign-up/$'
   fileRoutesByTo: FileRoutesByTo
@@ -119,7 +109,6 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/settings/appearance'
     | '/settings/claude-code'
-    | '/settings/wallet'
     | '/sign-in/$'
     | '/sign-up/$'
   id:
@@ -130,7 +119,6 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/settings/appearance'
     | '/settings/claude-code'
-    | '/settings/wallet'
     | '/sign-in/$'
     | '/sign-up/$'
   fileRoutesById: FileRoutesById
@@ -142,7 +130,6 @@ export interface RootRouteChildren {
   TasksRoute: typeof TasksRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
   SettingsClaudeCodeRoute: typeof SettingsClaudeCodeRoute
-  SettingsWalletRoute: typeof SettingsWalletRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
 }
@@ -191,13 +178,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings/wallet': {
-      id: '/settings/wallet'
-      path: '/settings/wallet'
-      fullPath: '/settings/wallet'
-      preLoaderRoute: typeof SettingsWalletRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/settings/claude-code': {
       id: '/settings/claude-code'
       path: '/settings/claude-code'
@@ -222,7 +202,6 @@ const rootRouteChildren: RootRouteChildren = {
   TasksRoute: TasksRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
   SettingsClaudeCodeRoute: SettingsClaudeCodeRoute,
-  SettingsWalletRoute: SettingsWalletRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,
 }

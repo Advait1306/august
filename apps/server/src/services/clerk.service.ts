@@ -38,10 +38,15 @@ export class ClerkService {
   }
 
   /**
-   * Delete an organisation from the database
+   * Soft delete an organisation (set deleted_at timestamp)
+   * Does not remove from DB, maintains Dodo Payments customer record
    */
   async deleteOrganisation(orgId: string) {
-    await this.db.delete(organisations).where(eq(organisations.id, orgId));
+    await this.db
+      .update(organisations)
+      .set({ deleted_at: new Date() })
+      .where(eq(organisations.id, orgId));
+    console.log(`Soft deleted organisation ${orgId}`);
   }
 
   /**

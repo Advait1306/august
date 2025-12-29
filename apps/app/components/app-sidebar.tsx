@@ -3,7 +3,6 @@ import {
   Palette,
   Wrench,
   ChevronLeft,
-  Wallet,
   PlusIcon,
   Sparkles,
 } from "lucide-react";
@@ -11,7 +10,6 @@ import { MCPIcon } from "@/components/icons/MCPIcon";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
-import { NavWallet } from "@/components/nav-wallet";
 import {
   Sidebar,
   SidebarContent,
@@ -40,11 +38,6 @@ const data = {
       title: "Claude Code",
       url: "/settings/claude-code",
       icon: Wrench,
-    },
-    {
-      title: "Wallet",
-      url: "/settings/wallet",
-      icon: Wallet,
     },
   ],
 };
@@ -114,10 +107,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               Back
             </Button>
           ) : (
-            <>
-              <OrganizationSwitcher />
-              <NavWallet />
-            </>
+            <OrganizationSwitcher />
           )}
         </SidebarHeader>
         <SidebarContent>

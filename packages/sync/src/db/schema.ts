@@ -22,10 +22,23 @@ export const users = pgTable("users", {
   id: varchar().primaryKey().notNull(),
 });
 
+export const subscriptionStatus = pgEnum("subscription_status", [
+  "pending",
+  "active",
+  "on_hold",
+  "cancelled",
+  "failed",
+  "expired",
+]);
+
 export const organisations = pgTable("organisations", {
   id: varchar().primaryKey().notNull(),
   payment_id: varchar(),
   wallet: doublePrecision().notNull().default(0.0),
+  subscription_id: varchar(),
+  subscription_status: subscriptionStatus(),
+  billing_exempt: boolean().notNull().default(false),
+  deleted_at: timestamp(),
 });
 
 export const usage = pgTable("usage", {
