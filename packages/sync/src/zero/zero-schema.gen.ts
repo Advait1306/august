@@ -553,11 +553,6 @@ const organisationsTable = {
       optional: true,
       customType: null as unknown as string,
     },
-    wallet: {
-      type: "number",
-      optional: true,
-      customType: null as unknown as number,
-    },
     subscription_id: {
       type: "string",
       optional: true,

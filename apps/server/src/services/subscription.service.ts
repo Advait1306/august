@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type DodoPayments from "dodopayments";
 import type { ClerkClient } from "@clerk/express";
-import { organisations } from "@jupiter/sync/db/schema";
+import { organisations, subscriptionStatus } from "@jupiter/sync/db/schema";
 import { AppState } from "../config/state";
 
 // Product IDs for different environments
@@ -25,13 +25,7 @@ export const ADDON_SEAT_PRODUCT_ID =
 // Trial period in days
 export const TRIAL_PERIOD_DAYS = 10;
 
-export type SubscriptionStatus =
-  | "pending"
-  | "active"
-  | "on_hold"
-  | "cancelled"
-  | "failed"
-  | "expired";
+export type SubscriptionStatus = (typeof subscriptionStatus.enumValues)[number];
 
 export class SubscriptionService {
   constructor(

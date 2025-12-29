@@ -35,7 +35,6 @@ export const subscriptionStatus = pgEnum("subscription_status", [
 export const organisations = pgTable("organisations", {
   id: varchar().primaryKey().notNull(),
   payment_id: varchar(),
-  wallet: doublePrecision().notNull().default(0.0),
   subscription_id: varchar(),
   subscription_status: subscriptionStatus(),
   billing_exempt: boolean().notNull().default(false),

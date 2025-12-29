@@ -19,13 +19,10 @@ export class ClerkService {
    * Create a new organisation in the database (upsert to handle out-of-order webhooks)
    */
   async createOrganisation(orgId: string) {
-    const isPersonalOrg = orgId.startsWith("user");
-
     await this.db
       .insert(organisations)
       .values({
         id: orgId,
-        wallet: isPersonalOrg ? 500 : 0,
       })
       .onConflictDoNothing({ target: organisations.id });
   }
