@@ -30,15 +30,12 @@ export function createClerkController(
     switch (parsedPayload.type) {
       case "user.created": {
         await clerkService.createUser(parsedPayload.data.id);
-        await clerkService.createOrganisation(parsedPayload.data.id);
-
         res.sendStatus(200);
         break;
       }
 
       case "user.deleted": {
         await clerkService.deleteUser(parsedPayload.data.id);
-        await clerkService.deleteOrganisation(parsedPayload.data.id);
         res.sendStatus(200);
         break;
       }
@@ -65,6 +62,9 @@ export function createClerkController(
           console.error("No organization ID in membership webhook payload");
           return res.sendStatus(400);
         }
+
+        // Ensure org exists (handles out-of-order webhook events)
+        await clerkService.createOrganisation(orgId);
 
         await subscriptionService.handleMemberChange(orgId, membersCount);
         res.sendStatus(200);

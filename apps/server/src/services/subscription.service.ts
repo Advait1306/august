@@ -41,14 +41,6 @@ export class SubscriptionService {
   ) {}
 
   /**
-   * Generate a customer email for Dodo Payments
-   * Format: {org_id}@customer.august.tech
-   */
-  private getCustomerEmail(orgId: string): string {
-    return `${orgId}@customer.august.tech`;
-  }
-
-  /**
    * Get the number of members in an organization from Clerk
    */
   async getOrgMemberCount(orgId: string): Promise<number> {

@@ -892,6 +892,11 @@ const usersTable = {
       optional: false,
       customType: null as unknown as string,
     },
+    deleted_at: {
+      type: "number",
+      optional: true,
+      customType: null as unknown as number,
+    },
   },
   primaryKey: ["id"],
 } as const;

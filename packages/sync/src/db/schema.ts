@@ -20,6 +20,7 @@ export const integrationType = pgEnum("integration_type", [
 
 export const users = pgTable("users", {
   id: varchar().primaryKey().notNull(),
+  deleted_at: timestamp(),
 });
 
 export const subscriptionStatus = pgEnum("subscription_status", [
