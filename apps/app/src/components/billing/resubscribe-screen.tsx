@@ -32,10 +32,11 @@ export function ResubscribeScreen() {
 
       const data = await response.json();
 
-      // Redirect to Dodo hosted checkout
-      window.location.href = data.checkoutUrl;
+      // Open checkout in external browser
+      window.api?.browser.openUrl(data.checkoutUrl);
     } catch (error) {
       console.error("Error creating subscription checkout:", error);
+    } finally {
       setIsLoading(false);
     }
   };
