@@ -553,7 +553,28 @@ const organisationsTable = {
       optional: true,
       customType: null as unknown as string,
     },
-    wallet: {
+    subscription_id: {
+      type: "string",
+      optional: true,
+      customType: null as unknown as string,
+    },
+    subscription_status: {
+      type: "string",
+      optional: true,
+      customType: null as unknown as
+        | "pending"
+        | "active"
+        | "on_hold"
+        | "cancelled"
+        | "failed"
+        | "expired",
+    },
+    billing_exempt: {
+      type: "boolean",
+      optional: true,
+      customType: null as unknown as boolean,
+    },
+    deleted_at: {
       type: "number",
       optional: true,
       customType: null as unknown as number,
@@ -865,6 +886,11 @@ const usersTable = {
       type: "string",
       optional: false,
       customType: null as unknown as string,
+    },
+    deleted_at: {
+      type: "number",
+      optional: true,
+      customType: null as unknown as number,
     },
   },
   primaryKey: ["id"],

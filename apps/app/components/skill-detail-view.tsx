@@ -2,10 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Plus, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Skill, SkillDocument } from "@jupiter/sync/zero/zero-schema.gen";
+import { SkillDocument } from "@jupiter/sync/zero/zero-schema.gen";
 
 export interface SkillDetailViewProps {
-  skill: Skill;
   documents: SkillDocument[];
   localName: string;
   setLocalName: (name: string) => void;
@@ -13,7 +12,6 @@ export interface SkillDetailViewProps {
   setLocalDescription: (desc: string) => void;
   localPrompt: string;
   setLocalPrompt: (prompt: string) => void;
-  isEditing: boolean;
   setIsEditing: (editing: boolean) => void;
   onUpdateSkill: (
     updates: Partial<{ name: string; prompt: string; description: string }>
@@ -23,7 +21,6 @@ export interface SkillDetailViewProps {
 }
 
 export function SkillDetailView({
-  skill,
   documents,
   localName,
   setLocalName,
@@ -31,7 +28,6 @@ export function SkillDetailView({
   setLocalDescription,
   localPrompt,
   setLocalPrompt,
-  isEditing,
   setIsEditing,
   onUpdateSkill,
   onDocumentClick,

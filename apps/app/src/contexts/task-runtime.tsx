@@ -89,7 +89,7 @@ export const TaskRuntimeProvider = ({
       selectedSkills: [],
     },
   });
-  const [permissions, setPermissions] = useState<PermissionState>({});
+  const [permissions, _setPermissions] = useState<PermissionState>({});
   const [permissionIndices, setPermissionIndices] =
     useState<PermissionIndexState>({});
   const [defaultCwd, setDefaultCwd] = useState<string>("");
