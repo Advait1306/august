@@ -97,8 +97,12 @@ export function createBillingController(
         }
 
         if (!orgId) {
-          console.error("Could not determine org ID from metadata or subscription lookup");
-          return res.status(400).json({ error: "Could not determine organisation" });
+          console.error(
+            "Could not determine org ID from metadata or subscription lookup"
+          );
+          return res
+            .status(400)
+            .json({ error: "Could not determine organisation" });
         }
 
         try {
@@ -119,7 +123,10 @@ export function createBillingController(
               break;
             }
             case "subscription.failed": {
-              await subscriptionService.updateSubscriptionStatus(orgId, "failed");
+              await subscriptionService.updateSubscriptionStatus(
+                orgId,
+                "failed"
+              );
               break;
             }
             case "subscription.cancelled": {
@@ -130,7 +137,10 @@ export function createBillingController(
               break;
             }
             case "subscription.renewed": {
-              await subscriptionService.updateSubscriptionStatus(orgId, "active");
+              await subscriptionService.updateSubscriptionStatus(
+                orgId,
+                "active"
+              );
               break;
             }
             case "subscription.expired": {
@@ -144,8 +154,13 @@ export function createBillingController(
 
           return res.status(200).json({ success: true });
         } catch (error) {
-          console.error(`Error processing subscription event ${event.type}:`, error);
-          return res.status(500).json({ error: "Failed to process subscription event" });
+          console.error(
+            `Error processing subscription event ${event.type}:`,
+            error
+          );
+          return res
+            .status(500)
+            .json({ error: "Failed to process subscription event" });
         }
       }
 
@@ -194,7 +209,7 @@ export function createBillingController(
           await subscriptionService.getOrgMemberCount(organisationId);
         const addonSeats = subscriptionService.calculateAddonSeats(memberCount);
 
-        // Generate customer email (used to link subscription to org)
+        // Generate customer email as a unique id
         const customerEmail = `${organisationId}@customer.august.tech`;
 
         // Build addons array if needed

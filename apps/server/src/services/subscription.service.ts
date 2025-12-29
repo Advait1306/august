@@ -22,9 +22,6 @@ export const ADDON_SEAT_PRODUCT_ID =
     ? ADDON_SEAT_PRODUCT_ID_PROD
     : ADDON_SEAT_PRODUCT_ID_TEST;
 
-// Trial period in days
-export const TRIAL_PERIOD_DAYS = 10;
-
 export type SubscriptionStatus = (typeof subscriptionStatus.enumValues)[number];
 
 export class SubscriptionService {
