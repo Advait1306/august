@@ -1,7 +1,6 @@
 import * as React from "react";
 import {
   Palette,
-  Wrench,
   ChevronLeft,
   PlusIcon,
   Sparkles,
@@ -33,11 +32,6 @@ const data = {
       title: "Appearance",
       url: "/settings/appearance",
       icon: Palette,
-    },
-    {
-      title: "Claude Code",
-      url: "/settings/claude-code",
-      icon: Wrench,
     },
   ],
 };
