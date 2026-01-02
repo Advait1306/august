@@ -15,6 +15,7 @@ import { Route as AuthoriseRouteImport } from './routes/authorise'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SignUpSplatRouteImport } from './routes/sign-up.$'
 import { Route as SignInSplatRouteImport } from './routes/sign-in.$'
+import { Route as SettingsSupportRouteImport } from './routes/settings/support'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings/appearance'
 
 const TasksRoute = TasksRouteImport.update({
@@ -47,6 +48,11 @@ const SignInSplatRoute = SignInSplatRouteImport.update({
   path: '/sign-in/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsSupportRoute = SettingsSupportRouteImport.update({
+  id: '/settings/support',
+  path: '/settings/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   id: '/settings/appearance',
   path: '/settings/appearance',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/tasks': typeof TasksRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/support': typeof SettingsSupportRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/home': typeof HomeRoute
   '/tasks': typeof TasksRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/support': typeof SettingsSupportRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/tasks': typeof TasksRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
+  '/settings/support': typeof SettingsSupportRoute
   '/sign-in/$': typeof SignInSplatRoute
   '/sign-up/$': typeof SignUpSplatRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/tasks'
     | '/settings/appearance'
+    | '/settings/support'
     | '/sign-in/$'
     | '/sign-up/$'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/tasks'
     | '/settings/appearance'
+    | '/settings/support'
     | '/sign-in/$'
     | '/sign-up/$'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/tasks'
     | '/settings/appearance'
+    | '/settings/support'
     | '/sign-in/$'
     | '/sign-up/$'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   TasksRoute: typeof TasksRoute
   SettingsAppearanceRoute: typeof SettingsAppearanceRoute
+  SettingsSupportRoute: typeof SettingsSupportRoute
   SignInSplatRoute: typeof SignInSplatRoute
   SignUpSplatRoute: typeof SignUpSplatRoute
 }
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/support': {
+      id: '/settings/support'
+      path: '/settings/support'
+      fullPath: '/settings/support'
+      preLoaderRoute: typeof SettingsSupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings/appearance': {
       id: '/settings/appearance'
       path: '/settings/appearance'
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   TasksRoute: TasksRoute,
   SettingsAppearanceRoute: SettingsAppearanceRoute,
+  SettingsSupportRoute: SettingsSupportRoute,
   SignInSplatRoute: SignInSplatRoute,
   SignUpSplatRoute: SignUpSplatRoute,
 }
