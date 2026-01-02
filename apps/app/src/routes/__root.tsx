@@ -1,10 +1,10 @@
+import React, { useEffect } from "react";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { Theme } from "@/src/components/theme";
 import { SettingsProvider } from "@/src/contexts/settings-context";
 import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
 import Guard from "@/components/guard";
 import { Toaster } from "@/components/ui/sonner";
-import { useEffect } from "react";
 import { shadcn } from "@clerk/themes";
 import { getSerwist } from "virtual:serwist";
 import { UpdateProvider } from "@/src/contexts/update-context";
@@ -12,6 +12,15 @@ import { UpdateToast } from "@/components/update-toast";
 import { SyncEngine } from "../components/sync_engine";
 import { Analytics } from "@/src/components/analytics";
 import { ProtectedApp } from "../components/protected-app";
+
+function WindowDragRegion() {
+  return (
+    <div
+      className="pointer-events-none fixed inset-x-0 top-0 z-9999 h-[42px]"
+      style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+    />
+  );
+}
 
 // Import your Publishable Key
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -41,6 +50,7 @@ const RootLayout = () => {
     // show all functionality.
     return (
       <>
+        <WindowDragRegion />
         <SettingsProvider>
           <Theme>
             <UpdateProvider>

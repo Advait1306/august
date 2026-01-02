@@ -25,7 +25,7 @@
   --foreground: var(--color-neutral-600);
   --border: var(--color-neutral-300);
 
-  --card: oklch(89.839% 0.19449 109.764);
+  --card: oklch(0.85,0,0);
   --card-foreground: oklch(0.1448 0 0);
   --card-border: #e6e6e6;
 
