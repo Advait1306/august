@@ -6,6 +6,7 @@ import type {
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { ZodObject } from "zod";
 import { toJSONSchema } from "zod/v4/core";
+import { BASE_PROMPT } from "./base-prompt";
 
 /**
  * Zod-based tool definition (as exported by @august/shell-tools)
@@ -42,7 +43,7 @@ export interface SkillSummary {
  * Generate system prompt based on available tools, context, and skills
  */
 function generateSystemPrompt(cwd?: string, skills?: SkillSummary[]): string {
-  let prompt = `You are a helpful assistant with access to various tools.`;
+  let prompt = BASE_PROMPT;
 
   if (skills && skills.length > 0) {
     prompt += `\n\n## Available Skills\n`;

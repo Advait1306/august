@@ -43,10 +43,7 @@ export function MCPCard({ mcpStoreItem, connectedMcp }: MCPCardProps) {
       setIsConnecting(true);
 
       // Get Clerk token
-      const token = await getToken({
-        template: "cc-proxy",
-        skipCache: true,
-      });
+      const token = await getToken();
 
       if (!token) {
         toast.error("Authentication failed. Please try again.");
