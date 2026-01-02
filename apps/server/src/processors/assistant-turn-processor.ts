@@ -400,7 +400,7 @@ export class AssistantTurnProcessor {
     }
 
     // Upsert assistant turn
-    if (this.turn.dirty) {
+    if (this.turn.dirty) { 
       await this.db
         .insert(turns)
         .values({
@@ -428,7 +428,7 @@ export class AssistantTurnProcessor {
       // Note: Sometimes assistant turns and their response turns are created at the same time,
       // so we need to wait a bit to ensure the response turn is created after the assistant turn
       // to ensure ordering. This is a temporary workaround until we have a better solution for ordering.
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       await this.db
         .insert(turns)

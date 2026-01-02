@@ -21,7 +21,7 @@ export function createMCPController(db: AppState["db"]): Router {
     try {
       const { isAuthenticated, userId, orgId } = getAuth(req);
 
-      if (!isAuthenticated || !userId) {
+      if (!isAuthenticated || !userId || !orgId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
@@ -38,14 +38,15 @@ export function createMCPController(db: AppState["db"]): Router {
 
       if (!hasTemplateMcp && !hasCustomMcp) {
         res.status(400).json({
-          error: "Must provide either mcp_store_id OR both custom_mcp_url and custom_mcp_name"
+          error:
+            "Must provide either mcp_store_id OR both custom_mcp_url and custom_mcp_name",
         });
         return;
       }
 
       if (hasTemplateMcp && hasCustomMcp) {
         res.status(400).json({
-          error: "Cannot provide both mcp_store_id and custom MCP details"
+          error: "Cannot provide both mcp_store_id and custom MCP details",
         });
         return;
       }
@@ -68,7 +69,7 @@ export function createMCPController(db: AppState["db"]): Router {
           const result = await composioService.initiateComposioFlow({
             mcpStoreId: mcp_store_id!,
             userId: userId,
-            organisationId: orgId ?? userId,
+            organisationId: orgId,
           });
 
           res.json({
@@ -84,7 +85,7 @@ export function createMCPController(db: AppState["db"]): Router {
         customMcpUrl: custom_mcp_url,
         customMcpName: custom_mcp_name,
         userId: userId,
-        organisationId: orgId ?? userId,
+        organisationId: orgId,
       });
 
       res.json({ authorizationUrl: result.authorizationUrl });
@@ -103,70 +104,67 @@ export function createMCPController(db: AppState["db"]): Router {
    * - Composio: expects `connected_account_id` query param
    * No authentication required for Composio (comes from browser redirect)
    */
-  router.get(
-    "/api/mcp/callback",
-    async (req: Request, res: Response) => {
-      try {
-        const { code, state, connected_account_id } = req.query as {
-          code?: string;
-          state?: string;
-          connected_account_id?: string;
-        };
+  router.get("/api/mcp/callback", async (req: Request, res: Response) => {
+    try {
+      const { code, state, connected_account_id } = req.query as {
+        code?: string;
+        state?: string;
+        connected_account_id?: string;
+      };
 
-        // Determine which flow based on query params
-        if (connected_account_id) {
-          // Composio flow - no authentication needed
-          console.log("[Callback] Handling Composio callback");
+      // Determine which flow based on query params
+      if (connected_account_id) {
+        // Composio flow - no authentication needed
+        console.log("[Callback] Handling Composio callback");
 
-          const result = await composioService.handleComposioCallback({
-            connectedAccountId: connected_account_id,
-          });
+        const result = await composioService.handleComposioCallback({
+          connectedAccountId: connected_account_id,
+        });
 
-          if (result.success) {
-            // Redirect to frontend with success
-            const redirectUrl =
-              result.redirectUri ||
-              `${process.env.WEB_URL}/integrations?status=success`;
-            res.redirect(redirectUrl);
-          } else {
-            // Redirect to frontend with error
-            const errorUrl =
-              result.redirectUri ||
-              `${process.env.WEB_URL}/integrations?status=error&message=${encodeURIComponent(result.error || "Unknown error")}`;
-            res.redirect(errorUrl);
-          }
-        } else if (code && state) {
-          // OAuth flow
-          console.log("[Callback] Handling OAuth callback");
-
-          const result = await oauthService.handleOAuthCallback({
-            code,
-            state,
-          });
-
-          if (result.success) {
-            // Redirect to frontend with success
-            const redirectUrl =
-              result.redirectUri ||
-              `${process.env.WEB_URL}/integrations?status=success`;
-            res.redirect(redirectUrl);
-          } else {
-            // Redirect to frontend with error
-            const errorUrl = `${process.env.WEB_URL}/integrations?status=error&message=${encodeURIComponent(result.error || "Unknown error")}`;
-            res.redirect(errorUrl);
-          }
+        if (result.success) {
+          // Redirect to frontend with success
+          const redirectUrl =
+            result.redirectUri ||
+            `${process.env.WEB_URL}/integrations?status=success`;
+          res.redirect(redirectUrl);
         } else {
-          // Missing required parameters
-          res.status(400).send("Missing required callback parameters");
-          return;
+          // Redirect to frontend with error
+          const errorUrl =
+            result.redirectUri ||
+            `${process.env.WEB_URL}/integrations?status=error&message=${encodeURIComponent(result.error || "Unknown error")}`;
+          res.redirect(errorUrl);
         }
-      } catch (error) {
-        console.error("Error in /api/mcp/callback:", error);
-        const errorUrl = `${process.env.WEB_URL}/integrations?status=error&message=${encodeURIComponent("Internal server error")}`;
-        res.redirect(errorUrl);
+      } else if (code && state) {
+        // OAuth flow
+        console.log("[Callback] Handling OAuth callback");
+
+        const result = await oauthService.handleOAuthCallback({
+          code,
+          state,
+        });
+
+        if (result.success) {
+          // Redirect to frontend with success
+          const redirectUrl =
+            result.redirectUri ||
+            `${process.env.WEB_URL}/integrations?status=success`;
+          res.redirect(redirectUrl);
+        } else {
+          // Redirect to frontend with error
+          const errorUrl = `${process.env.WEB_URL}/integrations?status=error&message=${encodeURIComponent(result.error || "Unknown error")}`;
+          res.redirect(errorUrl);
+        }
+      } else {
+        // Missing required parameters
+        res.status(400).send("Missing required callback parameters");
+        return;
       }
+    } catch (error) {
+      console.error("Error in /api/mcp/callback:", error);
+      const errorUrl = `${process.env.WEB_URL}/integrations?status=error&message=${encodeURIComponent("Internal server error")}`;
+      res.redirect(errorUrl);
     }
-  );
+  });
 
   return router;
 }

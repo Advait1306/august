@@ -244,14 +244,12 @@ export class AiService {
       }
     );
 
-    // Get container ID from the last assistant turn's metadata (for code execution continuity)
-    const lastAssistantTurn = task.turns
+    // Get container ID from turns metadata (search from latest to find most recent container)
+    const containerId = task.turns
       .slice()
       .reverse()
-      .find((turn) => turn.type === "assistant");
-    const containerId = (
-      lastAssistantTurn?.metadata as { container?: { id: string } } | null
-    )?.container?.id;
+      .map((turn) => (turn.metadata as { container?: { id: string } } | null)?.container?.id)
+      .find((id) => id !== undefined);
 
     const assistantTurnProcessor = new AssistantTurnProcessor(
       this.db,
@@ -264,11 +262,12 @@ export class AiService {
     let lastFlush = Date.now();
 
     // Extract skills for this task
-    const taskSkillsList = task.taskSkills?.map((ts) => ({
-      id: ts.skill.id,
-      name: ts.skill.name,
-      description: ts.skill.description,
-    })) ?? [];
+    const taskSkillsList =
+      task.taskSkills?.map((ts) => ({
+        id: ts.skill.id,
+        name: ts.skill.name,
+        description: ts.skill.description,
+      })) ?? [];
 
     try {
       for await (const event of agentLoop({
