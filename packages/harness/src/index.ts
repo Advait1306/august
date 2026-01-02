@@ -1,5 +1,6 @@
 export {
   agentLoop,
+  DEFAULT_MODEL,
   type AgentLoopConfig,
   type ZodToolDefinition,
   type SkillSummary,

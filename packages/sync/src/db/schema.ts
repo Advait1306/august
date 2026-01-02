@@ -1,7 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
-  doublePrecision,
   integer,
   jsonb,
   pgEnum,
@@ -46,12 +45,13 @@ export const usage = pgTable("usage", {
   organisation_id: varchar()
     .notNull()
     .references(() => organisations.id),
+  task_id: varchar().references(() => tasks.id),
+  message_id: varchar().unique(), // Anthropic message ID for deduplication
   model: varchar().notNull(),
   input_tokens: integer().notNull(),
   output_tokens: integer().notNull(),
   cache_creation_input_tokens: integer().notNull(),
   cache_read_input_tokens: integer().notNull(),
-  cost: doublePrecision().notNull().default(0.0),
   created_at: timestamp().notNull().defaultNow(),
 });
 
@@ -405,6 +405,7 @@ export const taskRelations = relations(tasks, ({ one, many }) => ({
     references: [runtimes.id],
   }),
   taskSkills: many(taskSkills),
+  usage: many(usage),
 }));
 
 // Turn relations
@@ -444,6 +445,10 @@ export const usageRelations = relations(usage, ({ one }) => ({
   organisation: one(organisations, {
     fields: [usage.organisation_id],
     references: [organisations.id],
+  }),
+  task: one(tasks, {
+    fields: [usage.task_id],
+    references: [tasks.id],
   }),
 }));
 
