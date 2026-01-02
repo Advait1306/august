@@ -17,6 +17,11 @@ export interface ZodToolDefinition {
 }
 
 /**
+ * Default model for the agent loop
+ */
+export const DEFAULT_MODEL = "claude-sonnet-4-5-20250929";
+
+/**
  * Code execution tool definition
  */
 const CODE_EXECUTION_TOOL = {
@@ -94,7 +99,7 @@ export async function* agentLoop(
     messages,
     tools = [],
     mcpTools = [],
-    model = "claude-sonnet-4-5-20250929",
+    model = DEFAULT_MODEL,
     maxTokens = 8192,
     client = new Anthropic(),
     container,

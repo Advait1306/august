@@ -23,12 +23,15 @@ import { eq } from "drizzle-orm";
 import { isServerTool } from "../server-tools";
 import { addToServerToolExecutorQueue } from "../queues/workers/serverToolExecutorWorker";
 import { addToMcpToolExecutorQueue } from "../queues/workers/mcpToolExecutorWorker";
+import { UsageService } from "../services/usage.service";
 
 export class AssistantTurnProcessor {
   private db: AppState["db"];
+  private usageService: UsageService;
 
   private task: {
     id: string;
+    organisationId: string;
     status: "available" | "executing" | "starting";
     dirty: boolean;
   };
@@ -73,15 +76,32 @@ export class AssistantTurnProcessor {
   // Mapping from MCP tool name to MCP ID
   private toolToMcpId: Map<string, string>;
 
+  // Model used for this request
+  private model: string;
+
+  // Usage tracking
+  private messageId: string | null = null;
+  private usageData: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationInputTokens: number;
+    cacheReadInputTokens: number;
+  } | null = null;
+
   constructor(
     db: AppState["db"],
     taskId: string,
+    organisationId: string,
+    model: string,
     toolToMcpId: Map<string, string> = new Map()
   ) {
     this.db = db;
+    this.usageService = new UsageService(db);
     this.toolToMcpId = toolToMcpId;
+    this.model = model;
     this.task = {
       id: taskId,
+      organisationId,
       status: "executing",
       dirty: true,
     };
@@ -169,16 +189,38 @@ export class AssistantTurnProcessor {
 
     if (data.message.container) this.setContainer(data.message.container);
     if (data.message.stop_reason) this.setStopReason(data.message.stop_reason);
+
+    // Extract message ID and initial usage
+    this.messageId = data.message.id;
+    if (data.message.usage) {
+      this.usageData = {
+        inputTokens: data.message.usage.input_tokens,
+        outputTokens: data.message.usage.output_tokens,
+        cacheCreationInputTokens:
+          data.message.usage.cache_creation_input_tokens ?? 0,
+        cacheReadInputTokens: data.message.usage.cache_read_input_tokens ?? 0,
+      };
+    }
   }
 
   processMessageDelta(data: BetaRawMessageDeltaEvent) {
     if (data.delta.container) this.setContainer(data.delta.container);
     if (data.delta.stop_reason) this.setStopReason(data.delta.stop_reason);
 
+    // Extract final usage (authoritative output_tokens value)
+    if (data.usage) {
+      this.usageData = {
+        inputTokens: this.usageData?.inputTokens ?? 0,
+        outputTokens: data.usage.output_tokens,
+        cacheCreationInputTokens: this.usageData?.cacheCreationInputTokens ?? 0,
+        cacheReadInputTokens: this.usageData?.cacheReadInputTokens ?? 0,
+      };
+    }
+
     // We aren't processing `stop_sequence` here as it should never occur
   }
 
-  processMessageStop() {
+  async processMessageStop() {
     this.turn.complete = true;
     this.turn.dirty = true;
 
@@ -192,7 +234,22 @@ export class AssistantTurnProcessor {
     }
 
     this.task.dirty = true;
-    this.flushToDb();
+
+    // Record usage before flushing to DB
+    if (this.messageId && this.usageData) {
+      await this.usageService.recordUsage({
+        organisationId: this.task.organisationId,
+        taskId: this.task.id,
+        messageId: this.messageId,
+        model: this.model,
+        inputTokens: this.usageData.inputTokens,
+        outputTokens: this.usageData.outputTokens,
+        cacheCreationInputTokens: this.usageData.cacheCreationInputTokens,
+        cacheReadInputTokens: this.usageData.cacheReadInputTokens,
+      });
+    }
+
+    await this.flushToDb();
   }
 
   processCompleteBlock(index: number, content: BetaContentBlockParam) {

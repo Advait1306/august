@@ -863,6 +863,16 @@ const usageTable = {
       optional: false,
       customType: null as unknown as string,
     },
+    task_id: {
+      type: "string",
+      optional: true,
+      customType: null as unknown as string,
+    },
+    message_id: {
+      type: "string",
+      optional: true,
+      customType: null as unknown as string,
+    },
     model: {
       type: "string",
       optional: false,
@@ -886,11 +896,6 @@ const usageTable = {
     cache_read_input_tokens: {
       type: "number",
       optional: false,
-      customType: null as unknown as number,
-    },
-    cost: {
-      type: "number",
-      optional: true,
       customType: null as unknown as number,
     },
     created_at: {
@@ -1300,6 +1305,14 @@ const tasksRelationships = {
       cardinality: "many",
     },
   ],
+  usage: [
+    {
+      sourceField: ["id"],
+      destField: ["task_id"],
+      destSchema: "usage",
+      cardinality: "many",
+    },
+  ],
 } as const;
 const taskSkillsRelationships = {
   task: [
@@ -1351,6 +1364,14 @@ const usageRelationships = {
       sourceField: ["organisation_id"],
       destField: ["id"],
       destSchema: "organisations",
+      cardinality: "one",
+    },
+  ],
+  task: [
+    {
+      sourceField: ["task_id"],
+      destField: ["id"],
+      destSchema: "tasks",
       cardinality: "one",
     },
   ],

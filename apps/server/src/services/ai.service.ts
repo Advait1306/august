@@ -1,7 +1,12 @@
 import { asc, eq, InferSelectModel } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { blocks, tasks, turns } from "@jupiter/sync/db/schema";
-import { agentLoop, McpConnection, getMcpTools } from "@august/harness";
+import {
+  agentLoop,
+  McpConnection,
+  getMcpTools,
+  DEFAULT_MODEL,
+} from "@august/harness";
 import { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { AssistantTurnProcessor } from "../processors/assistant-turn-processor";
 import { toolDefinitions } from "@august/shell-tools";
@@ -251,6 +256,8 @@ export class AiService {
     const assistantTurnProcessor = new AssistantTurnProcessor(
       this.db,
       taskId,
+      task.organisation_id,
+      DEFAULT_MODEL,
       toolToMcpId
     );
 
@@ -282,7 +289,7 @@ export class AiService {
             break;
           }
           case "message_stop": {
-            assistantTurnProcessor.processMessageStop();
+            await assistantTurnProcessor.processMessageStop();
             break;
           }
           case "content_block_start": {
