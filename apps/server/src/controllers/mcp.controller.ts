@@ -21,10 +21,6 @@ export function createMCPController(db: AppState["db"]): Router {
     try {
       const { isAuthenticated, userId, orgId } = getAuth(req);
 
-      console.log("isAuthenticated", isAuthenticated);
-      console.log("userId", userId);
-      console.log("orgId", orgId);
-
       if (!isAuthenticated || !userId || !orgId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
