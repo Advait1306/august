@@ -4,6 +4,8 @@ import {
   ChevronLeft,
   PlusIcon,
   Sparkles,
+  Headset,
+  Settings,
 } from "lucide-react";
 import { MCPIcon } from "@/components/icons/MCPIcon";
 
@@ -38,6 +40,11 @@ const data: { settingsNav: NavItem[] } = {
       type: "component",
       component: BillingButton,
       key: "billing",
+    },
+    {
+      title: "Support",
+      url: "/settings/support",
+      icon: Headset,
     },
   ],
 };
@@ -200,6 +207,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 >
                   <MCPIcon className="h-4 w-4 mr-2" />
                   Connections
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-8 text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    navigate({
+                      to: "/settings/appearance",
+                      search: { from: location.pathname },
+                    })
+                  }
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
                 </Button>
               </div>
             </div>
