@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { MCPIcon } from "@/components/icons/MCPIcon";
 
-import { NavMain } from "@/components/nav-main";
+import { NavMain, type NavItem } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -25,13 +25,19 @@ import { SkillsContent } from "@/components/skills-content";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
 import { useScrollGradients } from "@/hooks/use-scroll-gradients";
 import { FullPageDialog } from "@/components/full-page-dialog";
+import { BillingButton } from "@/components/billing-button";
 
-const data = {
+const data: { settingsNav: NavItem[] } = {
   settingsNav: [
     {
       title: "Appearance",
       url: "/settings/appearance",
       icon: Palette,
+    },
+    {
+      type: "component",
+      component: BillingButton,
+      key: "billing",
     },
   ],
 };

@@ -98,6 +98,11 @@ export const queries = defineQueries({
       }
     ),
   },
+  dodoCustomerPortal: {
+    current: defineQuery(({ ctx }) => {
+      return builder.dodoCustomerPortal.where("organisation_id", ctx.orgId).one();
+    }),
+  },
 });
 
 export type Queries = typeof queries;

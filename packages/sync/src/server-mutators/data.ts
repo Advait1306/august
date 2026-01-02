@@ -1,9 +1,13 @@
 import { defineMutators, defineMutator } from "@rocicorp/zero";
 import { z } from "zod";
+import type DodoPayments from "dodopayments";
 import { builder } from "../zero/schema";
 import { mutators as clientMutators } from "../mutators/data";
 import mixpanel from "mixpanel";
 import { ToolUseBlockParam } from "@anthropic-ai/sdk/resources";
+
+// 24 hours in milliseconds
+const PORTAL_LINK_TTL_MS = 24 * 60 * 60 * 1000;
 
 type AsyncTask = Array<() => Promise<void>>;
 
@@ -23,7 +27,8 @@ export function createServerMutators(
   asyncTasks: AsyncTask,
   mixpanelClient: mixpanel.Mixpanel,
   oauthService: OAuthService,
-  addToAgentLoopQueue: AddToAgentLoopQueue
+  addToAgentLoopQueue: AddToAgentLoopQueue,
+  dodoClient: DodoPayments
 ) {
   // Analytics tracking function - needs ctx passed in
   const createTrackEvent = (userId: string, orgId: string) => {
@@ -196,7 +201,14 @@ export function createServerMutators(
           await clientMutators.message.create.fn({
             tx,
             ctx,
-            args: { message, task_id, turn_id, block_id, session_id, skill_ids },
+            args: {
+              message,
+              task_id,
+              turn_id,
+              block_id,
+              session_id,
+              skill_ids,
+            },
           });
 
           // Add to agent loop queue
@@ -415,6 +427,71 @@ export function createServerMutators(
           // TODO: Add analytics event
         }
       ),
+    },
+    dodoCustomerPortal: {
+      /**
+       * Create/refresh the customer portal link.
+       * Checks if cached link is still valid (< 24 hours old).
+       * If expired or missing, creates a new portal session via Dodo API and caches it.
+       */
+      createLink: defineMutator(async ({ tx, ctx }) => {
+        const organisationId = ctx.orgId;
+
+        // Check if we have a cached link that's still valid
+        const cached = await tx.run(
+          builder.dodoCustomerPortal
+            .where("organisation_id", organisationId)
+            .one()
+        );
+
+        if (cached) {
+          const createdAt = cached.created_at;
+          if (createdAt) {
+            const now = Date.now();
+            const age = now - createdAt;
+
+            // If link is less than 24 hours old, no refresh needed
+            if (age < PORTAL_LINK_TTL_MS) {
+              return;
+            }
+          }
+        }
+
+        // Look up customer by email reconstructed from org_id
+        const customerEmail =
+          `${organisationId}@customer.august.tech`.toLowerCase();
+
+        const customers = await dodoClient.customers.list({
+          email: customerEmail,
+        });
+
+        const customer = customers.items[0];
+        if (!customer) {
+          // No customer found - org hasn't gone through checkout yet
+          return;
+        }
+
+        const customerId = customer.customer_id;
+
+        // Create a new portal session
+        const session =
+          await dodoClient.customers.customerPortal.create(customerId);
+
+        // Cache the new link (upsert)
+        if (cached) {
+          await tx.mutate.dodoCustomerPortal.update({
+            organisation_id: organisationId,
+            link: session.link,
+            created_at: Date.now(),
+          });
+        } else {
+          await tx.mutate.dodoCustomerPortal.insert({
+            organisation_id: organisationId,
+            link: session.link,
+            created_at: Date.now(),
+          });
+        }
+      }),
     },
   });
 }
