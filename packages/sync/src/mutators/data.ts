@@ -408,6 +408,15 @@ export const mutators = defineMutators({
       }
     ),
   },
+  dodoCustomerPortal: {
+    /**
+     * Create/refresh the customer portal link.
+     * Client-side stub - actual implementation is on the server.
+     */
+    createLink: defineMutator(async () => {
+      // No-op on client - server handles the Dodo API call
+    }),
+  },
   skillDocuments: {
     create: defineMutator(
       z.object({

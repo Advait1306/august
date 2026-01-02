@@ -8,9 +8,8 @@ import { AppState } from "../config/state";
 const SUBSCRIPTION_PRODUCT_ID_TEST = "pdt_0NV3MBvQ4Cc8uEZiilx3Q";
 const ADDON_SEAT_PRODUCT_ID_TEST = "adn_0NV3Mw8K54WjM5ARADSDs";
 
-// TODO: Add production IDs when available
-const SUBSCRIPTION_PRODUCT_ID_PROD = "pdt_0NV3MBvQ4Cc8uEZiilx3Q";
-const ADDON_SEAT_PRODUCT_ID_PROD = "adn_0NV3Mw8K54WjM5ARADSDs";
+const SUBSCRIPTION_PRODUCT_ID_PROD = "pdt_0NVOghnXNJygNiDjhpchx";
+const ADDON_SEAT_PRODUCT_ID_PROD = "adn_0NVOgnI4WzUiofwvpaSdq";
 
 export const SUBSCRIPTION_PRODUCT_ID =
   process.env.NODE_ENV === "production"

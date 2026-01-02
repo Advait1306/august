@@ -61,7 +61,7 @@ const subscriptionService = new SubscriptionService(
   clerkClient
 );
 const oauthService = new OAuthService(db);
-const syncService = new SyncService(dbProvider, mp, oauthService);
+const syncService = new SyncService(dbProvider, mp, oauthService, dodoClient);
 
 // Clerk webhook needs raw body parser
 app.use("/clerk", bodyParser.raw({ type: "application/json" }));

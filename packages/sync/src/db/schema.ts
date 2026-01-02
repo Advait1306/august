@@ -55,6 +55,16 @@ export const usage = pgTable("usage", {
   created_at: timestamp().notNull().defaultNow(),
 });
 
+// Dodo Customer Portal - Cached portal links per organization
+export const dodoCustomerPortal = pgTable("dodo_customer_portal", {
+  organisation_id: varchar()
+    .primaryKey()
+    .notNull()
+    .references(() => organisations.id),
+  link: varchar().notNull(),
+  created_at: timestamp().notNull().defaultNow(),
+});
+
 // MCP Store - Global catalog of pre-configured integrations (public-facing only)
 export const mcpStore = pgTable("mcp_store", {
   id: varchar().primaryKey().notNull(),
@@ -351,13 +361,22 @@ export const userRelations = relations(users, ({ many }) => ({
 }));
 
 // Organisation relations
-export const organisationRelations = relations(organisations, ({ many }) => ({
+export const organisationRelations = relations(organisations, ({ one, many }) => ({
   tasks: many(tasks),
   usage: many(usage),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
   composioStates: many(composioStates),
   skills: many(skills),
+  dodoCustomerPortal: one(dodoCustomerPortal),
+}));
+
+// Dodo Customer Portal relations
+export const dodoCustomerPortalRelations = relations(dodoCustomerPortal, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [dodoCustomerPortal.organisation_id],
+    references: [organisations.id],
+  }),
 }));
 
 // Runtime relations

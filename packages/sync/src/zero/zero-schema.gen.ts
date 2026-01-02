@@ -131,6 +131,28 @@ const composioStatesTable = {
   primaryKey: ["id"],
   serverName: "composio_states",
 } as const;
+const dodoCustomerPortalTable = {
+  name: "dodoCustomerPortal",
+  columns: {
+    organisation_id: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    link: {
+      type: "string",
+      optional: false,
+      customType: null as unknown as string,
+    },
+    created_at: {
+      type: "number",
+      optional: true,
+      customType: null as unknown as number,
+    },
+  },
+  primaryKey: ["organisation_id"],
+  serverName: "dodo_customer_portal",
+} as const;
 const mcpComposioConnectionsTable = {
   name: "mcpComposioConnections",
   columns: {
@@ -939,6 +961,16 @@ const composioStatesRelationships = {
     },
   ],
 } as const;
+const dodoCustomerPortalRelationships = {
+  organisation: [
+    {
+      sourceField: ["organisation_id"],
+      destField: ["id"],
+      destSchema: "organisations",
+      cardinality: "one",
+    },
+  ],
+} as const;
 const mcpComposioConnectionsRelationships = {
   mcp: [
     {
@@ -1146,6 +1178,14 @@ const organisationsRelationships = {
       destField: ["organisation_id"],
       destSchema: "skills",
       cardinality: "many",
+    },
+  ],
+  dodoCustomerPortal: [
+    {
+      sourceField: ["id"],
+      destField: ["organisation_id"],
+      destSchema: "dodoCustomerPortal",
+      cardinality: "one",
     },
   ],
 } as const;
@@ -1373,6 +1413,7 @@ export const schema = {
   tables: {
     blocks: blocksTable,
     composioStates: composioStatesTable,
+    dodoCustomerPortal: dodoCustomerPortalTable,
     mcpComposioConnections: mcpComposioConnectionsTable,
     mcpComposioIntegrationDetails: mcpComposioIntegrationDetailsTable,
     mcpOauthConnections: mcpOauthConnectionsTable,
@@ -1394,6 +1435,7 @@ export const schema = {
   relationships: {
     blocks: blocksRelationships,
     composioStates: composioStatesRelationships,
+    dodoCustomerPortal: dodoCustomerPortalRelationships,
     mcpComposioConnections: mcpComposioConnectionsRelationships,
     mcpComposioIntegrationDetails: mcpComposioIntegrationDetailsRelationships,
     mcpOauthConnections: mcpOauthConnectionsRelationships,
@@ -1435,6 +1477,13 @@ export type Block = Row["blocks"];
  * @deprecated Use Row["composioStates"] instead from "@rocicorp/zero".
  */
 export type ComposioState = Row["composioStates"];
+/**
+ * Represents a row from the "dodoCustomerPortal" table.
+ * This type is auto-generated from your Drizzle schema definition.
+ *
+ * @deprecated Use Row["dodoCustomerPortal"] instead from "@rocicorp/zero".
+ */
+export type DodoCustomerPortal = Row["dodoCustomerPortal"];
 /**
  * Represents a row from the "mcpComposioConnections" table.
  * This type is auto-generated from your Drizzle schema definition.
