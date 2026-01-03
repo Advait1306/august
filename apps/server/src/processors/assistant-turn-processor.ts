@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import {
   BetaContainer,
   BetaContentBlockParam,
@@ -106,7 +107,7 @@ export class AssistantTurnProcessor {
       dirty: true,
     };
     this.turn = {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       metadata: {},
       complete: false,
       dirty: true,
@@ -256,7 +257,7 @@ export class AssistantTurnProcessor {
     // Generate toolResponseTurn if this is a tool_use block
     if (content.type === "tool_use" && !this.toolResponseTurn) {
       this.toolResponseTurn = {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         dirty: true,
       };
     }
@@ -264,7 +265,7 @@ export class AssistantTurnProcessor {
     // Initialize block if it doesn't exist (complete blocks can come without streaming)
     if (!this.blocks[index]) {
       this.blocks[index] = {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         dirty: true,
         data: {
           content: content,
@@ -306,14 +307,14 @@ export class AssistantTurnProcessor {
     // Generate toolResponseTurn if this is a tool_use block
     if (content.type === "tool_use" && !this.toolResponseTurn) {
       this.toolResponseTurn = {
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         dirty: true,
       };
     }
 
     // Add block to our internal state with generated ID
     this.blocks[data.index] = {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       dirty: true,
       data: {
         content: content,
