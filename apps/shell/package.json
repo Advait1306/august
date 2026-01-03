@@ -25,7 +25,6 @@
     "publish:linux": "electron-builder --linux -p always"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
     "@august/shell-tools": "*",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
