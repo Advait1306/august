@@ -75,12 +75,22 @@ function getCodeExecutionToolUseIds(messages: BetaMessageParam[]): Set<string> {
 
 /**
  * Check if a content block can have cache_control added.
- * Tool results called by code execution cannot have cache_control.
+ * Tool use blocks and tool results called by code execution cannot have cache_control.
  */
 function canHaveCacheControl(
   block: BetaContentBlockParam,
   codeExecutionToolUseIds: Set<string>
 ): boolean {
+  // Tool use blocks called by code execution cannot have cache_control
+  if (
+    block.type === "tool_use" &&
+    "caller" in block &&
+    (block as { caller?: { type: string } }).caller?.type ===
+      "code_execution_20250825"
+  ) {
+    return false;
+  }
+  // Tool results for code execution tool calls cannot have cache_control
   if (block.type === "tool_result" && "tool_use_id" in block) {
     return !codeExecutionToolUseIds.has(block.tool_use_id);
   }
@@ -309,7 +319,7 @@ export async function* agentLoop(
     max_tokens: maxTokens,
     system: systemPrompt,
     tools: allTools.length > 0 ? allTools : undefined,
-    messages,
+    messages: cachedMessages,
     betas: betas.length > 0 ? betas : undefined,
     container,
     stream: true,
