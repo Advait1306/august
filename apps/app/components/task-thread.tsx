@@ -1,9 +1,11 @@
+import { useRef, useEffect } from "react";
 import { VList, VListHandle } from "virtua";
+import { useQuery } from "@rocicorp/zero/react";
+import { queries } from "@jupiter/sync/queries/data";
+import { Task, Turn as TurnType } from "@jupiter/sync/zero/zero-schema.gen";
 import { ConversationEmptyState } from "@/components/ai-elements/conversation";
-import { UserMessagePartView, AssistantTextPartView } from "./message";
-import { ToolGroupView } from "./tool-group";
+import { Turn } from "./turn";
 import { BlinkingCursor } from "./blinking-cursor";
-import { MessagePart } from "@/lib/message-utils";
 import { EducationCard } from "./education-card";
 import {
   Carousel,
@@ -15,21 +17,37 @@ import {
 import Autoplay from "embla-carousel-autoplay";
 
 interface TaskThreadProps {
-  selectedTaskId: string;
-  messageParts: MessagePart[];
+  selectedTask: Task | "new-conversation";
   isGenerating: boolean;
-  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
-  virtualizerRef: React.RefObject<VListHandle | null>;
 }
 
-export function TaskThread({
-  selectedTaskId,
-  messageParts,
-  isGenerating,
-  scrollContainerRef,
-  virtualizerRef,
-}: TaskThreadProps) {
-  if (selectedTaskId === "new-conversation") {
+export function TaskThread({ selectedTask, isGenerating }: TaskThreadProps) {
+  const virtualizerRef = useRef<VListHandle>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch turns for the selected task
+  const [turns] = useQuery(
+    selectedTask !== "new-conversation"
+      ? queries.turns.byTask({ taskId: selectedTask.id })
+      : queries.turns.byTask({ taskId: "" }),
+    {
+      enabled: selectedTask !== "new-conversation",
+    }
+  );
+
+  // Scroll to bottom when turns change
+  useEffect(() => {
+    if (virtualizerRef.current && turns.length > 0) {
+      virtualizerRef.current.scrollToIndex(turns.length - 1, {
+        align: "end",
+      });
+    }
+  }, [
+    turns.length,
+    selectedTask === "new-conversation" ? "new-conversation" : selectedTask.id,
+  ]);
+
+  if (selectedTask === "new-conversation") {
     {
       /* The -translate-y-20 is to account for optical weight of the composer */
     }
@@ -46,7 +64,7 @@ export function TaskThread({
             <div className="h-[40px] w-[40px] rounded-full bg-primary" />
           </div>
         </div>
-        <div className="relative flex grow-1 max-h-[300px] w-full max-w-[800px]">
+        <div className="relative flex grow max-h-[300px] w-full max-w-[800px]">
           <Carousel
             opts={{
               align: "start",
@@ -101,19 +119,11 @@ export function TaskThread({
       ref={scrollContainerRef}
       className="relative flex flex-col w-full max-w-[720px] h-[calc(100vh-204px)]"
     >
-      <VList className="grow-1 no-scrollbar w-full" ref={virtualizerRef}>
+      <VList className="grow no-scrollbar w-full" ref={virtualizerRef}>
         {/* Used to offset the header */}
         <div className="h-[54px] w-full" />
-        {messageParts.map((part) => (
-          <div>
-            {part.type === "user-content" && (
-              <UserMessagePartView content={part.content} />
-            )}
-            {part.type === "assistant-text" && (
-              <AssistantTextPartView text={part.text} />
-            )}
-            {part.type === "tool-group" && <ToolGroupView tools={part.tools} />}
-          </div>
+        {turns.map((turn) => (
+          <Turn key={turn.id} turn={turn as TurnType} />
         ))}
         {isGenerating && (
           <div className="flex flex-row text-sm text-muted-foreground items-center gap-2">

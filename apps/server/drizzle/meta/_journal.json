@@ -43,6 +43,62 @@
       "when": 1763015869772,
       "tag": "0005_closed_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1765877251401,
+      "tag": "0006_deep_mimic",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1766168703197,
+      "tag": "0007_unusual_matthew_murdock",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1766489590746,
+      "tag": "0008_natural_gwen_stacy",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1766581842484,
+      "tag": "0009_safe_white_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1766739394001,
+      "tag": "0010_sleepy_darkhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1766779593844,
+      "tag": "0011_uneven_paibok",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1766811366921,
+      "tag": "0012_red_fenris",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1767338465847,
+      "tag": "0013_far_rick_jones",
+      "breakpoints": true
     }
   ]
 }

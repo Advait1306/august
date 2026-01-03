@@ -1,135 +1,200 @@
-# Turborepo starter
+# August
 
-This Turborepo starter is maintained by the Turborepo core team.
+An AI-powered agent management and task automation platform. August enables users to run and manage autonomous AI agents, handle task execution, and coordinate with various services through both desktop and web interfaces.
 
-## Using this example
+## Features
 
-Run the following command:
+- **Agent Management** - Run and manage autonomous AI agents with built-in permission systems
+- **Task Execution** - Create, track, and execute tasks with AI agent assistance
+- **Real-time Sync** - Rocicorp Zero for live bidirectional data synchronization
+- **Multi-platform** - Desktop app (Electron) and web app with shared codebase
+- **Third-party Integrations** - Connect external services via Composio
+- **Auto-updates** - Built-in update mechanism for the desktop application
 
-```sh
-npx create-turbo@latest
-```
-
-## What's inside?
-
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
+## Project Structure
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+august/
+├── apps/
+│   ├── shell/          # Electron desktop application
+│   ├── app/            # Vite + React web application
+│   ├── website/        # Next.js marketing website
+│   ├── server/         # Express.js backend API
+│   ├── db/             # Database setup and migrations
+│   └── zero-cache/     # Rocicorp Zero sync service
+├── packages/
+│   ├── shell-tools/    # Agent tools (grep with ripgrep)
+│   ├── sync/           # Database queries and mutations
+│   ├── shared/         # Shared types and IPC system
+│   ├── typescript-config/
+│   └── eslint-config/
+└── docs/               # Architecture documentation
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+## Tech Stack
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+| Layer | Technologies |
+|-------|-------------|
+| Frontend | React 19, TypeScript, Vite, TanStack Router, Tailwind CSS 4, Radix UI |
+| Desktop | Electron 37+, Electron Builder |
+| Backend | Node.js, Express.js, PostgreSQL, Drizzle ORM |
+| Sync | Rocicorp Zero, Better-sqlite3 (client cache) |
+| Auth | Clerk |
+| AI | AI SDK, OpenAI, Anthropic Claude |
+| Build | Turborepo, npm workspaces |
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## Prerequisites
 
-### Develop
+- Node.js >= 18
+- npm 10.9.2+
+- Docker (for local PostgreSQL)
 
-To develop all apps and packages, run the following command:
+## Getting Started
 
-```
-cd my-turborepo
+### Installation
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+```bash
+# Clone the repository
+git clone <repository-url>
+cd august
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
+# Install dependencies
+npm install
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+# Build all packages
+npm run build
 ```
 
-### Remote Caching
+### Development
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+```bash
+# Start all apps in development mode
+npm run dev
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+# Or start specific apps
+npx turbo dev --filter=app      # Web app only
+npx turbo dev --filter=shell    # Desktop app only
+npx turbo dev --filter=server   # Backend only
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+### Database Setup
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+```bash
+cd apps/db
 
+# Start PostgreSQL in Docker
+npm run dev:db-up
+
+# Run migrations
+npm run migrate
+
+# Stop PostgreSQL
+npm run dev:db-down
 ```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+### Building for Production
+
+```bash
+# Build all packages
+npm run build
+
+# Build desktop app for specific platforms
+cd apps/shell
+npm run build:mac     # macOS
+npm run build:win     # Windows
+npm run build:linux   # Linux
 ```
 
-## Useful Links
+## Available Scripts
 
-Learn more about the power of Turborepo:
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start all apps in development mode |
+| `npm run build` | Build all apps and packages |
+| `npm run lint` | Run ESLint across the monorepo |
+| `npm run format` | Format code with Prettier |
+| `npm run check-types` | TypeScript type checking |
 
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+## Apps
+
+### Shell (`apps/shell`)
+
+Electron desktop application that serves as the container for the web app. Handles:
+- Local agent execution
+- IPC communication with the renderer
+- System-level integrations
+- Auto-updates
+
+### App (`apps/app`)
+
+Main React web application running inside Electron or standalone. Features:
+- Task management interface
+- Agent interaction UI
+- Settings and configuration
+- PWA support via Serwist
+
+### Server (`apps/server`)
+
+Express.js backend running on port 8080. Provides:
+- REST API endpoints
+- Authentication via Clerk
+- Billing via DodoPayments
+- Webhook handlers
+- Third-party integrations
+
+### Website (`apps/website`)
+
+Next.js marketing website with landing pages and public documentation.
+
+## Packages
+
+### @jupiter/shared
+
+Shared TypeScript types and IPC system for type-safe communication between Electron main and renderer processes.
+
+### @jupiter/sync
+
+Database queries, mutations, and Rocicorp Zero schema definitions. Used by both client and server for data synchronization.
+
+### @jupiter/shell-tools
+
+Agent tools including a ripgrep-based grep utility for fast file content searching.
+
+## Architecture
+
+### IPC System
+
+Three-layer architecture for Electron communication:
+1. **Shared types** in `@jupiter/shared`
+2. **Main process handlers** in `apps/shell/src/main/ipc/`
+3. **Preload scripts** exposing `window.api`
+
+See `docs/ipc.md` for detailed documentation.
+
+### Data Synchronization
+
+Uses Rocicorp Zero for real-time bidirectional sync:
+- Server-side schema in `@jupiter/sync`
+- Client-side SQLite cache via better-sqlite3
+- Zero-cache service for sync coordination
+
+## Environment Variables
+
+Each app requires its own `.env` file. Key variables include:
+
+- `DATABASE_URL` - PostgreSQL connection string
+- `CLERK_*` - Clerk authentication keys
+- `OPENAI_API_KEY` - OpenAI API key
+- `COMPOSIO_API_KEY` - Composio integration key
+- `DODO_*` - DodoPayments billing keys
+
+## Contributing
+
+1. Create a feature branch from `development`
+2. Make your changes
+3. Run `npm run lint` and `npm run check-types`
+4. Submit a pull request
+
+## License
+
+Proprietary - All rights reserved

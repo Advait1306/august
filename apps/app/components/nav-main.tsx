@@ -20,19 +20,30 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 
+type NavLinkItem = {
+  type?: "link";
+  title: string;
+  url: string;
+  icon: LucideIcon | ComponentType<any>;
+  isActive?: boolean;
+  items?: {
+    title: string;
+    url: string;
+  }[];
+};
+
+type NavComponentItem = {
+  type: "component";
+  component: ComponentType;
+  key: string;
+};
+
+export type NavItem = NavLinkItem | NavComponentItem;
+
 export function NavMain({
   items,
 }: {
-  items: {
-    title: string;
-    url: string;
-    icon: LucideIcon | ComponentType<any>;
-    isActive?: boolean;
-    items?: {
-      title: string;
-      url: string;
-    }[];
-  }[];
+  items: NavItem[];
 }) {
   const location = useLocation();
   const isSettingsPage = location.pathname.startsWith("/settings");
@@ -42,6 +53,17 @@ export function NavMain({
     <SidebarGroup>
       <SidebarMenu>
         {items.map((item) => {
+          // Handle custom component items
+          if (item.type === "component") {
+            const Component = item.component;
+            return (
+              <SidebarMenuItem key={item.key}>
+                <Component />
+              </SidebarMenuItem>
+            );
+          }
+
+          // Handle standard link items
           const isActive = location.pathname === item.url;
           const linkProps =
             isSettingsPage && fromParam

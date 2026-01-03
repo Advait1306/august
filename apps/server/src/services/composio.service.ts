@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { eq } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { AppState } from "../config/state";
 import { Composio } from "@composio/core";
 import {
   mcps,
@@ -13,7 +13,7 @@ import {
 export class ComposioService {
   private composio: Composio;
 
-  constructor(private db: NodePgDatabase) {
+  constructor(private db: AppState["db"]) {
     const apiKey = process.env.COMPOSIO_API_KEY;
     if (!apiKey) {
       throw new Error("COMPOSIO_API_KEY environment variable is not set");

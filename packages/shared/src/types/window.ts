@@ -1,6 +1,5 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
-import type { AgentTypes } from "./agent";
-import type { ClaudeInstallation } from "./claude";
+import type { IPC } from "../ipc/contracts";
 
 declare global {
   interface Window {
@@ -24,12 +23,15 @@ declare global {
           error?: string;
         }>;
       };
-      agent: AgentTypes;
-      claudeCode: {
-        discoverInstallations: () => Promise<ClaudeInstallation[]>;
-      };
       browser: {
         openUrl: (url: string) => Promise<boolean>;
+      };
+      shellTools: {
+        getManifest: () => Promise<IPC.ShellTools.GetManifestResponse>;
+        execute: <T extends keyof IPC.ShellTools.ToolInputMap>(
+          name: T,
+          input: IPC.ShellTools.ToolInputMap[T]
+        ) => Promise<IPC.ShellTools.ToolOutputMap[T]>;
       };
     };
   }

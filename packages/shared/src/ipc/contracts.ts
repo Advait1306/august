@@ -1,5 +1,21 @@
 import { ModelMessage } from "ai";
-import { ClaudeInstallation } from "../types/claude";
+import type {
+  ShellToolsManifest,
+  GrepInput,
+  GrepOutput,
+  GlobInput,
+  GlobOutput,
+  LsInput,
+  LsOutput,
+  EditInput,
+  EditOutput,
+  WriteInput,
+  WriteOutput,
+  MultiEditInput,
+  MultiEditOutput,
+  BashInput,
+  BashOutput,
+} from "@august/shell-tools";
 
 // Type-safe IPC request/response definitions
 export namespace IPC {
@@ -59,8 +75,39 @@ export namespace IPC {
       error?: string;
     }
   }
+  export namespace ShellTools {
+    // Get manifest response
+    export type GetManifestResponse = ShellToolsManifest;
 
-  export namespace ClaudeCode {
-    export type DiscoverInstallationsResponse = ClaudeInstallation[];
+    // Tool input/output type mapping
+    export interface ToolInputMap {
+      grep: GrepInput;
+      glob: GlobInput;
+      ls: LsInput;
+      edit: EditInput;
+      write: WriteInput;
+      multiedit: MultiEditInput;
+      bash: BashInput;
+    }
+
+    export interface ToolOutputMap {
+      grep: GrepOutput;
+      glob: GlobOutput;
+      ls: LsOutput;
+      edit: EditOutput;
+      write: WriteOutput;
+      multiedit: MultiEditOutput;
+      bash: BashOutput;
+    }
+
+    // Execute request
+    export interface ExecuteRequest<T extends keyof ToolInputMap = keyof ToolInputMap> {
+      name: T;
+      input: ToolInputMap[T];
+    }
+
+    // Execute response
+    export type ExecuteResponse<T extends keyof ToolOutputMap = keyof ToolOutputMap> =
+      ToolOutputMap[T];
   }
 }

@@ -1,17 +1,16 @@
 import * as React from "react";
 import {
-  Bot,
   Palette,
-  Wrench,
   ChevronLeft,
-  Wallet,
   PlusIcon,
+  Sparkles,
+  Headset,
+  Settings,
 } from "lucide-react";
 import { MCPIcon } from "@/components/icons/MCPIcon";
 
-import { NavMain } from "@/components/nav-main";
+import { NavMain, type NavItem } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
-import { NavWallet } from "@/components/nav-wallet";
 import {
   Sidebar,
   SidebarContent,
@@ -23,13 +22,14 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
 import { useState, useEffect, useRef } from "react";
-import { AgentsContent } from "@/components/agents-content";
 import { MCPContent } from "@/components/mcp-content";
+import { SkillsContent } from "@/components/skills-content";
 import { useKeyboardNavigation } from "@/src/hooks/useKeyboardNavigation";
 import { useScrollGradients } from "@/hooks/use-scroll-gradients";
 import { FullPageDialog } from "@/components/full-page-dialog";
+import { BillingButton } from "@/components/billing-button";
 
-const data = {
+const data: { settingsNav: NavItem[] } = {
   settingsNav: [
     {
       title: "Appearance",
@@ -37,14 +37,14 @@ const data = {
       icon: Palette,
     },
     {
-      title: "Claude Code",
-      url: "/settings/claude-code",
-      icon: Wrench,
+      type: "component",
+      component: BillingButton,
+      key: "billing",
     },
     {
-      title: "Wallet",
-      url: "/settings/wallet",
-      icon: Wallet,
+      title: "Support",
+      url: "/settings/support",
+      icon: Headset,
     },
   ],
 };
@@ -55,7 +55,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const isSettingsPage = location.pathname.startsWith("/settings");
   const fromParam = isSettingsPage ? (location.search as any)?.from : undefined;
   const { tasks, selectedTaskId, selectTask } = useTaskRuntime();
-  const [dialog, setDialog] = useState<null | "agents" | "mcp">(null);
+  const [dialog, setDialog] = useState<null | "skills" | "mcp">(null);
   const taskRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -114,10 +114,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               Back
             </Button>
           ) : (
-            <>
-              <OrganizationSwitcher />
-              <NavWallet />
-            </>
+            <OrganizationSwitcher />
           )}
         </SidebarHeader>
         <SidebarContent>
@@ -128,7 +125,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {/* Tasks Section */}
               <div className="flex flex-col flex-1 min-h-0">
                 {/* Fixed Header */}
-                <div className="flex-shrink-0 px-2">
+                <div className="shrink-0 px-2">
                   <div className="text-[10px] font-semibold text-muted-foreground px-2 py-1">
                     TASKS
                   </div>
@@ -182,26 +179,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {/* Gradient Overlays */}
                   {showTopGradient && (
                     <div className="absolute top-0 left-0 right-0 h-12 pointer-events-none z-10">
-                      <div className="absolute inset-0 bg-gradient-to-b from-sidebar via-sidebar/50 to-transparent" />
+                      <div className="absolute inset-0 bg-linear-to-b from-sidebar via-sidebar/50 to-transparent" />
                     </div>
                   )}
                   {showBottomGradient && (
                     <div className="absolute bottom-0 left-0 right-0 h-12 pointer-events-none z-10">
-                      <div className="absolute inset-0 bg-gradient-to-t from-sidebar via-sidebar/50 to-transparent" />
+                      <div className="absolute inset-0 bg-linear-to-t from-sidebar via-sidebar/50 to-transparent" />
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Fixed Bottom Navigation */}
-              <div className="flex-shrink-0 flex flex-col gap-1 px-2 pb-2 border-t border-border pt-2">
+              <div className="shrink-0 flex flex-col gap-1 px-2 pb-2 border-t border-border pt-2">
                 <Button
                   variant="ghost"
                   className="w-full justify-start h-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => setDialog("agents")}
+                  onClick={() => setDialog("skills")}
                 >
-                  <Bot className="h-4 w-4 mr-2" />
-                  Agents
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Skills
                 </Button>
                 <Button
                   variant="ghost"
@@ -210,6 +207,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 >
                   <MCPIcon className="h-4 w-4 mr-2" />
                   Connections
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-8 text-muted-foreground hover:text-foreground"
+                  onClick={() =>
+                    navigate({
+                      to: "/settings/appearance",
+                      search: { from: location.pathname },
+                    })
+                  }
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Settings
                 </Button>
               </div>
             </div>
@@ -222,13 +232,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         )}
       </Sidebar>
 
-      {/* Agents Dialog */}
+      {/* Skills Dialog */}
       <FullPageDialog
-        open={dialog === "agents"}
-        onOpenChange={(open) => setDialog(open ? "agents" : null)}
-        title="Agents"
+        open={dialog === "skills"}
+        onOpenChange={(open) => setDialog(open ? "skills" : null)}
+        title="Skills"
       >
-        <AgentsContent />
+        <SkillsContent />
       </FullPageDialog>
 
       {/* MCP Dialog */}

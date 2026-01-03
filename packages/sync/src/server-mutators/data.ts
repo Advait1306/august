@@ -1,13 +1,13 @@
-// server-mutators.ts
-import { CustomMutatorDefs, Transaction } from "@rocicorp/zero";
-import { Schema } from "../zero/schema";
-import { wrapMutatorsWithAnalytics } from "./analytics-wrapper";
+import { defineMutators, defineMutator } from "@rocicorp/zero";
+import { z } from "zod";
+import type DodoPayments from "dodopayments";
+import { builder } from "../zero/schema";
+import { mutators as clientMutators } from "../mutators/data";
 import mixpanel from "mixpanel";
+import { ToolUseBlockParam } from "@anthropic-ai/sdk/resources";
 
-type AuthData = {
-  userId: string;
-  orgId: string;
-};
+// 24 hours in milliseconds
+const PORTAL_LINK_TTL_MS = 24 * 60 * 60 * 1000;
 
 type AsyncTask = Array<() => Promise<void>>;
 
@@ -15,232 +15,485 @@ type OAuthService = {
   revokeToken: (params: { mcpId: string }) => Promise<void>;
 };
 
+type AgentLoopJobData = {
+  task_id: string;
+  turn_id: string;
+  block_id: string;
+};
+
+type AddToAgentLoopQueue = (data: AgentLoopJobData) => Promise<void>;
+
 export function createServerMutators(
-  clientMutators: CustomMutatorDefs,
-  authData: AuthData,
   asyncTasks: AsyncTask,
-  mixpanel: mixpanel.Mixpanel,
-  oauthService: OAuthService
+  mixpanelClient: mixpanel.Mixpanel,
+  oauthService: OAuthService,
+  addToAgentLoopQueue: AddToAgentLoopQueue,
+  dodoClient: DodoPayments
 ) {
-  // Analytics configuration
-  const analyticsConfig = {
-    projects: {
-      create: {
-        event: "project_created",
-        getProperties: (args: any) => ({
-          project_id: args.project_id,
-          name: args.name,
-        }),
-      },
-      update: {
-        event: "project_updated",
-        getProperties: (args: any) => ({ project_id: args.project_id }),
-      },
-      delete: {
-        event: "project_deleted",
-        getProperties: (args: any) => ({ project_id: args.project_id }),
-      },
-    },
-    agents: {
-      create: {
-        event: "agent_created",
-        getProperties: (args: any) => ({
-          agent_id: args.agent_id,
-          base_agent: args.base_agent,
-        }),
-      },
-      update: {
-        event: "agent_updated",
-        getProperties: (args: any) => ({ agent_id: args.agent_id }),
-      },
-      delete: {
-        event: "agent_deleted",
-        getProperties: (args: any) => ({ agent_id: args.agent_id }),
-      },
-    },
-    tasks: {
-      create: {
-        event: "task_created",
-        getProperties: (args: any) => ({
-          task_id: args.task_id,
-          project_id: args.project_id,
-          ...(args.agent_id && { agent_id: args.agent_id }),
-        }),
-      },
-    },
-    message: {
-      create: {
-        event: "message_created",
-        getProperties: (args: any) => ({
-          task_id: args.task_id,
-          message_id: args.message_id,
-          role: args.role,
-        }),
-      },
-      update: {
-        event: "message_updated",
-        getProperties: (args: any) => ({
-          task_id: args.task_id,
-          message_id: args.message_id,
-        }),
-      },
-    },
-  };
-
-  // Analytics tracking function
-  const trackEvent = async (event: string, properties: Record<string, any>) => {
-    asyncTasks.push(async () => {
-      mixpanel.track(event, {
-        $user_id: authData.userId,
-        org_id: authData.orgId,
-        ...properties,
+  // Analytics tracking function - needs ctx passed in
+  const createTrackEvent = (userId: string, orgId: string) => {
+    return async (event: string, properties: Record<string, any>) => {
+      asyncTasks.push(async () => {
+        mixpanelClient.track(event, {
+          $user_id: userId,
+          org_id: orgId,
+          ...properties,
+        });
       });
-    });
+    };
   };
 
-  // Wrap client mutators with analytics
-  const wrappedMutators = wrapMutatorsWithAnalytics(
-    clientMutators,
-    analyticsConfig,
-    trackEvent
-  );
+  return defineMutators(clientMutators, {
+    tasks: {
+      create: defineMutator(
+        z.object({
+          message: z.string(),
+          task_id: z.string(),
+          turn_id: z.string(),
+          block_id: z.string(),
+          runtime_id: z.string(),
+          session_id: z.string(),
+          metadata: z.object({ cwd: z.string().optional() }).optional(),
+          skill_ids: z.array(z.string()).optional(),
+        }),
+        async ({
+          tx,
+          ctx,
+          args: {
+            message,
+            task_id,
+            turn_id,
+            block_id,
+            runtime_id,
+            session_id,
+            metadata,
+            skill_ids,
+          },
+        }) => {
+          // Run the base mutator
+          await clientMutators.tasks.create.fn({
+            tx,
+            ctx,
+            args: {
+              message,
+              task_id,
+              turn_id,
+              block_id,
+              runtime_id,
+              session_id,
+              metadata,
+              skill_ids,
+            },
+          });
 
-  // Override specific mutators that need custom server-side logic
-  return {
-    ...wrappedMutators,
-    mcps: {
-      delete: async (
-        tx: Transaction<Schema>,
-        { mcp_id }: { mcp_id: string }
-      ) => {
-        // Check if MCP belongs to user
-        const mcp = await tx.query.mcps
-          .where("id", mcp_id)
-          .where("author_id", authData.userId)
-          .one()
-          .run();
+          // Add to agent loop queue
+          asyncTasks.push(async () => {
+            addToAgentLoopQueue({
+              task_id,
+              turn_id,
+              block_id,
+            });
+          });
 
-        if (!mcp) {
-          throw new Error("MCP not found or access denied");
-        }
-
-        if (mcp.integration_type === "oauth") {
-          // Revoke OAuth token synchronously before deleting the connection
-          try {
-            // This will also delete the oauth token from the database
-            await oauthService.revokeToken({ mcpId: mcp_id });
-          } catch (error) {
-            console.error(
-              "[Server Mutator] Error revoking OAuth token:",
-              error
-            );
-          }
-        } else {
-          const composioConnection = await tx.query.mcpComposioConnections
-            .where("mcp_id", mcp_id)
-            .one()
-            .run();
-
-          if (!composioConnection) {
-            throw new Error("Composio connection not found");
-          }
-
-          // TODO: Figure out how to delete the Composio connection from composio SDK as well
-          await tx.mutate.mcpComposioConnections.delete({
-            id: composioConnection.id,
+          asyncTasks.push(async () => {
+            // Track analytics
+            const trackEvent = createTrackEvent(ctx.userId, ctx.orgId);
+            await trackEvent("task_created", { task_id });
           });
         }
+      ),
+      abort: defineMutator(
+        z.object({
+          task_id: z.string(),
+        }),
+        async ({ tx, ctx, args: { task_id } }) => {
+          const task = await tx.run(
+            builder.tasks
+              .where("id", task_id)
+              .where("author_id", ctx.userId)
+              .one()
+          );
 
-        // Delete the MCP from the database
-        await tx.mutate.mcps.delete({ id: mcp_id });
-      },
+          if (!task) {
+            throw new Error("Task not found with user");
+          }
+
+          if (task.status !== "executing") {
+            throw new Error("Can't stop a non-executing task");
+          }
+
+          await tx.mutate.tasks.update({
+            id: task_id,
+            status: "stopping",
+          });
+
+          asyncTasks.push(async () => {
+            // TODO: Create a task stop processing job
+          });
+        }
+      ),
+    },
+    mcps: {
+      delete: defineMutator(
+        z.object({
+          mcp_id: z.string(),
+        }),
+        async ({ tx, ctx, args: { mcp_id } }) => {
+          // Check if MCP belongs to user
+          const mcp = await tx.run(
+            builder.mcps
+              .where("id", mcp_id)
+              .where("author_id", ctx.userId)
+              .one()
+          );
+
+          if (!mcp) {
+            throw new Error("MCP not found or access denied");
+          }
+
+          if (mcp.integration_type === "oauth") {
+            // Revoke OAuth token synchronously before deleting the connection
+            try {
+              // This will also delete the oauth token from the database
+              await oauthService.revokeToken({ mcpId: mcp_id });
+            } catch (error) {
+              console.error(
+                "[Server Mutator] Error revoking OAuth token:",
+                error
+              );
+            }
+          } else {
+            const composioConnection = await tx.run(
+              builder.mcpComposioConnections.where("mcp_id", mcp_id).one()
+            );
+
+            if (!composioConnection) {
+              throw new Error("Composio connection not found");
+            }
+
+            // TODO: Figure out how to delete the Composio connection from composio SDK as well
+            await tx.mutate.mcpComposioConnections.delete({
+              id: composioConnection.id,
+            });
+          }
+
+          // Delete the MCP from the database
+          await tx.mutate.mcps.delete({ id: mcp_id });
+        }
+      ),
     },
     message: {
-      create: async (
-        tx: Transaction<Schema>,
-        {
-          task_id,
-          message_id,
-          role,
-          content,
-          metadata,
-        }: {
-          task_id: string;
-          message_id: string;
-          role: string;
-          content: Record<string, any>[];
-          metadata: Record<string, any>;
+      create: defineMutator(
+        z.object({
+          message: z.string(),
+          task_id: z.string(),
+          turn_id: z.string(),
+          block_id: z.string(),
+          session_id: z.string(),
+          skill_ids: z.array(z.string()).optional(),
+        }),
+        async ({
+          tx,
+          ctx,
+          args: { message, task_id, turn_id, block_id, session_id, skill_ids },
+        }) => {
+          // Run the base mutator
+          await clientMutators.message.create.fn({
+            tx,
+            ctx,
+            args: {
+              message,
+              task_id,
+              turn_id,
+              block_id,
+              session_id,
+              skill_ids,
+            },
+          });
+
+          // Add to agent loop queue
+          asyncTasks.push(async () => {
+            addToAgentLoopQueue({
+              task_id,
+              turn_id,
+              block_id,
+            });
+          });
+
+          // TODO: Add analytics event
         }
-      ) => {
-        // Check if task belongs to user
-        const task = tx.query.tasks
-          .where("id", task_id)
-          .where("author_id", authData.userId)
-          .one();
-
-        if (!task) {
-          throw new Error("Task not found with user");
-        }
-
-        await tx.mutate.messages.insert({
-          id: message_id,
-          task_id,
-          message_id,
-          role,
-          content,
-          metadata,
-          created_at: Date.now(),
-        });
-
-        // Track analytics manually for custom mutator
-        await trackEvent("message_created", {
-          task_id,
-          message_id,
-          role,
-        });
-      },
-
-      update: async (
-        tx: Transaction<Schema>,
-        {
-          task_id,
-          message_id,
-          role,
-          content,
-          metadata,
-        }: {
-          task_id: string;
-          message_id: string;
-          role: string;
-          content: Record<string, any>[];
-          metadata: Record<string, any>;
-        }
-      ) => {
-        // Check if the task belongs to the user
-        const task = tx.query.tasks
-          .where("id", task_id)
-          .where("author_id", authData.userId)
-          .one();
-
-        if (!task) {
-          throw new Error("Task not found with user");
-        }
-
-        await tx.mutate.messages.update({
-          id: message_id,
-          task_id,
-          message_id: message_id,
-          role: role,
-          content: content,
-          metadata: metadata,
-        });
-
-        // Track analytics manually for custom mutator
-        await trackEvent("message_updated", {
-          task_id,
-          message_id,
-        });
-      },
+      ),
     },
-  } as const;
+    runtimes: {
+      register: defineMutator(
+        z.object({
+          runtime_id: z.string(),
+          tools: z.array(z.object({ name: z.string(), version: z.string() })),
+        }),
+        async ({ tx, ctx, args: { runtime_id, tools } }) => {
+          // Run the base mutator
+          await clientMutators.runtimes.register.fn({
+            tx,
+            ctx,
+            args: { runtime_id, tools },
+          });
+        }
+      ),
+    },
+    tools: {
+      submitResult: defineMutator(
+        z.object({
+          tool_block_id: z.string(),
+          turn_id: z.string(),
+          result: z.string(),
+          block_id: z.string(),
+          is_error: z.boolean(),
+        }),
+        async ({
+          tx,
+          ctx,
+          args: { tool_block_id, turn_id, result, block_id, is_error },
+        }) => {
+          const turn = await tx.run(
+            builder.turns
+              .where("id", turn_id)
+              .related("task", (q) => {
+                return q.where("author_id", ctx.userId);
+              })
+              .one()
+          );
+
+          const tool = await tx.run(
+            builder.blocks
+              .where("id", tool_block_id)
+              .where("type", "tool_use")
+              .one()
+          );
+
+          if (!tool) {
+            throw new Error("Tool block not found");
+          }
+
+          if (!turn) {
+            throw new Error("Turn not found");
+          }
+
+          if (turn.type !== "user") {
+            throw new Error("Turn is not a user turn");
+          }
+
+          if (turn.locked) {
+            throw new Error("Turn is locked");
+          }
+
+          await tx.mutate.blocks.insert({
+            id: block_id,
+            turn_id: turn_id,
+            type: "tool_result",
+            status: "none",
+            content: {
+              type: "tool_result",
+              tool_use_id: (tool.content as ToolUseBlockParam).id,
+              content: result,
+              is_error,
+            },
+            created_at: Date.now(),
+            updated_at: Date.now(),
+            processed: false,
+          });
+
+          await tx.mutate.blocks.update({
+            id: tool_block_id,
+            status: "completed",
+          });
+
+          asyncTasks.push(async () => {
+            addToAgentLoopQueue({
+              task_id: turn.task_id,
+              turn_id,
+              block_id,
+            });
+          });
+          // TODO: Add analytics event
+        }
+      ),
+      approve: defineMutator(
+        z.object({
+          block_id: z.string(),
+        }),
+        async ({ tx, ctx, args: { block_id } }) => {
+          const block = await tx.run(
+            builder.blocks
+              .where("id", block_id)
+              .related("turn", (q) => {
+                return q.related("task", (s) => {
+                  return s.where("author_id", ctx.userId);
+                });
+              })
+              .one()
+          );
+
+          if (!block) {
+            throw new Error("Block not found");
+          }
+
+          switch (block.type) {
+            case "tool_use": {
+              await tx.mutate.blocks.update({
+                id: block_id,
+                status: "client_pending",
+              });
+              break;
+            }
+            case "server_tool_use": {
+              await tx.mutate.blocks.update({
+                id: block_id,
+                status: "server_pending",
+              });
+              break;
+            }
+            default: {
+              throw new Error("Block doesn't support permission approval");
+            }
+          }
+          // TODO: Add analytics event
+        }
+      ),
+      deny: defineMutator(
+        z.object({
+          tool_block_id: z.string(),
+          turn_id: z.string(),
+          reason: z.string(),
+          result_block_id: z.string(),
+        }),
+        async ({
+          tx,
+          ctx,
+          args: { tool_block_id, turn_id, reason, result_block_id },
+        }) => {
+          const block = await tx.run(
+            builder.blocks
+              .where("id", tool_block_id)
+              .related("turn", (q) => {
+                return q.related("task", (s) => {
+                  return s.where("author_id", ctx.userId);
+                });
+              })
+              .one()
+          );
+
+          const turn = await tx.run(builder.turns.where("id", turn_id).one());
+
+          if (!turn) {
+            throw new Error("Turn not found");
+          }
+
+          if (!block) {
+            throw new Error("Block not found");
+          }
+
+          if (block.type !== "tool_use" && block.type !== "server_tool_use") {
+            throw new Error("Block doesn't support permission denial");
+          }
+
+          await tx.mutate.blocks.update({
+            id: tool_block_id,
+            status: "completed",
+          });
+
+          await tx.mutate.blocks.insert({
+            id: result_block_id,
+            turn_id: turn_id,
+            type: "tool_result",
+            content: {
+              type: "tool_result",
+              tool_use_id: tool_block_id,
+              content: reason,
+              is_error: true,
+            },
+            created_at: Date.now(),
+            updated_at: Date.now(),
+            processed: false,
+            complete: true,
+          });
+
+          asyncTasks.push(async () => {
+            addToAgentLoopQueue({
+              task_id: turn.task_id,
+              turn_id,
+              block_id: tool_block_id,
+            });
+          });
+          // TODO: Add analytics event
+        }
+      ),
+    },
+    dodoCustomerPortal: {
+      /**
+       * Create/refresh the customer portal link.
+       * Checks if cached link is still valid (< 24 hours old).
+       * If expired or missing, creates a new portal session via Dodo API and caches it.
+       */
+      createLink: defineMutator(async ({ tx, ctx }) => {
+        const organisationId = ctx.orgId;
+
+        // Check if we have a cached link that's still valid
+        const cached = await tx.run(
+          builder.dodoCustomerPortal
+            .where("organisation_id", organisationId)
+            .one()
+        );
+
+        if (cached) {
+          const createdAt = cached.created_at;
+          if (createdAt) {
+            const now = Date.now();
+            const age = now - createdAt;
+
+            // If link is less than 24 hours old, no refresh needed
+            if (age < PORTAL_LINK_TTL_MS) {
+              return;
+            }
+          }
+        }
+
+        // Look up customer by email reconstructed from org_id
+        const customerEmail =
+          `${organisationId}@customer.august.tech`.toLowerCase();
+
+        const customers = await dodoClient.customers.list({
+          email: customerEmail,
+        });
+
+        const customer = customers.items[0];
+        if (!customer) {
+          // No customer found - org hasn't gone through checkout yet
+          return;
+        }
+
+        const customerId = customer.customer_id;
+
+        // Create a new portal session
+        const session =
+          await dodoClient.customers.customerPortal.create(customerId);
+
+        // Cache the new link (upsert)
+        if (cached) {
+          await tx.mutate.dodoCustomerPortal.update({
+            organisation_id: organisationId,
+            link: session.link,
+            created_at: Date.now(),
+          });
+        } else {
+          await tx.mutate.dodoCustomerPortal.insert({
+            organisation_id: organisationId,
+            link: session.link,
+            created_at: Date.now(),
+          });
+        }
+      }),
+    },
+  });
 }
+
+export type ServerMutators = ReturnType<typeof createServerMutators>;

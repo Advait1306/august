@@ -1,6 +1,6 @@
 import { ZeroProvider } from "@rocicorp/zero/react";
 import { schema } from "@jupiter/sync/zero/schema";
-import { createMutators } from "@jupiter/sync/mutators/data";
+import { mutators } from "@jupiter/sync/mutators/data";
 import {
   ClerkLoaded,
   SignedIn,
@@ -9,7 +9,7 @@ import {
   useOrganization,
   useUser,
 } from "@clerk/clerk-react";
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useEffect, useMemo } from "react";
 import { Zero } from "@rocicorp/zero";
 
 const ZERO_URL = import.meta.env.VITE_ZERO_URL;
@@ -54,16 +54,23 @@ export const SyncEngine = ({ children }: { children: React.ReactNode }) => {
       userID: `${authData.userId}-${authData.orgId}`,
       schema,
       server: ZERO_URL,
-      auth: async () => {
-        const token = await getToken();
-        return token === null ? undefined : token;
-      },
-      mutators: createMutators({
-        userId: authData.userId,
-        orgId: authData.orgId,
-      }),
+      mutators,
+      context: authData,
     });
-  }, [authData, getToken]);
+  }, [authData]);
+
+  useEffect(() => {
+    const unsubscribe = zero.connection.state.subscribe(async (state) => {
+      if (state.name === "needs-auth") {
+        const token = await getToken();
+        if (token) {
+          await zero.connection.connect({ auth: token });
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [zero, getToken]);
 
   return (
     <>

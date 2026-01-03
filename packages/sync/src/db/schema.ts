@@ -1,25 +1,43 @@
 import { relations } from "drizzle-orm";
 import {
-  doublePrecision,
+  boolean,
   integer,
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   serial,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+import { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 
-export const integrationType = pgEnum("integration_type", ["oauth", "composio"]);
+export const integrationType = pgEnum("integration_type", [
+  "oauth",
+  "composio",
+]);
 
 export const users = pgTable("users", {
   id: varchar().primaryKey().notNull(),
+  deleted_at: timestamp(),
 });
+
+export const subscriptionStatus = pgEnum("subscription_status", [
+  "pending",
+  "active",
+  "on_hold",
+  "cancelled",
+  "failed",
+  "expired",
+]);
 
 export const organisations = pgTable("organisations", {
   id: varchar().primaryKey().notNull(),
   payment_id: varchar(),
-  wallet: doublePrecision().notNull().default(0.0),
+  subscription_id: varchar(),
+  subscription_status: subscriptionStatus(),
+  billing_exempt: boolean().notNull().default(false),
+  deleted_at: timestamp(),
 });
 
 export const usage = pgTable("usage", {
@@ -27,12 +45,23 @@ export const usage = pgTable("usage", {
   organisation_id: varchar()
     .notNull()
     .references(() => organisations.id),
+  task_id: varchar().references(() => tasks.id),
+  message_id: varchar().unique(), // Anthropic message ID for deduplication
   model: varchar().notNull(),
   input_tokens: integer().notNull(),
   output_tokens: integer().notNull(),
   cache_creation_input_tokens: integer().notNull(),
   cache_read_input_tokens: integer().notNull(),
-  cost: doublePrecision().notNull().default(0.0),
+  created_at: timestamp().notNull().defaultNow(),
+});
+
+// Dodo Customer Portal - Cached portal links per organization
+export const dodoCustomerPortal = pgTable("dodo_customer_portal", {
+  organisation_id: varchar()
+    .primaryKey()
+    .notNull()
+    .references(() => organisations.id),
+  link: varchar().notNull(),
   created_at: timestamp().notNull().defaultNow(),
 });
 
@@ -53,31 +82,37 @@ export const mcpStore = pgTable("mcp_store", {
 });
 
 // OAuth Integration Details - Server-side only (NEVER sent to client)
-export const mcpOauthIntegrationDetails = pgTable("mcp_oauth_integration_details", {
-  id: varchar().primaryKey().notNull(),
-  mcp_store_id: varchar()
-    .unique()
-    .notNull()
-    .references(() => mcpStore.id),
-  mcp_server_url: varchar().notNull(),
-  default_scopes: varchar(),
-  created_at: timestamp().notNull().defaultNow(),
-  updated_at: timestamp().notNull().defaultNow(),
-});
+export const mcpOauthIntegrationDetails = pgTable(
+  "mcp_oauth_integration_details",
+  {
+    id: varchar().primaryKey().notNull(),
+    mcp_store_id: varchar()
+      .unique()
+      .notNull()
+      .references(() => mcpStore.id),
+    mcp_server_url: varchar().notNull(),
+    default_scopes: varchar(),
+    created_at: timestamp().notNull().defaultNow(),
+    updated_at: timestamp().notNull().defaultNow(),
+  }
+);
 
 // Composio Integration Details - Server-side only (NEVER sent to client)
-export const mcpComposioIntegrationDetails = pgTable("mcp_composio_integration_details", {
-  id: varchar().primaryKey().notNull(),
-  mcp_store_id: varchar()
-    .unique()
-    .notNull()
-    .references(() => mcpStore.id),
-  auth_config_id: varchar().notNull(),
-  mcp_config_id: varchar().notNull(),
-  metadata: jsonb(),
-  created_at: timestamp().notNull().defaultNow(),
-  updated_at: timestamp().notNull().defaultNow(),
-});
+export const mcpComposioIntegrationDetails = pgTable(
+  "mcp_composio_integration_details",
+  {
+    id: varchar().primaryKey().notNull(),
+    mcp_store_id: varchar()
+      .unique()
+      .notNull()
+      .references(() => mcpStore.id),
+    auth_config_id: varchar().notNull(),
+    mcp_config_id: varchar().notNull(),
+    metadata: jsonb(),
+    created_at: timestamp().notNull().defaultNow(),
+    updated_at: timestamp().notNull().defaultNow(),
+  }
+);
 
 // MCPs - Per-user, per-org MCP instances
 export const mcps = pgTable("mcps", {
@@ -165,25 +200,69 @@ export const composioStates = pgTable("composio_states", {
   expires_at: timestamp().notNull(),
 });
 
-export const baseAgent = pgEnum("base_agent", [
-  "claude-code",
-  "codex",
-  "opencode",
+export const runtimes = pgTable("runtimes", {
+  id: varchar().notNull().primaryKey(),
+  user_id: varchar()
+    .notNull()
+    .references(() => users.id),
+  tools: jsonb().$type<{ name: string; version: string }[]>(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+export const taskStatus = pgEnum("task_status", [
+  "available",
+  "starting",
+  "executing",
+  "stopping",
 ]);
 
-export const agents = pgTable("agents", {
-  id: varchar().notNull().primaryKey(),
-  name: varchar().notNull(),
-  system_prompt: varchar().notNull(),
-  base_agent: baseAgent().notNull(),
-  created_at: timestamp().notNull().defaultNow(),
+export interface TaskMetadata {
+  cwd?: string;
+}
+
+// Skills - Main skill definitions with prompt and metadata
+export const skills = pgTable("skills", {
+  id: varchar().primaryKey().notNull(),
   organisation_id: varchar()
     .notNull()
     .references(() => organisations.id),
   author_id: varchar()
     .notNull()
     .references(() => users.id),
+  name: varchar().notNull(),
+  prompt: varchar().notNull(),
+  description: varchar().notNull(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
 });
+
+// Skill Documents - Supporting documents for skills
+export const skillDocuments = pgTable("skill_documents", {
+  id: varchar().primaryKey().notNull(),
+  skill_id: varchar()
+    .notNull()
+    .references(() => skills.id),
+  name: varchar().notNull(),
+  content: varchar().notNull(),
+  description: varchar().notNull(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+});
+
+// Task Skills - Junction table for many-to-many relationship between tasks and skills
+export const taskSkills = pgTable(
+  "task_skills",
+  {
+    task_id: varchar()
+      .notNull()
+      .references(() => tasks.id),
+    skill_id: varchar()
+      .notNull()
+      .references(() => skills.id),
+  },
+  (table) => [primaryKey({ columns: [table.task_id, table.skill_id] })]
+);
 
 export const tasks = pgTable("tasks", {
   id: varchar().notNull().primaryKey(),
@@ -195,8 +274,69 @@ export const tasks = pgTable("tasks", {
     .notNull()
     .references(() => users.id),
   created_at: timestamp().notNull().defaultNow(),
-  agent_id: varchar().references(() => agents.id),
+  last_session_id: varchar(),
+  status: taskStatus().notNull().default("available"),
+  runtime_id: varchar()
+    .notNull()
+    .references(() => runtimes.id),
+  metadata: jsonb().$type<TaskMetadata>(),
   updated_at: timestamp().notNull().defaultNow(),
+});
+
+export const turnType = pgEnum("turn_type", ["user", "assistant"]);
+
+export const turns = pgTable("turns", {
+  id: varchar().notNull().primaryKey(),
+  type: turnType().notNull(),
+  complete: boolean().notNull().default(false),
+  metadata: jsonb(),
+  task_id: varchar()
+    .notNull()
+    .references(() => tasks.id),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+  locked: boolean().notNull().default(false),
+});
+
+export const blockType = pgEnum("block_type", [
+  "text",
+  "tool_use",
+  "tool_result",
+  "server_tool_use",
+  "code_execution_tool_result",
+  "bash_code_execution_tool_result",
+  "text_editor_code_execution_tool_result",
+  "web_search_tool_result",
+  "thinking",
+] as const satisfies readonly BetaContentBlockParam["type"][]);
+
+export const blockStatus = pgEnum("block_status", [
+  "none",
+  "permission_pending",
+  "client_pending",
+  "server_pending",
+  "mcp_pending",
+  "completed",
+]);
+
+export interface BlockMetadata {
+  mcpId?: string;
+}
+
+export const blocks = pgTable("blocks", {
+  id: varchar().notNull().primaryKey(),
+  turn_id: varchar()
+    .notNull()
+    .references(() => turns.id),
+  type: blockType().notNull(),
+  status: blockStatus().notNull().default("none"),
+  complete: boolean().notNull().default(false),
+  content: jsonb().$type<BetaContentBlockParam>().notNull(),
+  metadata: jsonb().$type<BlockMetadata>(),
+  created_at: timestamp().notNull().defaultNow(),
+  updated_at: timestamp().notNull().defaultNow(),
+  processed: boolean().notNull().default(false),
+  response_turn_id: varchar().references(() => turns.id),
 });
 
 export const messages = pgTable("messages", {
@@ -214,33 +354,39 @@ export const messages = pgTable("messages", {
 // User relations
 export const userRelations = relations(users, ({ many }) => ({
   tasks: many(tasks),
-  agents: many(agents),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
   composioStates: many(composioStates),
+  runtimes: many(runtimes),
+  skills: many(skills),
 }));
 
 // Organisation relations
-export const organisationRelations = relations(organisations, ({ many }) => ({
-  agents: many(agents),
+export const organisationRelations = relations(organisations, ({ one, many }) => ({
   tasks: many(tasks),
   usage: many(usage),
   mcps: many(mcps),
   oauthStates: many(oauthStates),
   composioStates: many(composioStates),
+  skills: many(skills),
+  dodoCustomerPortal: one(dodoCustomerPortal),
 }));
 
-// Agent relations
-export const agentRelations = relations(agents, ({ one, many }) => ({
+// Dodo Customer Portal relations
+export const dodoCustomerPortalRelations = relations(dodoCustomerPortal, ({ one }) => ({
+  organisation: one(organisations, {
+    fields: [dodoCustomerPortal.organisation_id],
+    references: [organisations.id],
+  }),
+}));
+
+// Runtime relations
+export const runtimeRelations = relations(runtimes, ({ one, many }) => ({
   user: one(users, {
-    fields: [agents.author_id],
+    fields: [runtimes.user_id],
     references: [users.id],
   }),
   tasks: many(tasks),
-  organisation: one(organisations, {
-    fields: [agents.organisation_id],
-    references: [organisations.id],
-  }),
 }));
 
 // Task relations
@@ -249,14 +395,41 @@ export const taskRelations = relations(tasks, ({ one, many }) => ({
     fields: [tasks.author_id],
     references: [users.id],
   }),
-  agent: one(agents, {
-    fields: [tasks.agent_id],
-    references: [agents.id],
-  }),
   messages: many(messages),
   organisation: one(organisations, {
     fields: [tasks.organisation_id],
     references: [organisations.id],
+  }),
+  turns: many(turns),
+  runtime: one(runtimes, {
+    fields: [tasks.runtime_id],
+    references: [runtimes.id],
+  }),
+  taskSkills: many(taskSkills),
+  usage: many(usage),
+}));
+
+// Turn relations
+export const turnRelations = relations(turns, ({ one, many }) => ({
+  task: one(tasks, {
+    fields: [turns.task_id],
+    references: [tasks.id],
+  }),
+  blocks: many(blocks, { relationName: "turn" }),
+  response_blocks: many(blocks, { relationName: "response_turn" }),
+}));
+
+// Block relations
+export const blockRelations = relations(blocks, ({ one }) => ({
+  turn: one(turns, {
+    fields: [blocks.turn_id],
+    references: [turns.id],
+    relationName: "turn",
+  }),
+  response_turn: one(turns, {
+    fields: [blocks.response_turn_id],
+    references: [turns.id],
+    relationName: "response_turn",
   }),
 }));
 
@@ -273,6 +446,10 @@ export const usageRelations = relations(usage, ({ one }) => ({
   organisation: one(organisations, {
     fields: [usage.organisation_id],
     references: [organisations.id],
+  }),
+  task: one(tasks, {
+    fields: [usage.task_id],
+    references: [tasks.id],
   }),
 }));
 
@@ -376,5 +553,39 @@ export const composioStatesRelations = relations(composioStates, ({ one }) => ({
   mcpStore: one(mcpStore, {
     fields: [composioStates.mcp_store_id],
     references: [mcpStore.id],
+  }),
+}));
+
+// Skills relations
+export const skillsRelations = relations(skills, ({ one, many }) => ({
+  organisation: one(organisations, {
+    fields: [skills.organisation_id],
+    references: [organisations.id],
+  }),
+  author: one(users, {
+    fields: [skills.author_id],
+    references: [users.id],
+  }),
+  documents: many(skillDocuments),
+  taskSkills: many(taskSkills),
+}));
+
+// Skill Documents relations
+export const skillDocumentsRelations = relations(skillDocuments, ({ one }) => ({
+  skill: one(skills, {
+    fields: [skillDocuments.skill_id],
+    references: [skills.id],
+  }),
+}));
+
+// Task Skills relations (junction table)
+export const taskSkillsRelations = relations(taskSkills, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskSkills.task_id],
+    references: [tasks.id],
+  }),
+  skill: one(skills, {
+    fields: [taskSkills.skill_id],
+    references: [skills.id],
   }),
 }));

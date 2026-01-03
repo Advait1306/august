@@ -9,26 +9,25 @@ import mixpanel from "mixpanel";
 import DodoPayments from "dodopayments";
 
 // Config
-import { db, processor } from "./config/database";
+import { db, dbProvider } from "./config/state";
 
 // Middleware
 import { apiKeyToAuthMiddleware } from "./middleware/apiKeyToAuth";
 
 // Services
 import { ClerkService } from "./services/clerk.service";
-import { BillingService } from "./services/billing.service";
+import { SubscriptionService } from "./services/subscription.service";
 import { SyncService } from "./services/sync.service";
-import { ProxyService } from "./services/proxy.service";
 import { OAuthService } from "./services/oauth.service";
-import { ComposioService } from "./services/composio.service";
 
 // Controllers
 import { createClerkController } from "./controllers/clerk.controller";
 import { createSyncController } from "./controllers/sync.controller";
-import { createProxyController } from "./controllers/proxy.controller";
 import { createBillingController } from "./controllers/billing.controller";
 import { createMCPController } from "./controllers/mcp.controller";
 import { createRedirectController } from "./controllers/redirect.controller";
+import { createBullDashboardAndAttachRouter } from "./queues/dashboard";
+import { gracefulShutdown } from "./queues/factory";
 
 const app = express();
 
@@ -56,11 +55,13 @@ app.use(clerkMiddleware());
 
 // Initialize services
 const clerkService = new ClerkService(db);
-const billingService = new BillingService(db);
+const subscriptionService = new SubscriptionService(
+  db,
+  dodoClient,
+  clerkClient
+);
 const oauthService = new OAuthService(db);
-const composioService = new ComposioService(db);
-const syncService = new SyncService(processor, mp, oauthService);
-const proxyService = new ProxyService(billingService, oauthService);
+const syncService = new SyncService(dbProvider, mp, oauthService, dodoClient);
 
 // Clerk webhook needs raw body parser
 app.use("/clerk", bodyParser.raw({ type: "application/json" }));
@@ -73,13 +74,35 @@ app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
 // Mount controllers
-app.use(createClerkController(clerkService));
+app.use(createClerkController(clerkService, subscriptionService));
 app.use(createSyncController(syncService));
-app.use(createProxyController(proxyService, billingService, oauthService, composioService, db));
-app.use(createBillingController(clerkClient, db, dodoClient, billingService));
+app.use(
+  createBillingController(clerkClient, db, dodoClient, subscriptionService)
+);
 app.use(createMCPController(db));
 app.use(createRedirectController());
 
-app.listen(8080, () => {
+// Mount Bull Dashboard
+createBullDashboardAndAttachRouter(app);
+
+const server = app.listen(8080, () => {
   console.log("Server is running on port 8080");
 });
+
+// Graceful shutdown handlers
+const shutdown = async (signal: string) => {
+  console.log(`\n${signal} received, starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(() => {
+    console.log("HTTP server closed");
+  });
+
+  // Shutdown workers and queues (30s timeout for in-progress jobs)
+  await gracefulShutdown(5000);
+
+  process.exit(0);
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

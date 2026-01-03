@@ -1,47 +1,52 @@
 import { eq } from "drizzle-orm";
 import { organisations, users } from "@jupiter/sync/db/schema";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { AppState } from "../config/state";
 
 export class ClerkService {
-  constructor(private db: NodePgDatabase) {}
+  constructor(private db: AppState["db"]) {}
 
   /**
-   * Create a new user in the database
+   * Create a new user in the database (upsert to handle out-of-order webhooks)
    */
   async createUser(userId: string) {
-    const userInsert: typeof users.$inferInsert = {
-      id: userId,
-    };
-
-    await this.db.insert(users).values(userInsert);
+    await this.db
+      .insert(users)
+      .values({ id: userId })
+      .onConflictDoNothing({ target: users.id });
   }
 
   /**
-   * Create a new organisation in the database
+   * Create a new organisation in the database (upsert to handle out-of-order webhooks)
    */
   async createOrganisation(orgId: string) {
-    const isPersonalOrg = orgId.startsWith("user");
-
-    const orgInsert: typeof organisations.$inferInsert = {
-      id: orgId,
-      wallet: isPersonalOrg ? 500 : 0,
-    };
-
-    await this.db.insert(organisations).values(orgInsert);
+    await this.db
+      .insert(organisations)
+      .values({
+        id: orgId,
+      })
+      .onConflictDoNothing({ target: organisations.id });
   }
 
   /**
-   * Delete a user from the database
+   * Soft delete a user (set deleted_at timestamp)
    */
   async deleteUser(userId: string) {
-    await this.db.delete(users).where(eq(users.id, userId));
+    await this.db
+      .update(users)
+      .set({ deleted_at: new Date() })
+      .where(eq(users.id, userId));
   }
 
   /**
-   * Delete an organisation from the database
+   * Soft delete an organisation (set deleted_at timestamp)
+   * Does not remove from DB, maintains Dodo Payments customer record
    */
   async deleteOrganisation(orgId: string) {
-    await this.db.delete(organisations).where(eq(organisations.id, orgId));
+    await this.db
+      .update(organisations)
+      .set({ deleted_at: new Date() })
+      .where(eq(organisations.id, orgId));
+    console.log(`Soft deleted organisation ${orgId}`);
   }
 
   /**

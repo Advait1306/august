@@ -92,7 +92,7 @@ export const UserMessagePartView = ({ content }: { content: any }) => {
 export const AssistantTextPartView = ({ text }: { text: string }) => {
   return (
     <Response
-      className="text-sm leading-7 max-w-[80%]"
+      className="selectable text-sm leading-7 max-w-[80%]"
       components={{
         h1: ({ children }) => (
           <h1 className="text-3xl font-semibold pt-4 pb-1">{children}</h1>
@@ -128,7 +128,7 @@ export const AssistantTextPartView = ({ text }: { text: string }) => {
           </ol>
         ),
         hr: () => (
-          <Separator className="my-5 border-0 h-[1.5px] bg-gradient-to-r from-border via-border/70 to-transparent" />
+          <Separator className="my-5 border-0 h-[1.5px] bg-linear-to-r from-border via-border/70 to-transparent" />
         ),
         pre: ({ children }) => {
           return <pre className="border border-border">{children}</pre>;

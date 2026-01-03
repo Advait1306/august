@@ -25,7 +25,7 @@
   --foreground: var(--color-neutral-600);
   --border: var(--color-neutral-300);
 
-  --card: oklch(89.839% 0.19449 109.764);
+  --card: oklch(0.85,0,0);
   --card-foreground: oklch(0.1448 0 0);
   --card-border: #e6e6e6;
 
@@ -260,5 +260,12 @@
   .no-scrollbar {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
+  }
+
+  /* Allow text selection for message content */
+  .selectable,
+  .selectable * {
+    user-select: text !important;
+    -webkit-user-select: text !important;
   }
 }

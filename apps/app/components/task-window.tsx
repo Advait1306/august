@@ -1,24 +1,19 @@
 import { useTaskRuntime } from "@/src/contexts/task-runtime";
-import { useQuery } from "@rocicorp/zero/react";
-import { getAgents } from "@jupiter/sync/queries/data";
-import { useSyncContext } from "@/src/components/sync_engine";
 import { motion } from "motion/react";
 import { useComposerState } from "@/hooks/use-composer-state";
-import { useMessageVirtualization } from "@/hooks/use-message-virtualization";
 import { usePromptMenu } from "@/hooks/use-prompt-menu";
 import { TaskHeader } from "./task-header";
 import { TaskThread } from "./task-thread";
 import { TaskComposer } from "./task-composer";
 import { PermissionDialog } from "./permission-dialog";
+import { queries } from "@jupiter/sync/queries/data";
+import { useQuery } from "@rocicorp/zero/react";
 
 export default function TaskWindow() {
-  const syncData = useSyncContext();
-  const agents = useQuery(getAgents(syncData.authData))[0];
-
   const {
     selectedTaskId,
     selectedTask,
-    messages,
+    isGenerating,
     sendMessage,
     stopGeneration,
     composerStates,
@@ -27,21 +22,18 @@ export default function TaskWindow() {
     permissionIndices,
     nextPermission,
     previousPermission,
-    generationState,
     defaultCwd,
-    todoState,
   } = useTaskRuntime();
 
   // Custom hooks for state management
   const {
     prompt,
-    agent,
     cwd,
+    selectedSkills,
     setPrompt,
-    setAgent,
     selectFolder,
-    clearAgent,
     clearCwd,
+    setSelectedSkills,
   } = useComposerState({
     selectedTaskId,
     composerStates,
@@ -49,55 +41,32 @@ export default function TaskWindow() {
     defaultCwd,
   });
 
-  const { messageParts, virtualizerRef, scrollContainerRef } =
-    useMessageVirtualization({
-      messages,
-      selectedTaskId,
-    });
-
   const { menuOptions } = usePromptMenu({
-    agents,
-    setAgent,
     selectFolder,
   });
 
-  // Derived state
-  const taskAgent =
-    selectedTaskId === "new-conversation"
-      ? agent
-      : agents.find((agent) =>
-          selectedTask && typeof selectedTask === "object"
-            ? agent.id === selectedTask.agent_id
-            : false
-        );
+  // Fetch skills for the @ mention
+  const [skills] = useQuery(queries.skills.all());
 
   const pendingPermissions = permissions[selectedTaskId] || [];
   const currentPermissionIndex = permissionIndices[selectedTaskId] || 0;
   const currentPermission = pendingPermissions[currentPermissionIndex];
-  const isGenerating = generationState.includes(selectedTaskId);
 
   return (
     <motion.div className="flex flex-1 relative" layout>
       {/* Header */}
       {selectedTaskId !== "new-conversation" && (
         <TaskHeader
-          agent={taskAgent}
+          taskId={selectedTaskId}
           cwd={cwd}
           defaultCwd={defaultCwd}
-          todoState={todoState}
           isGenerating={isGenerating}
         />
       )}
 
       {/* Thread */}
-      <motion.div layout className="grow-1 w-full flex justify-center">
-        <TaskThread
-          selectedTaskId={selectedTaskId}
-          messageParts={messageParts}
-          isGenerating={isGenerating}
-          scrollContainerRef={scrollContainerRef}
-          virtualizerRef={virtualizerRef}
-        />
+      <motion.div layout className="grow w-full flex justify-center">
+        <TaskThread selectedTask={selectedTask} isGenerating={isGenerating} />
       </motion.div>
 
       {/* Composer & Permission Container */}
@@ -110,13 +79,14 @@ export default function TaskWindow() {
           sendMessage={sendMessage}
           stopGeneration={stopGeneration}
           selectedTaskId={selectedTaskId}
-          agent={agent}
           cwd={cwd}
           defaultCwd={defaultCwd}
           menuOptions={menuOptions}
-          clearAgent={clearAgent}
           clearCwd={clearCwd}
           currentPermission={currentPermission}
+          selectedSkills={selectedSkills}
+          setSelectedSkills={setSelectedSkills}
+          skills={skills}
         />
 
         {/* Permission */}
