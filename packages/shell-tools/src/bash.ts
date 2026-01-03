@@ -12,6 +12,7 @@
 import { spawn, type ChildProcess } from "child_process";
 import { stat } from "fs/promises";
 import { isAbsolute, basename } from "path";
+import { shellEnvSync } from "shell-env";
 import { z } from "zod";
 import {
   BashError,
@@ -32,6 +33,25 @@ const DEFAULT_TIMEOUT_MS = 2 * 60 * 1000;
 
 /** Time to wait after SIGTERM before sending SIGKILL */
 const SIGKILL_TIMEOUT_MS = 200;
+
+/** Cached shell environment variables */
+let cachedShellEnv: Record<string, string> | null = null;
+
+/**
+ * Get the shell environment with caching
+ * This loads variables from the user's shell profile (.bashrc, .zshrc, etc.)
+ */
+function getShellEnv(): Record<string, string> {
+  if (cachedShellEnv === null) {
+    try {
+      cachedShellEnv = shellEnvSync();
+    } catch {
+      // Fallback to process.env if shell-env fails
+      cachedShellEnv = process.env as Record<string, string>;
+    }
+  }
+  return cachedShellEnv;
+}
 
 // Input schema for the bash tool
 export const BashInputSchema = z.object({
@@ -236,13 +256,14 @@ export async function bash(
     };
   }
 
-  // Spawn the process
+  // Spawn the process with shell environment
   let proc: ChildProcess;
   try {
+    const shellEnv = getShellEnv();
     proc = spawn(command, {
       shell,
       cwd,
-      env: { ...process.env },
+      env: { ...process.env, ...shellEnv },
       stdio: ["ignore", "pipe", "pipe"],
       // Use process group on Unix for clean termination
       detached: process.platform !== "win32",
