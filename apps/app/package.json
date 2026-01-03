@@ -8,7 +8,17 @@
     "dev": "vite dev --port 3000",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "start": "vite preview --port 3000"
+    "start": "vite preview --port 3000",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "test:all": "npm run test:run && npm run test:e2e"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.27",
@@ -66,18 +76,28 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.1.0",
+    "@playwright/test": "^1.57.0",
     "@serwist/vite": "latest",
     "@tailwindcss/postcss": "^4.1.13",
     "@tanstack/router-plugin": "^1.139.14",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react-swc": "4.0.1",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
     "autoprefixer": "^10.4.21",
+    "jsdom": "^27.4.0",
+    "msw": "^2.12.7",
     "postcss": "^8.5.6",
     "serwist": "latest",
     "tailwindcss": "^4.1.13",
     "typescript": "5.9.2",
-    "vite": "7.1.5"
+    "vite": "7.1.5",
+    "vitest": "^4.0.16"
   }
 }

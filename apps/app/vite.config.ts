@@ -5,7 +5,7 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import path from "path";
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     tanstackRouter({
       target: "react",
@@ -18,6 +18,8 @@ export default defineConfig({
       globDirectory: "dist",
       injectionPoint: "self.__SW_MANIFEST",
       rollupFormat: "iife",
+      // Disable service worker in development to avoid build issues
+      disable: mode !== "production",
     }),
   ],
   resolve: {
@@ -25,4 +27,4 @@ export default defineConfig({
       "@": path.resolve(__dirname, "."),
     },
   },
-});
+}));
