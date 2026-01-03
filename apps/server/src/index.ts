@@ -83,7 +83,7 @@ app.use(createMCPController(db));
 app.use(createRedirectController());
 
 // Mount Bull Dashboard
-createBullDashboardAndAttachRouter(app, clerkClient);
+createBullDashboardAndAttachRouter(app);
 
 const server = app.listen(8080, () => {
   console.log("Server is running on port 8080");
