@@ -17,6 +17,10 @@ if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET environment variable is required");
 }
 
+if (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD) {
+  throw new Error("ADMIN_USERNAME and ADMIN_PASSWORD environment variables are required");
+}
+
 // Timing-safe string comparison to prevent timing attacks
 const safeCompare = (a: string | undefined, b: string | undefined): boolean => {
   if (!a || !b) return false;
