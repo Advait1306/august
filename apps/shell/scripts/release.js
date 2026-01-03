@@ -43,7 +43,7 @@ function bumpVersion(type = 'patch') {
 
 function commitAndTag(version) {
   log(`Committing and tagging version ${version}...`)
-  execCommand(`git add package.json package-lock.json`)
+  execCommand(`git add -A`)
   execCommand(`git commit -m "chore: bump version to ${version}"`)
   execCommand(`git tag v${version}`)
 }
@@ -93,13 +93,13 @@ async function main() {
     log('Starting release process...')
 
     // Check if we're in a clean git state
-    // try {
-    //   execCommand('git diff --exit-code', { stdio: 'pipe' })
-    //   execCommand('git diff --cached --exit-code', { stdio: 'pipe' })
-    // } catch {
-    //   error('Working directory is not clean. Please commit or stash your changes.')
-    //   process.exit(1)
-    // }
+    try {
+      execSync('git diff --exit-code', { stdio: 'pipe' })
+      execSync('git diff --cached --exit-code', { stdio: 'pipe' })
+    } catch {
+      error('Publish script can only be run on a clean branch. Please commit or stash your changes.')
+      process.exit(1)
+    }
 
     let version
     if (!skipBump) {
