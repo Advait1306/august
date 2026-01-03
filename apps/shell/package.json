@@ -6,6 +6,8 @@
   "author": "sixhuman.com",
   "homepage": "https://august.tech",
   "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
     "format": "prettier --write .",
     "lint": "eslint --cache .",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
@@ -40,6 +42,7 @@
     "shell-env": "^4.0.1"
   },
   "devDependencies": {
+    "vitest": "^4.0.15",
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
