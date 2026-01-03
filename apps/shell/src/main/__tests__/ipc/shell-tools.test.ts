@@ -238,6 +238,31 @@ describe("Shell Tools IPC Handlers", () => {
       expect(result).toEqual(mockBashResult);
     });
 
+    it("should execute multiedit tool when EXECUTE is called with multiedit", async () => {
+      const { registerShellToolsIpcHandlers } = await import(
+        "../../ipc/shell-tools"
+      );
+
+      registerShellToolsIpcHandlers();
+
+      const executeCall = mockIpcMainHandle.mock.calls.find(
+        (call: unknown[]) => call[0] === "shell-tools:execute"
+      );
+      const handler = executeCall?.[1] as (
+        event: unknown,
+        request: { name: string; input: unknown }
+      ) => Promise<unknown>;
+
+      const mockMultieditResult = { success: true, filesModified: 2 };
+      mockMultiedit.mockResolvedValueOnce(mockMultieditResult);
+
+      const multieditInput = { edits: [{ file: "a.ts", search: "x", replace: "y" }] };
+      const result = await handler({}, { name: "multiedit", input: multieditInput });
+
+      expect(mockMultiedit).toHaveBeenCalledWith(multieditInput);
+      expect(result).toEqual(mockMultieditResult);
+    });
+
     it("should throw error for unknown tool name", async () => {
       const { registerShellToolsIpcHandlers } = await import(
         "../../ipc/shell-tools"
