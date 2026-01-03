@@ -8,6 +8,24 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { ensureLoggedIn } from "connect-ensure-login";
+import crypto from "crypto";
+
+const isProduction = process.env.NODE_ENV === "production";
+
+// Require SESSION_SECRET in production
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required");
+}
+
+// Timing-safe string comparison to prevent timing attacks
+const safeCompare = (a: string | undefined, b: string | undefined): boolean => {
+  if (!a || !b) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch {
+    return false;
+  }
+};
 
 const queues = [
   new BullBoardGroupMQAdapter(AgentLoopQueue, {
@@ -28,10 +46,9 @@ const localStrategy = new LocalStrategy(
     passwordField: "password",
   },
   (username, password, cb) => {
-    if (
-      username === process.env.ADMIN_USERNAME &&
-      password === process.env.ADMIN_PASSWORD
-    ) {
+    const usernameMatch = safeCompare(username, process.env.ADMIN_USERNAME);
+    const passwordMatch = safeCompare(password, process.env.ADMIN_PASSWORD);
+    if (usernameMatch && passwordMatch) {
       return cb(null, { user: "bull-board" });
     }
     return cb(null, false);
@@ -118,10 +135,15 @@ const createBullDashboardAndAttachRouter = (app: Express) => {
   app.use(
     "/admin/*splat",
     session({
-      secret: process.env.SESSION_SECRET || "bull-board-session-secret",
-      cookie: {},
-      saveUninitialized: true,
-      resave: true,
+      secret: process.env.SESSION_SECRET!,
+      cookie: {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: "lax",
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      },
+      saveUninitialized: false,
+      resave: false,
     })
   );
   app.use("/admin/*splat", passport.initialize());
