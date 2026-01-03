@@ -10,10 +10,10 @@ describe("useKeyboardNavigation", () => {
   ];
 
   const mockGetItemId = (item: (typeof mockItems)[0]) => item.id;
-  let mockOnSelect: ReturnType<typeof vi.fn>;
+  let mockOnSelect: ReturnType<typeof vi.fn> & ((id: string) => void);
 
   beforeEach(() => {
-    mockOnSelect = vi.fn();
+    mockOnSelect = vi.fn() as ReturnType<typeof vi.fn> & ((id: string) => void);
     vi.clearAllMocks();
   });
 

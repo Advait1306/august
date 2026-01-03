@@ -10,10 +10,10 @@ import {
 
 // Get access to our localStorage mock
 const getLocalStorageMock = () => window.localStorage as unknown as {
-  getItem: ReturnType<typeof vi.fn>;
-  setItem: ReturnType<typeof vi.fn>;
-  removeItem: ReturnType<typeof vi.fn>;
-  clear: ReturnType<typeof vi.fn>;
+  getItem: ReturnType<typeof vi.fn> & ((key: string) => string | null);
+  setItem: ReturnType<typeof vi.fn> & ((key: string, value: string) => void);
+  removeItem: ReturnType<typeof vi.fn> & ((key: string) => void);
+  clear: ReturnType<typeof vi.fn> & (() => void);
 };
 
 const wrapper = ({ children }: { children: ReactNode }) => (

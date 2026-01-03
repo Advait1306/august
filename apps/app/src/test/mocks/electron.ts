@@ -68,7 +68,7 @@ export const createApiMock = (): MockWindowAPI => ({
   auth: {
     getToken: vi.fn().mockResolvedValue("mock-auth-token"),
     openLogin: vi.fn().mockResolvedValue(true),
-    onTokenReceived: vi.fn((callback: (token: string) => void) => {
+    onTokenReceived: vi.fn((_callback: (token: string) => void) => {
       return () => {}; // Return cleanup function
     }),
   },

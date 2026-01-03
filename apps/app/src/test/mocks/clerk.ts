@@ -61,15 +61,15 @@ export const setSignedOut = () => {
   mockUseAuth.mockReturnValue({
     isLoaded: true,
     isSignedIn: false,
-    userId: null,
-    sessionId: null,
+    userId: null as unknown as string,
+    sessionId: null as unknown as string,
     getToken: vi.fn().mockResolvedValue(null),
   });
 
   mockUseUser.mockReturnValue({
     isLoaded: true,
     isSignedIn: false,
-    user: null,
+    user: null as unknown as { id: string; emailAddresses: { emailAddress: string }[]; firstName: string; lastName: string; fullName: string },
   });
 };
 
@@ -78,14 +78,14 @@ export const setLoading = () => {
   mockUseAuth.mockReturnValue({
     isLoaded: false,
     isSignedIn: false,
-    userId: null,
-    sessionId: null,
+    userId: null as unknown as string,
+    sessionId: null as unknown as string,
     getToken: vi.fn().mockResolvedValue(null),
   });
 
   mockUseUser.mockReturnValue({
     isLoaded: false,
     isSignedIn: false,
-    user: null,
+    user: null as unknown as { id: string; emailAddresses: { emailAddress: string }[]; firstName: string; lastName: string; fullName: string },
   });
 };
