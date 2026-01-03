@@ -3,6 +3,9 @@ import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import type {
   BetaRawMessageStreamEvent,
   BetaMessageParam,
+  BetaTextBlockParam,
+  BetaCacheControlEphemeral,
+  BetaContentBlockParam,
 } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { ZodObject } from "zod";
 import { toJSONSchema } from "zod/v4/core";
@@ -40,27 +43,168 @@ export interface SkillSummary {
 }
 
 /**
- * Generate system prompt based on available tools, context, and skills
+ * Cache control constant for prompt caching
  */
-function generateSystemPrompt(cwd?: string, skills?: SkillSummary[]): string {
-  let prompt = BASE_PROMPT;
+const CACHE_CONTROL: BetaCacheControlEphemeral = { type: "ephemeral" };
+
+/**
+ * Build a set of tool_use_ids that were called by code execution.
+ * Tool results for these cannot have cache_control.
+ */
+function getCodeExecutionToolUseIds(messages: BetaMessageParam[]): Set<string> {
+  const codeExecutionIds = new Set<string>();
+
+  for (const message of messages) {
+    if (typeof message.content === "string") continue;
+    if (!Array.isArray(message.content)) continue;
+
+    for (const block of message.content) {
+      // Check for tool_use blocks with code_execution caller
+      if (
+        block.type === "tool_use" &&
+        "caller" in block &&
+        block.caller?.type === "code_execution_20250825"
+      ) {
+        codeExecutionIds.add(block.id);
+      }
+    }
+  }
+
+  return codeExecutionIds;
+}
+
+/**
+ * Check if a content block can have cache_control added.
+ * Tool use blocks and tool results called by code execution cannot have cache_control.
+ */
+function canHaveCacheControl(
+  block: BetaContentBlockParam,
+  codeExecutionToolUseIds: Set<string>
+): boolean {
+  // Tool use blocks called by code execution cannot have cache_control
+  if (
+    block.type === "tool_use" &&
+    "caller" in block &&
+    (block as { caller?: { type: string } }).caller?.type ===
+      "code_execution_20250825"
+  ) {
+    return false;
+  }
+  // Tool results for code execution tool calls cannot have cache_control
+  if (block.type === "tool_result" && "tool_use_id" in block) {
+    return !codeExecutionToolUseIds.has(block.tool_use_id);
+  }
+  return true;
+}
+
+/**
+ * Add cache_control to the last eligible content block.
+ * This enables incremental caching of conversation history.
+ * Tool results called by code execution are skipped as they cannot have cache_control.
+ */
+function addMessageCacheControl(
+  messages: BetaMessageParam[]
+): BetaMessageParam[] {
+  if (messages.length === 0) return messages;
+
+  // Build set of tool_use_ids called by code execution
+  const codeExecutionToolUseIds = getCodeExecutionToolUseIds(messages);
+
+  const result = [...messages];
+
+  // Walk backwards through messages to find an eligible block for cache_control
+  for (let msgIdx = result.length - 1; msgIdx >= 0; msgIdx--) {
+    const message = result[msgIdx]!;
+
+    // Handle string content - convert to text block with cache_control
+    if (typeof message.content === "string") {
+      result[msgIdx] = {
+        role: message.role,
+        content: [
+          {
+            type: "text",
+            text: message.content,
+            cache_control: CACHE_CONTROL,
+          },
+        ],
+      };
+      return result;
+    }
+
+    // Handle array content - find last eligible block
+    if (Array.isArray(message.content) && message.content.length > 0) {
+      const contentBlocks = [...message.content];
+
+      // Walk backwards through blocks to find one that can have cache_control
+      for (let blockIdx = contentBlocks.length - 1; blockIdx >= 0; blockIdx--) {
+        const block = contentBlocks[blockIdx]!;
+
+        if (canHaveCacheControl(block, codeExecutionToolUseIds)) {
+          contentBlocks[blockIdx] = {
+            ...block,
+            cache_control: CACHE_CONTROL,
+          } as BetaContentBlockParam;
+
+          result[msgIdx] = {
+            role: message.role,
+            content: contentBlocks,
+          };
+          return result;
+        }
+      }
+    }
+  }
+
+  // No eligible block found, return original messages
+  return messages;
+}
+
+/**
+ * Generate system prompt blocks with cache control for prompt caching.
+ * Returns an array of text blocks:
+ * - Block 1: BASE_PROMPT (cached) - static instructions
+ * - Block 2: Skills + CWD (cached) - dynamic but stable per-task
+ */
+function generateSystemPrompt(
+  cwd?: string,
+  skills?: SkillSummary[]
+): BetaTextBlockParam[] {
+  const blocks: BetaTextBlockParam[] = [
+    {
+      type: "text",
+      text: BASE_PROMPT,
+      cache_control: CACHE_CONTROL,
+    },
+  ];
+
+  // Build dynamic content (skills + cwd)
+  let dynamicContent = "";
 
   if (skills && skills.length > 0) {
-    prompt += `\n\n## Available Skills\n`;
-    prompt += `The following skills are available for this task. Use the \`get_skill\` tool to retrieve the full skill prompt and discover its supporting documents. Use the \`get_document\` tool to retrieve specific document contents.\n`;
+    dynamicContent += `## Available Skills\n`;
+    dynamicContent += `The following skills are available for this task. Use the \`get_skill\` tool to retrieve the full skill prompt and discover its supporting documents. Use the \`get_document\` tool to retrieve specific document contents.\n`;
     for (const skill of skills) {
-      prompt += `\n### ${skill.name} (ID: ${skill.id})`;
+      dynamicContent += `\n### ${skill.name} (ID: ${skill.id})`;
       if (skill.description) {
-        prompt += `\n${skill.description}`;
+        dynamicContent += `\n${skill.description}`;
       }
     }
   }
 
   if (cwd) {
-    prompt += `\n\nCurrent working directory: ${cwd}`;
+    dynamicContent += `${dynamicContent ? "\n\n" : ""}Current working directory: ${cwd}`;
   }
 
-  return prompt;
+  // Add dynamic content as a separate cached block if present
+  if (dynamicContent) {
+    blocks.push({
+      type: "text",
+      text: dynamicContent,
+      cache_control: CACHE_CONTROL,
+    });
+  }
+
+  return blocks;
 }
 
 /**
@@ -140,15 +284,23 @@ export async function* agentLoop(
   });
 
   // Combine local tools with MCP tools (MCP tools already have allowed_callers set)
-  let allTools: (Tool | typeof CODE_EXECUTION_TOOL)[] = [
-    ...convertedTools,
-    ...mcpTools,
-  ];
+  // Add cache_control to the last tool for prompt caching
+  const combinedTools: Tool[] = [...convertedTools, ...mcpTools];
+  const allToolsWithCache: Tool[] =
+    combinedTools.length > 0
+      ? [
+          ...combinedTools.slice(0, -1),
+          {
+            ...combinedTools[combinedTools.length - 1],
+            cache_control: CACHE_CONTROL,
+          } as Tool,
+        ]
+      : [];
 
-  // Add code execution tool if using programmatic calling
-  if (useProgrammaticCalling) {
-    allTools = [CODE_EXECUTION_TOOL, ...allTools];
-  }
+  // Add code execution tool at the beginning if using programmatic calling
+  const allTools: (Tool | typeof CODE_EXECUTION_TOOL)[] = useProgrammaticCalling
+    ? [CODE_EXECUTION_TOOL, ...allToolsWithCache]
+    : allToolsWithCache;
 
   // Determine which betas to use
   const betas: string[] = [];
@@ -159,12 +311,15 @@ export async function* agentLoop(
   // Generate dynamic system prompt based on available tools, context, and skills
   const systemPrompt = generateSystemPrompt(cwd, skills);
 
+  // Add cache_control to messages for incremental conversation caching
+  const cachedMessages = addMessageCacheControl(messages);
+
   const stream = await client.beta.messages.create({
     model,
     max_tokens: maxTokens,
     system: systemPrompt,
     tools: allTools.length > 0 ? allTools : undefined,
-    messages,
+    messages: cachedMessages,
     betas: betas.length > 0 ? betas : undefined,
     container,
     stream: true,

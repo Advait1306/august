@@ -305,6 +305,7 @@ export const blockType = pgEnum("block_type", [
   "server_tool_use",
   "code_execution_tool_result",
   "bash_code_execution_tool_result",
+  "text_editor_code_execution_tool_result",
   "web_search_tool_result",
   "thinking",
 ] as const satisfies readonly BetaContentBlockParam["type"][]);

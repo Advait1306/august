@@ -36,7 +36,7 @@ const SIGKILL_TIMEOUT_MS = 200;
 // Input schema for the bash tool
 export const BashInputSchema = z.object({
   command: z.string().describe("The shell command to execute"),
-  timeout: z
+  timeout: z.coerce
     .number()
     .optional()
     .describe(

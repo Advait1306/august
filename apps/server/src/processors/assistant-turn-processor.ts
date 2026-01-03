@@ -385,22 +385,20 @@ export class AssistantTurnProcessor {
   }
 
   async flushToDb() {
-    const now = new Date();
-
     // Update task status
     if (this.task.dirty) {
       await this.db
         .update(tasks)
         .set({
           status: this.task.status,
-          updated_at: now,
+          updated_at: new Date(),
         })
         .where(eq(tasks.id, this.task.id));
       this.task.dirty = false;
     }
 
     // Upsert assistant turn
-    if (this.turn.dirty) { 
+    if (this.turn.dirty) {
       await this.db
         .insert(turns)
         .values({
@@ -409,15 +407,15 @@ export class AssistantTurnProcessor {
           complete: this.turn.complete,
           metadata: this.turn.metadata,
           task_id: this.task.id,
-          created_at: now,
-          updated_at: now,
+          created_at: new Date(),
+          updated_at: new Date(),
         })
         .onConflictDoUpdate({
           target: turns.id,
           set: {
             complete: this.turn.complete,
             metadata: this.turn.metadata,
-            updated_at: now,
+            updated_at: new Date(),
           },
         });
       this.turn.dirty = false;
@@ -436,8 +434,8 @@ export class AssistantTurnProcessor {
           id: this.toolResponseTurn.id,
           type: "user",
           task_id: this.task.id,
-          created_at: now,
-          updated_at: now,
+          created_at: new Date(),
+          updated_at: new Date(),
         })
         .onConflictDoNothing();
       this.toolResponseTurn.dirty = false;
@@ -462,8 +460,8 @@ export class AssistantTurnProcessor {
               block.data.content.type === "tool_use"
                 ? this.toolResponseTurn?.id
                 : null,
-            created_at: now,
-            updated_at: now,
+            created_at: new Date(),
+            updated_at: new Date(),
           })
           .onConflictDoUpdate({
             target: blocks.id,
@@ -473,7 +471,7 @@ export class AssistantTurnProcessor {
               complete: block.data.complete,
               processed: block.data.processed,
               status: block.data.status,
-              updated_at: now,
+              updated_at: new Date(),
             },
           });
 
