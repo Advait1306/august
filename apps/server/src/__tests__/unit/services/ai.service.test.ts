@@ -333,13 +333,13 @@ describe("AiService", () => {
         mockDb._mockFindFirst
           .mockResolvedValueOnce(mockTask)
           .mockResolvedValueOnce(mockTurn)
-          .mockResolvedValueOnce(mockBlock)
-          .mockResolvedValueOnce(mockTask);
+          .mockResolvedValueOnce(mockBlock);
 
         const service = AiService.getInstance(mockState);
-        await service.processBlock("task-123", "turn-123", "block-123");
+        const result = await service.processBlock("task-123", "turn-123", "block-123");
 
-        expect(mockAgentLoop).toHaveBeenCalled();
+        // Should return true indicating agent loop should run
+        expect(result).toBe(true);
       });
     });
 
@@ -506,13 +506,13 @@ describe("AiService", () => {
         mockDb._mockFindFirst
           .mockResolvedValueOnce(mockTask)
           .mockResolvedValueOnce(mockTurn)
-          .mockResolvedValueOnce(mockBlock)
-          .mockResolvedValueOnce(mockTask);
+          .mockResolvedValueOnce(mockBlock);
 
         const service = AiService.getInstance(mockState);
-        await service.processBlock("task-123", "user-turn", "tool-result-block");
+        const result = await service.processBlock("task-123", "user-turn", "tool-result-block");
 
-        expect(mockAgentLoop).toHaveBeenCalled();
+        // Should return true indicating agent loop should run
+        expect(result).toBe(true);
       });
 
       it("does not start agent loop when not all tool_use blocks have results", async () => {
@@ -553,15 +553,15 @@ describe("AiService", () => {
           .mockResolvedValueOnce(mockBlock);
 
         const service = AiService.getInstance(mockState);
-        await service.processBlock("task-123", "user-turn", "tool-result-block");
+        const result = await service.processBlock("task-123", "user-turn", "tool-result-block");
 
-        // Agent loop should NOT be called since tool-use-2 has no result
-        expect(mockAgentLoop).not.toHaveBeenCalled();
+        // Should return false since not all tool_use blocks have results
+        expect(result).toBe(false);
       });
     });
 
     describe("unknown block types", () => {
-      it("does nothing for unhandled block types", async () => {
+      it("returns false for unhandled block types", async () => {
         const mockTask = createMockTask();
         const mockTurn = createMockTurn();
         const mockBlock = createMockBlock({
@@ -577,14 +577,13 @@ describe("AiService", () => {
         const service = AiService.getInstance(mockState);
         const result = await service.processBlock("task-123", "turn-123", "block-123");
 
-        // Should return undefined and not call agentLoop
-        expect(result).toBeUndefined();
-        expect(mockAgentLoop).not.toHaveBeenCalled();
+        // Should return false for unhandled block types
+        expect(result).toBe(false);
       });
     });
   });
 
-  describe("runAgentLoop (via processBlock)", () => {
+  describe("runAgentLoop", () => {
     it("processes agent loop events correctly", async () => {
       const mockTask = createMockTask({
         turns: [
@@ -594,8 +593,6 @@ describe("AiService", () => {
           }),
         ],
       });
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
 
       const events = [
         { type: "message_start", message: { content: [], usage: { input_tokens: 10, output_tokens: 5 } } },
@@ -619,21 +616,16 @@ describe("AiService", () => {
       });
 
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123");
+      await service.runAgentLoop("task-123");
 
       expect(mockAgentLoop).toHaveBeenCalled();
     });
 
     it("propagates agent loop errors", async () => {
       const mockTask = createMockTask();
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
 
       mockAgentLoop.mockReturnValue({
         [Symbol.asyncIterator]: () => ({
@@ -642,19 +634,16 @@ describe("AiService", () => {
       });
 
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
 
       await expect(
-        service.processBlock("task-123", "turn-123", "block-123")
+        service.runAgentLoop("task-123")
       ).rejects.toThrow("Agent loop error");
     });
 
-    it("works without mcpContext (graceful degradation)", async () => {
+    it("returns true for text blocks indicating agent loop should run", async () => {
       const mockTask = createMockTask({
         turns: [
           createMockTurn({
@@ -669,22 +658,13 @@ describe("AiService", () => {
       mockDb._mockFindFirst
         .mockResolvedValueOnce(mockTask)
         .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
-        .mockResolvedValueOnce(mockTask);
+        .mockResolvedValueOnce(mockBlock);
 
       const service = AiService.getInstance(mockState);
 
-      // Should not throw when mcpContext is undefined
-      await expect(
-        service.processBlock("task-123", "turn-123", "block-123", undefined)
-      ).resolves.not.toThrow();
-
-      // Should be called with empty mcpTools
-      expect(mockAgentLoop).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mcpTools: [],
-        })
-      );
+      // Should return true for text blocks
+      const result = await service.processBlock("task-123", "turn-123", "block-123");
+      expect(result).toBe(true);
     });
 
     it("extracts container ID from turn metadata", async () => {
@@ -697,17 +677,12 @@ describe("AiService", () => {
           }),
         ],
       });
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
 
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123");
+      await service.runAgentLoop("task-123");
 
       expect(mockAgentLoop).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -726,17 +701,12 @@ describe("AiService", () => {
           }),
         ],
       });
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
 
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123");
+      await service.runAgentLoop("task-123");
 
       const agentLoopCall = mockAgentLoop.mock.calls[0][0] as AgentLoopConfig;
       // Should include read_file (from filtered shell tools) + server_tool
@@ -764,17 +734,12 @@ describe("AiService", () => {
           }),
         ],
       });
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
 
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123");
+      await service.runAgentLoop("task-123");
 
       expect(mockAgentLoop).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -790,20 +755,13 @@ describe("AiService", () => {
     });
 
     it("throws error when task not found during runAgentLoop", async () => {
-      const mockTask = createMockTask();
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
-
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
-        .mockResolvedValueOnce(null); // Task not found during runAgentLoop
+        .mockResolvedValueOnce(null); // Task not found
 
       const service = AiService.getInstance(mockState);
 
       await expect(
-        service.processBlock("task-123", "turn-123", "block-123")
+        service.runAgentLoop("task-123")
       ).rejects.toThrow("Task not found");
     });
 
@@ -817,17 +775,12 @@ describe("AiService", () => {
           }),
         ],
       });
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
 
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123");
+      await service.runAgentLoop("task-123");
 
       const agentLoopCall = mockAgentLoop.mock.calls[0][0];
       // Should only have server tools (no shell tools filtered)
@@ -845,17 +798,12 @@ describe("AiService", () => {
           }),
         ],
       });
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
 
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123");
+      await service.runAgentLoop("task-123");
 
       expect(mockAgentLoop).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -874,17 +822,12 @@ describe("AiService", () => {
           }),
         ],
       });
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
 
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123");
+      await service.runAgentLoop("task-123");
 
       expect(mockAgentLoop).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -902,8 +845,6 @@ describe("AiService", () => {
           }),
         ],
       });
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
 
       const mcpTools = [{ name: "mcp_tool", description: "An MCP tool", input_schema: { type: "object" as const, properties: {} } }];
       const mcpContext = createMockMcpContext({
@@ -913,13 +854,10 @@ describe("AiService", () => {
       });
 
       mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123", mcpContext);
+      await service.runAgentLoop("task-123", mcpContext);
 
       expect(mockAgentLoop).toHaveBeenCalledWith(
         expect.objectContaining({

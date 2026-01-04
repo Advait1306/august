@@ -27,6 +27,17 @@ const worker = createWorker(
     const oauthService = OAuthService.getInstance(state.db);
     const composioService = ComposioService.getInstance(state.db);
 
+    // Process the block and check if agent loop should run
+    const shouldRunAgentLoop = await aiService.processBlock(
+      job.data.task_id,
+      job.data.turn_id,
+      job.data.block_id
+    );
+
+    if (!shouldRunAgentLoop) {
+      return;
+    }
+
     // Get task to find the author (user)
     const task = await state.db.query.tasks.findFirst({
       where: eq(tasks.id, job.data.task_id),
@@ -75,12 +86,7 @@ const worker = createWorker(
         mcpContext = { connections, tools, toolToMcpId };
       }
 
-      await aiService.processBlock(
-        job.data.task_id,
-        job.data.turn_id,
-        job.data.block_id,
-        mcpContext
-      );
+      await aiService.runAgentLoop(job.data.task_id, mcpContext);
     } finally {
       // Always disconnect
       await mcpService.disconnectAllConnections(connections);

@@ -28,7 +28,6 @@ interface ProcessBlockParams {
   task: TaskWithTurns;
   turn: InferSelectModel<typeof turns>;
   block: InferSelectModel<typeof blocks>;
-  mcpContext?: McpContext;
 }
 
 export interface McpContext {
@@ -50,12 +49,15 @@ export class AiService {
     return AiService.instance;
   }
 
+  /**
+   * Process a block and determine if agent loop should run.
+   * @returns true if the agent loop should be run after this block is processed
+   */
   async processBlock(
     taskId: string,
     turnId: string,
-    blockId: string,
-    mcpContext?: McpContext
-  ) {
+    blockId: string
+  ): Promise<boolean> {
     const task = await this.db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
       with: {
@@ -97,13 +99,19 @@ export class AiService {
     }
 
     if (block.type === "tool_result") {
-      return this.processToolResultBlock({ task, turn, block, mcpContext });
+      return this.processToolResultBlock({ task, turn, block });
     } else if (block.type === "text") {
-      return this.processTextBlock({ task, turn, block, mcpContext });
+      return this.processTextBlock({ task, turn, block });
     }
+
+    return false;
   }
 
-  private async processToolResultBlock(params: ProcessBlockParams) {
+  /**
+   * Process a tool result block and determine if agent loop should run.
+   * @returns true if all tool_use blocks have been answered and agent loop should run
+   */
+  private async processToolResultBlock(params: ProcessBlockParams): Promise<boolean> {
     const { task, turn, block } = params;
 
     if (turn.type !== "user") {
@@ -155,24 +163,24 @@ export class AiService {
     const appendedToolResultBlocks = [...toolResultBlocks, block];
 
     // TODO: Find a better array matching algorithm, this is O(n^2)
-    if (
-      lastAssistantTurnToolUseBlocks.every((block) => {
-        const tool_use_id = (block.content as ToolUseBlockParam).id;
+    // Return true if all tool_use blocks have been answered
+    return lastAssistantTurnToolUseBlocks.every((block) => {
+      const tool_use_id = (block.content as ToolUseBlockParam).id;
 
-        return appendedToolResultBlocks.some((toolResultBlock) => {
-          const result_tool_use_id = (
-            toolResultBlock.content as ToolResultBlockParam
-          ).tool_use_id;
-          return result_tool_use_id === tool_use_id;
-        });
-      })
-    ) {
-      // All tool use blocks are answered, start the agent loop
-      await this.runAgentLoop(params.task.id, params.mcpContext);
-    }
+      return appendedToolResultBlocks.some((toolResultBlock) => {
+        const result_tool_use_id = (
+          toolResultBlock.content as ToolResultBlockParam
+        ).tool_use_id;
+        return result_tool_use_id === tool_use_id;
+      });
+    });
   }
 
-  private async processTextBlock(params: ProcessBlockParams) {
+  /**
+   * Process a text block and determine if agent loop should run.
+   * @returns true - text blocks always trigger the agent loop
+   */
+  private async processTextBlock(params: ProcessBlockParams): Promise<boolean> {
     // TODO: We might have to check for integrity here
 
     await this.db
@@ -182,11 +190,11 @@ export class AiService {
       })
       .where(eq(blocks.id, params.block.id));
 
-    // Start agent loop
-    await this.runAgentLoop(params.task.id, params.mcpContext);
+    // Text blocks always trigger the agent loop
+    return true;
   }
 
-  private async runAgentLoop(taskId: string, mcpContext?: McpContext) {
+  async runAgentLoop(taskId: string, mcpContext?: McpContext) {
     const task = await this.db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
       with: {
