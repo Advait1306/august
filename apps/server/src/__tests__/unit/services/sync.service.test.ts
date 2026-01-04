@@ -139,7 +139,7 @@ describe("SyncService", () => {
 
       (mustGetQuery as Mock).mockReturnValue({ fn: mockQueryFn });
       (handleQueryRequest as Mock).mockImplementation(
-        async (queryHandler, _schema, _body) => {
+        async (queryHandler) => {
           // Simulate the query handler being called
           const result = queryHandler("testQuery", { arg1: "value1" });
           return result;
@@ -162,7 +162,7 @@ describe("SyncService", () => {
 
       (mustGetQuery as Mock).mockReturnValue({ fn: mockQueryFn });
       (handleQueryRequest as Mock).mockImplementation(
-        async (queryHandler, _schema, _body) => {
+        async (queryHandler) => {
           queryHandler("someQuery", { filter: "active" });
           return {};
         }
@@ -239,7 +239,7 @@ describe("SyncService", () => {
       (createServerMutators as Mock).mockReturnValue(mockServerMutators);
       (mustGetMutator as Mock).mockReturnValue({ fn: mockMutatorFn });
       (handleMutateRequest as Mock).mockImplementation(
-        async (_dbProvider, transactHandler, _body) => {
+        async (_dbProvider, transactHandler) => {
           // Simulate the transact handler being called with a transact function
           // The transact function receives a callback that gets (tx, name, args)
           type TxCallback = (tx: unknown, name: string, args: unknown) => unknown;
@@ -269,7 +269,7 @@ describe("SyncService", () => {
       (createServerMutators as Mock).mockReturnValue(mockServerMutators);
       (mustGetMutator as Mock).mockReturnValue({ fn: mockMutatorFn });
       (handleMutateRequest as Mock).mockImplementation(
-        async (_dbProvider, transactHandler, _body) => {
+        async (_dbProvider, transactHandler) => {
           // Simulate the transact handler being called with a transact function
           type TxCallback = (tx: unknown, name: string, args: unknown) => unknown;
           await transactHandler((txCallback: TxCallback) => {

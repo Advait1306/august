@@ -4,6 +4,9 @@ import tseslint from "typescript-eslint";
 
 export default [
   {
+    ignores: ["drizzle/**"],
+  },
+  {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
     languageOptions: {
       globals: { ...globals.node, ...globals.es2021 },

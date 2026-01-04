@@ -13,18 +13,6 @@ type MockFn<TArgs extends unknown[] = unknown[], TReturn = unknown> = MockInstan
 > &
   ((...args: TArgs) => TReturn);
 
-// Type for mock database with chainable methods
-interface MockDbChain {
-  set: MockFn<[Record<string, unknown>], { where: MockFn<[], Promise<void>> }>;
-  where: MockFn<[], Promise<void>>;
-}
-
-interface MockDbSelectChain {
-  from: MockFn<[], { where: MockFn<[], { limit: MockFn<[], Promise<{ id: string; subscription_id: string | null }[]>> }> }>;
-  where: MockFn<[], { limit: MockFn<[], Promise<{ id: string; subscription_id: string | null }[]>> }>;
-  limit: MockFn<[], Promise<{ id: string; subscription_id: string | null }[]>>;
-}
-
 interface MockDb {
   update: MockFn<[], { set: MockFn<[Record<string, unknown>], { where: MockFn<[], Promise<void>> }> }>;
   select: MockFn<[], { from: MockFn<[], { where: MockFn<[], { limit: MockFn<[], Promise<{ id: string; subscription_id: string | null }[]>> }> }> }>;

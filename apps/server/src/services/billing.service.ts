@@ -51,7 +51,7 @@ export class BillingService {
   async createCheckoutSession(
     params: CreateCheckoutSessionParams
   ): Promise<CheckoutSessionResult> {
-    const { userId, organisationId, returnUrl, memberCount, customerName } = params;
+    const { organisationId, returnUrl, memberCount, customerName } = params;
 
     const addonSeats = this.calculateAddonSeats(memberCount);
 

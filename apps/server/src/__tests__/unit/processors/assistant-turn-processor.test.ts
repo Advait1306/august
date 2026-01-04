@@ -50,8 +50,6 @@ import type {
   BetaRawContentBlockStartEvent,
   BetaRawContentBlockDeltaEvent,
   BetaRawContentBlockStopEvent,
-  BetaTextBlockParam,
-  BetaToolUseBlockParam,
 } from "@anthropic-ai/sdk/resources/beta";
 
 // Helper to create mock database

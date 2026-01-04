@@ -135,7 +135,7 @@ describe("Sync Controller Integration Tests", () => {
         expect(mockSyncService.handleQuery).toHaveBeenCalled();
 
         // Verify the fetch request was created properly
-        const [_, fetchRequest] = mockSyncService.handleQuery.mock.calls[0];
+        const [, fetchRequest] = mockSyncService.handleQuery.mock.calls[0];
         expect(fetchRequest).toBeDefined();
         expect(fetchRequest.method).toBe("POST");
       });
@@ -390,7 +390,7 @@ describe("Sync Controller Integration Tests", () => {
         .send({ test: "data" });
 
       expect(mockSyncService.handleQuery).toHaveBeenCalled();
-      const [_, fetchRequest] = mockSyncService.handleQuery.mock.calls[0];
+      const [, fetchRequest] = mockSyncService.handleQuery.mock.calls[0];
 
       expect(fetchRequest).toBeInstanceOf(Request);
       expect(fetchRequest.method).toBe("POST");
@@ -409,7 +409,7 @@ describe("Sync Controller Integration Tests", () => {
         .send({ mutations: [] });
 
       expect(mockSyncService.handleMutate).toHaveBeenCalled();
-      const [_, fetchRequest] = mockSyncService.handleMutate.mock.calls[0];
+      const [, fetchRequest] = mockSyncService.handleMutate.mock.calls[0];
 
       expect(fetchRequest).toBeInstanceOf(Request);
       expect(fetchRequest.method).toBe("POST");

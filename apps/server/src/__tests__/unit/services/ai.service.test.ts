@@ -1,22 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { InferSelectModel } from "drizzle-orm";
-import type { tasks, turns, blocks } from "@jupiter/sync/db/schema";
 import type { AgentLoopConfig } from "@august/harness";
 import type { AppState } from "../../../config/state";
 import type { McpContext } from "../../../services/ai.service";
-
-// Type definitions for mock objects
-type TaskModel = InferSelectModel<typeof tasks>;
-type TurnModel = InferSelectModel<typeof turns>;
-type BlockModel = InferSelectModel<typeof blocks>;
-
-type TaskWithTurns = TaskModel & {
-  turns: (TurnModel & {
-    blocks: BlockModel[];
-  })[];
-  runtime?: { tools: { name: string; version: string }[] } | null;
-  taskSkills?: { skill: { id: string; name: string; description: string | null } }[];
-};
 
 // Mock the @august/harness module
 const mockAgentLoop = vi.fn();

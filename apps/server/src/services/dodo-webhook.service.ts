@@ -79,7 +79,7 @@ export class DodoWebhookService {
     metadata?: { organisation_id?: string }
   ): Promise<string | null> {
     // First try to get from metadata
-    let orgId =
+    const orgId =
       metadata && typeof metadata === "object"
         ? (metadata as Record<string, string>)?.organisation_id
         : undefined;
