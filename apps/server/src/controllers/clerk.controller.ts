@@ -18,10 +18,28 @@ export function createClerkController(
     const payload = req.body;
     const headers = req.headers as Record<string, string>;
 
-    let parsedPayload;
+    interface ClerkWebhookPayload {
+      type: string;
+      data: {
+        id: string;
+        organization?: {
+          id: string;
+          members_count?: number;
+        };
+      };
+    }
+
+    let parsedPayload: ClerkWebhookPayload;
     try {
       wh.verify(payload, headers);
-      parsedPayload = JSON.parse(payload.toString());
+      // Handle both raw body (production with rawBody middleware) and parsed JSON (tests)
+      parsedPayload = (
+        typeof payload === "object" && !Buffer.isBuffer(payload)
+          ? payload
+          : JSON.parse(
+              Buffer.isBuffer(payload) ? payload.toString() : String(payload)
+            )
+      ) as ClerkWebhookPayload;
     } catch (err) {
       console.error("Clerk Webhook verification failed:", err);
       return res.sendStatus(400);
