@@ -10,6 +10,8 @@ import {
 import request from "supertest";
 import express, { Express } from "express";
 import { createClerkController } from "../../../controllers/clerk.controller";
+import type { ClerkService } from "../../../services/clerk.service";
+import type { SubscriptionService } from "../../../services/subscription.service";
 
 // Create a mock verify function that can be controlled per test
 const mockWebhookVerify = vi.fn();
@@ -30,18 +32,29 @@ vi.mock("@clerk/express", () => ({
 
 import { getAuth } from "@clerk/express";
 
+// Type for getAuth mock return value based on what the controller uses
+interface MockAuthResult {
+  isAuthenticated: boolean;
+  userId: string | null;
+}
+
+// Mock interfaces for the services (only include methods used by the controller)
+interface MockClerkService {
+  createUser: ReturnType<typeof vi.fn>;
+  deleteUser: ReturnType<typeof vi.fn>;
+  createOrganisation: ReturnType<typeof vi.fn>;
+  deleteOrganisation: ReturnType<typeof vi.fn>;
+  generateSignInToken: ReturnType<typeof vi.fn>;
+}
+
+interface MockSubscriptionService {
+  handleMemberChange: ReturnType<typeof vi.fn>;
+}
+
 describe("Clerk Controller Integration Tests", () => {
   let app: Express;
-  let mockClerkService: {
-    createUser: ReturnType<typeof vi.fn>;
-    deleteUser: ReturnType<typeof vi.fn>;
-    createOrganisation: ReturnType<typeof vi.fn>;
-    deleteOrganisation: ReturnType<typeof vi.fn>;
-    generateSignInToken: ReturnType<typeof vi.fn>;
-  };
-  let mockSubscriptionService: {
-    handleMemberChange: ReturnType<typeof vi.fn>;
-  };
+  let mockClerkService: MockClerkService;
+  let mockSubscriptionService: MockSubscriptionService;
 
   beforeAll(() => {
     process.env.CLERK_WEBHOOK_KEY = "whsec_test_key";
@@ -69,8 +82,8 @@ describe("Clerk Controller Integration Tests", () => {
     app.use(
       "/",
       createClerkController(
-        mockClerkService as any,
-        mockSubscriptionService as any
+        mockClerkService as unknown as ClerkService,
+        mockSubscriptionService as unknown as SubscriptionService
       )
     );
   });
@@ -309,7 +322,7 @@ describe("Clerk Controller Integration Tests", () => {
         vi.mocked(getAuth).mockReturnValue({
           isAuthenticated: true,
           userId: "user_ticket_123",
-        } as any);
+        } as MockAuthResult as ReturnType<typeof getAuth>);
 
         const response = await request(app).get("/ticket");
 
@@ -326,7 +339,7 @@ describe("Clerk Controller Integration Tests", () => {
         vi.mocked(getAuth).mockReturnValue({
           isAuthenticated: false,
           userId: null,
-        } as any);
+        } as MockAuthResult as ReturnType<typeof getAuth>);
 
         const response = await request(app).get("/ticket");
 
@@ -341,7 +354,7 @@ describe("Clerk Controller Integration Tests", () => {
         vi.mocked(getAuth).mockReturnValue({
           isAuthenticated: true,
           userId: "user_error_123",
-        } as any);
+        } as MockAuthResult as ReturnType<typeof getAuth>);
         mockClerkService.generateSignInToken.mockRejectedValue(
           new Error("Token generation failed")
         );

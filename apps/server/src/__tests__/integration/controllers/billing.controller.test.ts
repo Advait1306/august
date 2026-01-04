@@ -10,6 +10,10 @@ import {
 import request from "supertest";
 import express, { Express } from "express";
 import { createBillingController } from "../../../controllers/billing.controller";
+import type { ClerkClient } from "@clerk/express";
+import type { SignedInAuthObject, SignedOutAuthObject } from "@clerk/backend/internal";
+import type DodoPayments from "dodopayments";
+import type { SubscriptionService } from "../../../services/subscription.service";
 
 // Create a mock verify function that can be controlled per test
 const mockWebhookVerify = vi.fn();
@@ -30,24 +34,38 @@ vi.mock("@clerk/express", () => ({
 
 import { getAuth } from "@clerk/express";
 
+// Mock types for testing
+interface MockDb {
+  select: ReturnType<typeof vi.fn>;
+}
+
+interface MockClerkClient {
+  users: {
+    getUser: ReturnType<typeof vi.fn>;
+  };
+}
+
+interface MockDodoClient {
+  checkoutSessions: {
+    create: ReturnType<typeof vi.fn>;
+  };
+}
+
+interface MockSubscriptionService {
+  updateSubscriptionStatus: ReturnType<typeof vi.fn>;
+  getOrgMemberCount: ReturnType<typeof vi.fn>;
+  calculateAddonSeats: ReturnType<typeof vi.fn>;
+}
+
+// Partial mock types that satisfy the minimal interface needed for tests
+type PartialMockAuthObject = Pick<SignedInAuthObject | SignedOutAuthObject, 'isAuthenticated' | 'userId' | 'orgId'>;
+
 describe("Billing Controller Integration Tests", () => {
   let app: Express;
-  let mockClerkClient: {
-    users: {
-      getUser: ReturnType<typeof vi.fn>;
-    };
-  };
-  let mockDb: any;
-  let mockDodoClient: {
-    checkoutSessions: {
-      create: ReturnType<typeof vi.fn>;
-    };
-  };
-  let mockSubscriptionService: {
-    updateSubscriptionStatus: ReturnType<typeof vi.fn>;
-    getOrgMemberCount: ReturnType<typeof vi.fn>;
-    calculateAddonSeats: ReturnType<typeof vi.fn>;
-  };
+  let mockClerkClient: MockClerkClient;
+  let mockDb: MockDb;
+  let mockDodoClient: MockDodoClient;
+  let mockSubscriptionService: MockSubscriptionService;
 
   beforeAll(() => {
     process.env.DODO_WEBHOOK_SECRET = "whsec_test_dodo";
@@ -112,10 +130,10 @@ describe("Billing Controller Integration Tests", () => {
     app.use(
       "/",
       createBillingController(
-        mockClerkClient as any,
-        mockDb,
-        mockDodoClient as any,
-        mockSubscriptionService as any
+        mockClerkClient as unknown as ClerkClient,
+        mockDb as unknown as Parameters<typeof createBillingController>[1],
+        mockDodoClient as unknown as DodoPayments,
+        mockSubscriptionService as unknown as SubscriptionService
       )
     );
   });
@@ -412,10 +430,10 @@ describe("Billing Controller Integration Tests", () => {
         tempApp.use(
           "/",
           createBillingController(
-            mockClerkClient as any,
-            mockDb,
-            mockDodoClient as any,
-            mockSubscriptionService as any
+            mockClerkClient as unknown as ClerkClient,
+            mockDb as unknown as Parameters<typeof createBillingController>[1],
+            mockDodoClient as unknown as DodoPayments,
+            mockSubscriptionService as unknown as SubscriptionService
           )
         );
 
@@ -471,7 +489,7 @@ describe("Billing Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_checkout",
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const response = await request(app)
           .post("/api/subscription/checkout")
@@ -491,7 +509,7 @@ describe("Billing Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_org_checkout",
           orgId: "org_checkout",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const response = await request(app)
           .post("/api/subscription/checkout")
@@ -508,7 +526,7 @@ describe("Billing Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_addon",
           orgId: "org_addon",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
         mockSubscriptionService.getOrgMemberCount.mockResolvedValue(5);
         mockSubscriptionService.calculateAddonSeats.mockReturnValue(4);
 
@@ -528,7 +546,7 @@ describe("Billing Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_single",
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
         mockSubscriptionService.getOrgMemberCount.mockResolvedValue(1);
         mockSubscriptionService.calculateAddonSeats.mockReturnValue(0);
 
@@ -549,7 +567,7 @@ describe("Billing Controller Integration Tests", () => {
           isAuthenticated: false,
           userId: null,
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const response = await request(app)
           .post("/api/subscription/checkout")
@@ -566,7 +584,7 @@ describe("Billing Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_not_found",
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
         mockClerkClient.users.getUser.mockResolvedValue(null);
 
         const response = await request(app)
@@ -584,7 +602,7 @@ describe("Billing Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_no_url",
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const response = await request(app)
           .post("/api/subscription/checkout")
@@ -599,7 +617,7 @@ describe("Billing Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_bad_url",
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const response = await request(app)
           .post("/api/subscription/checkout")
@@ -616,7 +634,7 @@ describe("Billing Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_dodo_error",
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
         mockDodoClient.checkoutSessions.create.mockRejectedValue(
           new Error("Dodo API error")
         );

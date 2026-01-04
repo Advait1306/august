@@ -6,9 +6,35 @@ import {
   beforeEach,
   beforeAll,
   afterAll,
+  type Mock,
 } from "vitest";
 import request from "supertest";
 import express, { Express } from "express";
+import type { AppState } from "../../../config/state";
+
+// Mock auth return type that matches the properties we test from Clerk's getAuth
+interface MockAuthResult {
+  isAuthenticated: boolean;
+  userId: string | null;
+  orgId: string | null;
+}
+
+// Mock database types for testing
+interface MockDbSelectChain {
+  from: Mock<() => MockDbFromChain>;
+}
+
+interface MockDbFromChain {
+  where: Mock<() => MockDbWhereChain>;
+}
+
+interface MockDbWhereChain {
+  limit: Mock<() => Promise<Array<{ id: string; integration_type: string }>>>;
+}
+
+interface MockDatabase {
+  select: Mock<() => MockDbSelectChain>;
+}
 
 // Mock @clerk/express
 vi.mock("@clerk/express", () => ({
@@ -49,11 +75,14 @@ vi.mock("../../../services/composio.service", () => {
 import { getAuth } from "@clerk/express";
 import { createMCPController } from "../../../controllers/mcp.controller";
 
+// Helper to create a properly typed mock auth result
+function createMockAuth(auth: MockAuthResult): ReturnType<typeof getAuth> {
+  return auth as unknown as ReturnType<typeof getAuth>;
+}
+
 describe("MCP Controller Integration Tests", () => {
   let app: Express;
-  let mockDb: {
-    select: ReturnType<typeof vi.fn>;
-  };
+  let mockDb: MockDatabase;
 
   beforeAll(() => {
     process.env.WEB_URL = "http://localhost:3000";
@@ -62,15 +91,19 @@ describe("MCP Controller Integration Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Create mock DB
+    // Create mock DB with proper chained method types
+    const mockLimit = vi.fn().mockResolvedValue([]) as MockDbWhereChain["limit"];
+    const mockWhere = vi.fn().mockReturnValue({
+      limit: mockLimit,
+    }) as MockDbFromChain["where"];
+    const mockFrom = vi.fn().mockReturnValue({
+      where: mockWhere,
+    }) as MockDbSelectChain["from"];
+
     mockDb = {
       select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      }),
+        from: mockFrom,
+      }) as MockDatabase["select"],
     };
 
     // Setup default mock service responses
@@ -93,7 +126,7 @@ describe("MCP Controller Integration Tests", () => {
     // Create Express app with controller
     app = express();
     app.use(express.json());
-    app.use("/", createMCPController(mockDb as any));
+    app.use("/", createMCPController(mockDb as unknown as AppState["db"]));
   });
 
   afterAll(() => {
@@ -107,11 +140,13 @@ describe("MCP Controller Integration Tests", () => {
 
     describe("authenticated requests with template MCP", () => {
       it("should initiate OAuth flow for OAuth-type MCP", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_oauth",
-          orgId: "org_oauth",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_oauth",
+            orgId: "org_oauth",
+          })
+        );
 
         // Mock DB to return OAuth-type MCP
         mockDb.select().from().where().limit.mockResolvedValue([
@@ -136,11 +171,13 @@ describe("MCP Controller Integration Tests", () => {
       });
 
       it("should initiate Composio flow for Composio-type MCP", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_composio",
-          orgId: "org_composio",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_composio",
+            orgId: "org_composio",
+          })
+        );
 
         // Mock DB to return Composio-type MCP
         mockDb.select().from().where().limit.mockResolvedValue([
@@ -163,11 +200,13 @@ describe("MCP Controller Integration Tests", () => {
       });
 
       it("should return 404 when MCP is not found in store", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_not_found",
-          orgId: "org_not_found",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_not_found",
+            orgId: "org_not_found",
+          })
+        );
 
         // Mock DB to return empty result
         mockDb.select().from().where().limit.mockResolvedValue([]);
@@ -183,11 +222,13 @@ describe("MCP Controller Integration Tests", () => {
 
     describe("authenticated requests with custom MCP", () => {
       it("should initiate OAuth flow for custom MCP", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_custom",
-          orgId: "org_custom",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_custom",
+            orgId: "org_custom",
+          })
+        );
 
         const response = await request(app).post("/api/mcp/authorize").send({
           custom_mcp_url: "https://custom-mcp.example.com",
@@ -210,11 +251,13 @@ describe("MCP Controller Integration Tests", () => {
 
     describe("unauthenticated requests", () => {
       it("should return 401 when not authenticated", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: false,
-          userId: null,
-          orgId: null,
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: false,
+            userId: null,
+            orgId: null,
+          })
+        );
 
         const response = await request(app)
           .post("/api/mcp/authorize")
@@ -225,11 +268,13 @@ describe("MCP Controller Integration Tests", () => {
       });
 
       it("should return 401 when userId is missing", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: null,
-          orgId: "org_test",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: null,
+            orgId: "org_test",
+          })
+        );
 
         const response = await request(app)
           .post("/api/mcp/authorize")
@@ -240,11 +285,13 @@ describe("MCP Controller Integration Tests", () => {
       });
 
       it("should return 401 when orgId is missing", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_test",
-          orgId: null,
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_test",
+            orgId: null,
+          })
+        );
 
         const response = await request(app)
           .post("/api/mcp/authorize")
@@ -257,11 +304,13 @@ describe("MCP Controller Integration Tests", () => {
 
     describe("validation errors", () => {
       it("should return 400 when neither template nor custom MCP provided", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_empty",
-          orgId: "org_empty",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_empty",
+            orgId: "org_empty",
+          })
+        );
 
         const response = await request(app).post("/api/mcp/authorize").send({});
 
@@ -272,11 +321,13 @@ describe("MCP Controller Integration Tests", () => {
       });
 
       it("should return 400 when both template and custom MCP provided", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_both",
-          orgId: "org_both",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_both",
+            orgId: "org_both",
+          })
+        );
 
         const response = await request(app).post("/api/mcp/authorize").send({
           mcp_store_id: "mcp_template",
@@ -291,11 +342,13 @@ describe("MCP Controller Integration Tests", () => {
       });
 
       it("should return 400 when custom_mcp_url without custom_mcp_name", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_partial",
-          orgId: "org_partial",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_partial",
+            orgId: "org_partial",
+          })
+        );
 
         const response = await request(app).post("/api/mcp/authorize").send({
           custom_mcp_url: "https://custom.example.com",
@@ -305,11 +358,13 @@ describe("MCP Controller Integration Tests", () => {
       });
 
       it("should return 400 when custom_mcp_name without custom_mcp_url", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_partial",
-          orgId: "org_partial",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_partial",
+            orgId: "org_partial",
+          })
+        );
 
         const response = await request(app).post("/api/mcp/authorize").send({
           custom_mcp_name: "My Custom MCP",
@@ -321,11 +376,13 @@ describe("MCP Controller Integration Tests", () => {
 
     describe("error handling", () => {
       it("should return 500 when OAuth flow fails", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_error",
-          orgId: "org_error",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_error",
+            orgId: "org_error",
+          })
+        );
 
         mockOAuthServiceInstance.initiateOAuthFlow.mockRejectedValue(
           new Error("OAuth provider error")
@@ -341,11 +398,13 @@ describe("MCP Controller Integration Tests", () => {
       });
 
       it("should return 500 with generic message for non-Error exceptions", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_generic_error",
-          orgId: "org_generic_error",
-        } as any);
+        vi.mocked(getAuth).mockReturnValue(
+          createMockAuth({
+            isAuthenticated: true,
+            userId: "user_generic_error",
+            orgId: "org_generic_error",
+          })
+        );
 
         mockOAuthServiceInstance.initiateOAuthFlow.mockRejectedValue("String error");
 

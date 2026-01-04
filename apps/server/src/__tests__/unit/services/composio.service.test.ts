@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import type { AppState } from "../../../config/state.js";
 
 // Create mock Composio client instance
 const mockComposioClient = {
@@ -26,10 +27,20 @@ vi.mock("crypto", () => ({
 
 // Import after mocking
 import { ComposioService } from "../../../services/composio.service.js";
-import { Composio } from "@composio/core";
+
+// Interface for mock database that matches the expected shape
+interface MockDbChain {
+  select: Mock;
+  insert: Mock;
+  delete: Mock;
+  _mockFrom: Mock;
+  _mockWhere: Mock;
+  _mockLimit: Mock;
+  _mockValues: Mock;
+}
 
 // Create mock database helper with comprehensive chaining
-function createMockDb() {
+function createMockDb(): MockDbChain {
   const mockSelect = vi.fn();
   const mockFrom = vi.fn();
   const mockWhere = vi.fn();
@@ -64,18 +75,18 @@ function createMockDb() {
 
 describe("ComposioService", () => {
   let service: ComposioService;
-  let mockDb: ReturnType<typeof createMockDb>;
+  let mockDb: MockDbChain;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockDb = createMockDb();
-    service = new ComposioService(mockDb as any);
+    service = new ComposioService(mockDb as unknown as AppState["db"]);
   });
 
   describe("constructor", () => {
     it("creates a new ComposioService instance with API key", () => {
       const testDb = createMockDb();
-      const testService = new ComposioService(testDb as any);
+      const testService = new ComposioService(testDb as unknown as AppState["db"]);
 
       expect(testService).toBeInstanceOf(ComposioService);
       // Verify that the service was created successfully (Composio constructor was called internally)
@@ -85,7 +96,7 @@ describe("ComposioService", () => {
       const originalApiKey = process.env.COMPOSIO_API_KEY;
       delete process.env.COMPOSIO_API_KEY;
 
-      expect(() => new ComposioService(mockDb as any)).toThrow(
+      expect(() => new ComposioService(mockDb as unknown as AppState["db"])).toThrow(
         "COMPOSIO_API_KEY environment variable is not set"
       );
 

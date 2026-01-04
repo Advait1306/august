@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from "vitest";
 import { OAuthService } from "../../../services/oauth.service.js";
+import type { AppState } from "../../../config/state.js";
 
 // Mock the encryption utilities
 vi.mock("../../../utils/encryption", () => ({
@@ -9,8 +10,31 @@ vi.mock("../../../utils/encryption", () => ({
 
 import { encrypt, decrypt } from "../../../utils/encryption";
 
+// Type for a mocked fetch function
+type MockedFetch = Mock<typeof fetch> & {
+  mock: {
+    calls: Array<[string | URL | Request, RequestInit?]>;
+  };
+};
+
+// Mock database internal mocks interface
+interface MockDbInternals {
+  insertValues: Mock;
+  selectFrom: Mock;
+  selectWhere: Mock;
+  selectLimit: Mock;
+  updateSet: Mock;
+  updateWhere: Mock;
+  deleteWhere: Mock;
+}
+
+// Mock database type that can be used in place of AppState["db"]
+interface MockDb extends Pick<AppState["db"], "insert" | "select" | "update" | "delete"> {
+  _mocks: MockDbInternals;
+}
+
 // Mock database helper functions
-function createMockDb() {
+function createMockDb(): MockDb {
   const insertValues = vi.fn();
   const selectFrom = vi.fn();
   const selectWhere = vi.fn();
@@ -48,11 +72,8 @@ function createMockDb() {
       updateWhere,
       deleteWhere,
     },
-  };
+  } as unknown as MockDb;
 }
-
-// Create type-safe mock database
-type MockDb = ReturnType<typeof createMockDb>;
 
 describe("OAuthService", () => {
   let service: OAuthService;
@@ -61,7 +82,7 @@ describe("OAuthService", () => {
 
   beforeEach(() => {
     mockDb = createMockDb();
-    service = new OAuthService(mockDb as any);
+    service = new OAuthService(mockDb as unknown as AppState["db"]);
     vi.clearAllMocks();
     // Reset console spies
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -822,8 +843,8 @@ describe("OAuthService", () => {
       expect(result).toBe(true);
 
       // Verify client_secret was not included in the request
-      const fetchCall = (global.fetch as any).mock.calls[0];
-      const body = fetchCall[1].body as URLSearchParams;
+      const fetchCall = (global.fetch as MockedFetch).mock.calls[0];
+      const body = fetchCall[1]?.body as URLSearchParams;
       expect(body.has("client_secret")).toBe(false);
     });
 
@@ -973,8 +994,8 @@ describe("OAuthService", () => {
 
       await service.revokeToken({ mcpId: "mcp-123" });
 
-      const fetchCall = (global.fetch as any).mock.calls[0];
-      const body = fetchCall[1].body as URLSearchParams;
+      const fetchCall = (global.fetch as MockedFetch).mock.calls[0];
+      const body = fetchCall[1]?.body as URLSearchParams;
 
       expect(body.get("token")).toBe("access-token-xyz");
       expect(body.get("token_type_hint")).toBe("access_token");
@@ -996,8 +1017,8 @@ describe("OAuthService", () => {
 
       await service.revokeToken({ mcpId: "mcp-123" });
 
-      const fetchCall = (global.fetch as any).mock.calls[0];
-      const body = fetchCall[1].body as URLSearchParams;
+      const fetchCall = (global.fetch as MockedFetch).mock.calls[0];
+      const body = fetchCall[1]?.body as URLSearchParams;
 
       expect(body.has("client_secret")).toBe(false);
       expect(mockDb.delete).toHaveBeenCalled();
@@ -1017,8 +1038,8 @@ describe("OAuthService", () => {
 
       await service.revokeToken({ mcpId: "mcp-123" });
 
-      const fetchCall = (global.fetch as any).mock.calls[0];
-      const body = fetchCall[1].body as URLSearchParams;
+      const fetchCall = (global.fetch as MockedFetch).mock.calls[0];
+      const body = fetchCall[1]?.body as URLSearchParams;
 
       expect(body.has("client_id")).toBe(false);
       expect(mockDb.delete).toHaveBeenCalled();

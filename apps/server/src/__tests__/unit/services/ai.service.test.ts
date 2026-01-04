@@ -1,9 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { InferSelectModel } from "drizzle-orm";
+import type { tasks, turns, blocks } from "@jupiter/sync/db/schema";
+import type { AgentLoopConfig, McpConnection } from "@august/harness";
+import type { AppState } from "../../../config/state";
+
+// Type definitions for mock objects
+type TaskModel = InferSelectModel<typeof tasks>;
+type TurnModel = InferSelectModel<typeof turns>;
+type BlockModel = InferSelectModel<typeof blocks>;
+
+type TaskWithTurns = TaskModel & {
+  turns: (TurnModel & {
+    blocks: BlockModel[];
+  })[];
+  runtime?: { tools: { name: string; version: string }[] } | null;
+  taskSkills?: { skill: { id: string; name: string; description: string | null } }[];
+};
 
 // Mock the @august/harness module
 const mockAgentLoop = vi.fn();
 vi.mock("@august/harness", () => ({
-  agentLoop: (...args: any[]) => mockAgentLoop(...args),
+  agentLoop: (config: AgentLoopConfig) => mockAgentLoop(config),
   getMcpTools: vi.fn().mockReturnValue([]),
   DEFAULT_MODEL: "claude-3-sonnet",
 }));
@@ -15,11 +32,11 @@ const mockDisconnectAllConnections = vi.fn();
 // Mock the McpService with a proper class
 vi.mock("../../../services/mcp.service.js", () => ({
   McpService: class MockMcpService {
-    connectUserMcps(...args: any[]) {
-      return mockConnectUserMcps(...args);
+    connectUserMcps(userId: string) {
+      return mockConnectUserMcps(userId);
     }
-    disconnectAllConnections(...args: any[]) {
-      return mockDisconnectAllConnections(...args);
+    disconnectAllConnections(connections: McpConnection[]) {
+      return mockDisconnectAllConnections(connections);
     }
   },
 }));
@@ -52,8 +69,26 @@ vi.mock("../../../server-tools/index.js", () => ({
 // Import after mocks are set up
 import { AiService } from "../../../services/ai.service.js";
 
+// Mock database interface for type safety
+interface MockDb {
+  query: {
+    tasks: {
+      findFirst: ReturnType<typeof vi.fn>;
+    };
+    turns: {
+      findFirst: ReturnType<typeof vi.fn>;
+    };
+    blocks: {
+      findFirst: ReturnType<typeof vi.fn>;
+    };
+  };
+  update: ReturnType<typeof vi.fn>;
+  insert: ReturnType<typeof vi.fn>;
+  _mockFindFirst: ReturnType<typeof vi.fn>;
+}
+
 // Helper to create mock database
-function createMockDb() {
+function createMockDb(): MockDb {
   const mockFindFirst = vi.fn();
 
   return {
@@ -83,8 +118,53 @@ function createMockDb() {
   };
 }
 
+// Mock task type for test helper
+interface MockTask {
+  id: string;
+  author_id: string;
+  organisation_id: string;
+  metadata: { cwd?: string } | null;
+  runtime: { tools: { name: string; version?: string }[] } | null;
+  taskSkills: { skill: { id: string; name: string; description: string | null } }[];
+  turns: MockTurn[];
+  name?: string;
+  created_at?: Date;
+  last_session_id?: string | null;
+  status?: string;
+  runtime_id?: string;
+  updated_at?: Date;
+}
+
+// Mock turn type for test helper
+interface MockTurn {
+  id: string;
+  type: string;
+  task_id: string;
+  blocks: MockBlock[];
+  metadata: { container?: { id: string } } | null;
+  complete?: boolean;
+  created_at?: Date;
+  updated_at?: Date;
+  locked?: boolean;
+}
+
+// Mock block type for test helper
+interface MockBlock {
+  id: string;
+  turn_id: string;
+  type: string;
+  content: Record<string, unknown>;
+  processed: boolean;
+  status?: string;
+  complete?: boolean;
+  metadata?: Record<string, unknown> | null;
+  created_at?: Date;
+  updated_at?: Date;
+  response_turn_id?: string | null;
+}
+
 // Helper to create mock task with turns
-function createMockTask(overrides: Partial<any> = {}) {
+function createMockTask(overrides: Partial<MockTask> = {}): MockTask {
   return {
     id: "task-123",
     author_id: "user-456",
@@ -98,7 +178,7 @@ function createMockTask(overrides: Partial<any> = {}) {
 }
 
 // Helper to create mock turn
-function createMockTurn(overrides: Partial<any> = {}) {
+function createMockTurn(overrides: Partial<MockTurn> = {}): MockTurn {
   return {
     id: "turn-123",
     type: "user",
@@ -110,7 +190,7 @@ function createMockTurn(overrides: Partial<any> = {}) {
 }
 
 // Helper to create mock block
-function createMockBlock(overrides: Partial<any> = {}) {
+function createMockBlock(overrides: Partial<MockBlock> = {}): MockBlock {
   return {
     id: "block-123",
     turn_id: "turn-123",
@@ -130,16 +210,20 @@ function createEmptyAgentLoop() {
   };
 }
 
+// Type for accessing AiService private static instance for testing
+type AiServiceWithInstance = typeof AiService & { instance: AiService | undefined };
+
 describe("AiService", () => {
-  let mockDb: ReturnType<typeof createMockDb>;
-  let mockState: any;
+  let mockDb: MockDb;
+  let mockState: AppState;
 
   beforeEach(() => {
     // Reset the singleton instance before each test
-    (AiService as any).instance = undefined;
+    (AiService as AiServiceWithInstance).instance = undefined;
 
     mockDb = createMockDb();
-    mockState = { db: mockDb };
+    // Cast mockDb as AppState["db"] for testing purposes
+    mockState = { db: mockDb as unknown as AppState["db"] };
 
     // Reset all mocks
     vi.clearAllMocks();
@@ -148,7 +232,7 @@ describe("AiService", () => {
     mockConnectUserMcps.mockResolvedValue({
       connections: [],
       tools: [],
-      toolToMcpId: new Map(),
+      toolToMcpId: new Map<string, string>(),
     });
     mockDisconnectAllConnections.mockResolvedValue(undefined);
     mockAgentLoop.mockReturnValue(createEmptyAgentLoop());
@@ -156,7 +240,7 @@ describe("AiService", () => {
 
   afterEach(() => {
     // Clean up singleton instance
-    (AiService as any).instance = undefined;
+    (AiService as AiServiceWithInstance).instance = undefined;
   });
 
   describe("Singleton getInstance pattern", () => {
@@ -177,7 +261,7 @@ describe("AiService", () => {
       const instance1 = AiService.getInstance(mockState);
 
       const differentMockDb = createMockDb();
-      const differentState = { db: differentMockDb };
+      const differentState: AppState = { db: differentMockDb as unknown as AppState["db"] };
       const instance2 = AiService.getInstance(differentState);
 
       expect(instance1).toBe(instance2);
@@ -713,12 +797,12 @@ describe("AiService", () => {
       const service = AiService.getInstance(mockState);
       await service.processBlock("task-123", "turn-123", "block-123");
 
-      const agentLoopCall = mockAgentLoop.mock.calls[0][0];
+      const agentLoopCall = mockAgentLoop.mock.calls[0][0] as AgentLoopConfig;
       // Should include read_file (from filtered shell tools) + server_tool
       expect(agentLoopCall.tools).toHaveLength(2);
-      expect(agentLoopCall.tools.map((t: any) => t.name)).toContain("read_file");
-      expect(agentLoopCall.tools.map((t: any) => t.name)).toContain("server_tool");
-      expect(agentLoopCall.tools.map((t: any) => t.name)).not.toContain("write_file");
+      expect(agentLoopCall.tools?.map((t) => t.name)).toContain("read_file");
+      expect(agentLoopCall.tools?.map((t) => t.name)).toContain("server_tool");
+      expect(agentLoopCall.tools?.map((t) => t.name)).not.toContain("write_file");
     });
 
     it("includes task skills in agent loop", async () => {

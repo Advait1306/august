@@ -1,8 +1,59 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SubscriptionService } from "../../../services/subscription.service.js";
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
+import {
+  SubscriptionService,
+  SubscriptionStatus,
+} from "../../../services/subscription.service.js";
+import type { AppState } from "../../../config/state.js";
+import type DodoPayments from "dodopayments";
+import type { ClerkClient } from "@clerk/express";
+
+// Types for chainable mock methods
+type MockFn<TArgs extends unknown[] = unknown[], TReturn = unknown> = MockInstance<
+  (...args: TArgs) => TReturn
+> &
+  ((...args: TArgs) => TReturn);
+
+// Type for mock database with chainable methods
+interface MockDbChain {
+  set: MockFn<[Record<string, unknown>], { where: MockFn<[], Promise<void>> }>;
+  where: MockFn<[], Promise<void>>;
+}
+
+interface MockDbSelectChain {
+  from: MockFn<[], { where: MockFn<[], { limit: MockFn<[], Promise<{ id: string; subscription_id: string | null }[]>> }> }>;
+  where: MockFn<[], { limit: MockFn<[], Promise<{ id: string; subscription_id: string | null }[]>> }>;
+  limit: MockFn<[], Promise<{ id: string; subscription_id: string | null }[]>>;
+}
+
+interface MockDb {
+  update: MockFn<[], { set: MockFn<[Record<string, unknown>], { where: MockFn<[], Promise<void>> }> }>;
+  select: MockFn<[], { from: MockFn<[], { where: MockFn<[], { limit: MockFn<[], Promise<{ id: string; subscription_id: string | null }[]>> }> }> }>;
+}
+
+// Type for mock Dodo client subscriptions
+interface MockDodoSubscriptions {
+  retrieve: MockFn<[string], Promise<{ product_id: string; quantity: number; status?: string }>>;
+  changePlan: MockFn<[string, unknown], Promise<void>>;
+}
+
+interface MockDodoClient {
+  subscriptions: MockDodoSubscriptions;
+}
+
+// Type for mock Clerk client organizations
+interface MockClerkOrganizations {
+  getOrganizationMembershipList: MockFn<
+    [{ organizationId: string }],
+    Promise<{ totalCount: number; data: unknown[] }>
+  >;
+}
+
+interface MockClerkClient {
+  organizations: MockClerkOrganizations;
+}
 
 // Mock the database
-function createMockDb() {
+function createMockDb(): MockDb {
   return {
     update: vi.fn().mockReturnValue({
       set: vi.fn().mockReturnValue({
@@ -20,20 +71,20 @@ function createMockDb() {
 }
 
 // Mock Dodo Payments client
-function createMockDodoClient() {
+function createMockDodoClient(): MockDodoClient {
   return {
     subscriptions: {
       retrieve: vi.fn().mockResolvedValue({
         product_id: "pdt_test",
         quantity: 1,
       }),
-      changePlan: vi.fn().mockResolvedValue({ success: true }),
+      changePlan: vi.fn().mockResolvedValue(undefined),
     },
   };
 }
 
 // Mock Clerk client
-function createMockClerkClient() {
+function createMockClerkClient(): MockClerkClient {
   return {
     organizations: {
       getOrganizationMembershipList: vi.fn().mockResolvedValue({
@@ -55,9 +106,9 @@ describe("SubscriptionService", () => {
     mockDodoClient = createMockDodoClient();
     mockClerkClient = createMockClerkClient();
     service = new SubscriptionService(
-      mockDb as any,
-      mockDodoClient as any,
-      mockClerkClient as any
+      mockDb as unknown as AppState["db"],
+      mockDodoClient as unknown as DodoPayments,
+      mockClerkClient as unknown as ClerkClient
     );
     vi.clearAllMocks();
   });
@@ -137,11 +188,16 @@ describe("SubscriptionService", () => {
     });
 
     it("handles different status values", async () => {
-      const statuses = ["active", "cancelled", "paused", "on_trial"] as const;
+      const statuses: SubscriptionStatus[] = [
+        "active",
+        "cancelled",
+        "pending",
+        "on_hold",
+      ];
 
       for (const status of statuses) {
         vi.clearAllMocks();
-        await service.updateSubscriptionStatus("org_123", status as any);
+        await service.updateSubscriptionStatus("org_123", status);
         expect(mockDb.update().set).toHaveBeenCalledWith(
           expect.objectContaining({
             subscription_status: status,

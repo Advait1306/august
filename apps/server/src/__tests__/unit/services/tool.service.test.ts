@@ -1,6 +1,24 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import { ToolService } from "../../../services/tool.service.js";
 import { z } from "zod";
+import type { AppState } from "../../../config/state.js";
+import type { ServerToolDefinition, ServerToolContext } from "../../../server-tools/types.js";
+import type { McpConnection } from "@august/harness";
+
+/**
+ * Mock interface for ServerToolDefinition where execute is a mock function
+ */
+interface MockServerToolDefinition extends Omit<ServerToolDefinition, "execute"> {
+  execute: Mock<(input: unknown, context: ServerToolContext) => Promise<unknown>>;
+}
+
+/**
+ * Mock interface for McpConnection execute and disconnect methods
+ */
+interface MockMcpConnectionMethods {
+  execute: Mock<(toolName: string, args: Record<string, unknown>) => Promise<unknown>>;
+  disconnect: Mock<() => Promise<void>>;
+}
 
 // Create mock instances that will be returned by constructors
 const mockOAuthServiceInstance = {
@@ -96,7 +114,7 @@ type MockDb = ReturnType<typeof createMockDb>;
 // Helper to reset singleton instance between tests
 function resetToolServiceInstance() {
   // Access the private static instance and reset it
-  (ToolService as any).instance = undefined;
+  (ToolService as unknown as { instance: ToolService | undefined }).instance = undefined;
 }
 
 describe("ToolService", () => {
@@ -107,7 +125,7 @@ describe("ToolService", () => {
     vi.clearAllMocks();
     resetToolServiceInstance();
     mockDb = createMockDb();
-    service = ToolService.getInstance({ db: mockDb } as any);
+    service = ToolService.getInstance({ db: mockDb } as unknown as AppState);
 
     // Reset mock service instances
     mockOAuthServiceInstance.getAccessToken.mockReset();
@@ -128,16 +146,16 @@ describe("ToolService", () => {
 
   describe("getInstance", () => {
     it("returns the same instance on multiple calls", () => {
-      const instance1 = ToolService.getInstance({ db: mockDb } as any);
-      const instance2 = ToolService.getInstance({ db: mockDb } as any);
+      const instance1 = ToolService.getInstance({ db: mockDb } as unknown as AppState);
+      const instance2 = ToolService.getInstance({ db: mockDb } as unknown as AppState);
 
       expect(instance1).toBe(instance2);
     });
 
     it("creates new instance after reset", () => {
-      const instance1 = ToolService.getInstance({ db: mockDb } as any);
+      const instance1 = ToolService.getInstance({ db: mockDb } as unknown as AppState);
       resetToolServiceInstance();
-      const instance2 = ToolService.getInstance({ db: mockDb } as any);
+      const instance2 = ToolService.getInstance({ db: mockDb } as unknown as AppState);
 
       // They should be different instances but both valid
       expect(instance1).toBeDefined();
@@ -158,7 +176,7 @@ describe("ToolService", () => {
       },
     };
 
-    const mockServerTool = {
+    const mockServerTool: MockServerToolDefinition = {
       name: "todo_write",
       version: "1.0.0",
       description: "Write todo items",
@@ -169,7 +187,7 @@ describe("ToolService", () => {
 
     beforeEach(() => {
       mockDb._mocks.queryFindFirst.mockResolvedValue(mockToolBlock);
-      vi.mocked(getServerTool).mockReturnValue(mockServerTool as any);
+      vi.mocked(getServerTool).mockReturnValue(mockServerTool as unknown as ServerToolDefinition);
     });
 
     it("successfully executes a server tool and creates tool_result block", async () => {
@@ -345,7 +363,7 @@ describe("ToolService", () => {
       mcp_server_url: "https://linear-mcp.example.com",
     };
 
-    const mockMcpConnection = {
+    const mockMcpConnection: MockMcpConnectionMethods = {
       execute: vi.fn().mockResolvedValue({ id: "issue-123", title: "New Issue" }),
       disconnect: vi.fn().mockResolvedValue(undefined),
     };
@@ -353,7 +371,7 @@ describe("ToolService", () => {
     beforeEach(() => {
       mockDb._mocks.queryFindFirst.mockResolvedValue(mockToolBlock);
       mockDb._mocks.selectLimit.mockResolvedValue([mockMcpRecord]);
-      vi.mocked(connectMcpServer).mockResolvedValue(mockMcpConnection as any);
+      vi.mocked(connectMcpServer).mockResolvedValue(mockMcpConnection as unknown as McpConnection);
     });
 
     it("successfully executes an OAuth MCP tool", async () => {
@@ -771,12 +789,12 @@ describe("ToolService", () => {
         .mockResolvedValueOnce([mockMcp])
         .mockResolvedValueOnce([mockOAuthDetails]);
 
-      const localMockConnection = {
+      const localMockConnection: MockMcpConnectionMethods = {
         execute: vi.fn().mockRejectedValue(new Error("Execute failed")),
         disconnect: vi.fn().mockResolvedValue(undefined),
       };
 
-      vi.mocked(connectMcpServer).mockResolvedValue(localMockConnection as any);
+      vi.mocked(connectMcpServer).mockResolvedValue(localMockConnection as unknown as McpConnection);
       mockOAuthServiceInstance.getAccessToken.mockResolvedValue("token");
 
       await service.executeMcpTool(
@@ -810,12 +828,12 @@ describe("ToolService", () => {
         .mockResolvedValueOnce([mockMcp])
         .mockResolvedValueOnce([mockOAuthDetails]);
 
-      const localMockConnection = {
+      const localMockConnection: MockMcpConnectionMethods = {
         execute: vi.fn().mockResolvedValue("result"),
         disconnect: vi.fn().mockResolvedValue(undefined),
       };
 
-      vi.mocked(connectMcpServer).mockResolvedValue(localMockConnection as any);
+      vi.mocked(connectMcpServer).mockResolvedValue(localMockConnection as unknown as McpConnection);
       mockOAuthServiceInstance.getAccessToken.mockResolvedValue("token-xyz");
 
       await service.executeMcpTool(
@@ -877,7 +895,7 @@ describe("ToolService", () => {
       },
     };
 
-    const mockServerTool = {
+    const mockServerToolForResultBlock: MockServerToolDefinition = {
       name: "test_tool",
       version: "1.0.0",
       description: "Test tool",
@@ -888,7 +906,7 @@ describe("ToolService", () => {
 
     beforeEach(() => {
       mockDb._mocks.queryFindFirst.mockResolvedValue(mockToolBlock);
-      vi.mocked(getServerTool).mockReturnValue(mockServerTool as any);
+      vi.mocked(getServerTool).mockReturnValue(mockServerToolForResultBlock as unknown as ServerToolDefinition);
     });
 
     it("creates tool_result block with correct structure", async () => {

@@ -10,6 +10,8 @@ import {
 import request from "supertest";
 import express, { Express } from "express";
 import { createSyncController } from "../../../controllers/sync.controller";
+import type { SignedInAuthObject, SignedOutAuthObject } from "@clerk/backend/internal";
+import type { SyncService } from "../../../services/sync.service";
 
 // Mock @clerk/express
 vi.mock("@clerk/express", () => ({
@@ -18,12 +20,18 @@ vi.mock("@clerk/express", () => ({
 
 import { getAuth } from "@clerk/express";
 
+// Partial mock type that satisfies the minimal interface needed for tests
+type PartialMockAuthObject = Pick<SignedInAuthObject | SignedOutAuthObject, 'isAuthenticated' | 'userId' | 'orgId'>;
+
+// Mock interface for SyncService
+interface MockSyncService {
+  handleQuery: ReturnType<typeof vi.fn>;
+  handleMutate: ReturnType<typeof vi.fn>;
+}
+
 describe("Sync Controller Integration Tests", () => {
   let app: Express;
-  let mockSyncService: {
-    handleQuery: ReturnType<typeof vi.fn>;
-    handleMutate: ReturnType<typeof vi.fn>;
-  };
+  let mockSyncService: MockSyncService;
 
   beforeAll(() => {
     // No specific env vars needed
@@ -47,7 +55,7 @@ describe("Sync Controller Integration Tests", () => {
     // Create Express app with controller
     app = express();
     app.use(express.json());
-    app.use("/", createSyncController(mockSyncService as any));
+    app.use("/", createSyncController(mockSyncService as unknown as SyncService));
   });
 
   afterAll(() => {
@@ -65,7 +73,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_query_123",
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const queryPayload = {
           clientGroupID: "cg_123",
@@ -90,7 +98,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_query_org",
           orgId: "org_query_123",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const queryPayload = {
           clientGroupID: "cg_456",
@@ -111,7 +119,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_body_test",
           orgId: "org_body_test",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const queryPayload = {
           clientGroupID: "cg_body",
@@ -137,7 +145,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_response",
           orgId: "org_response",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const customResponse = {
           data: [
@@ -162,7 +170,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: false,
           userId: null,
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const response = await request(app)
           .post("/query")
@@ -180,7 +188,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_error",
           orgId: "org_error",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         mockSyncService.handleQuery.mockRejectedValue(
           new Error("Sync query failed")
@@ -207,7 +215,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_mutate_123",
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const mutatePayload = {
           clientGroupID: "cg_mutate",
@@ -232,7 +240,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_mutate_org",
           orgId: "org_mutate_123",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const mutatePayload = {
           clientGroupID: "cg_mutate_org",
@@ -255,7 +263,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_multi_mutate",
           orgId: "org_multi_mutate",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const mutatePayload = {
           clientGroupID: "cg_multi",
@@ -287,7 +295,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_mutate_response",
           orgId: "org_mutate_response",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const customResponse = {
           success: true,
@@ -309,7 +317,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: false,
           userId: null,
           orgId: null,
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         const response = await request(app)
           .post("/mutate")
@@ -327,7 +335,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_mutate_error",
           orgId: "org_mutate_error",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         mockSyncService.handleMutate.mockRejectedValue(
           new Error("Mutation conflict")
@@ -346,7 +354,7 @@ describe("Sync Controller Integration Tests", () => {
           isAuthenticated: true,
           userId: "user_validation",
           orgId: "org_validation",
-        } as any);
+        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
         mockSyncService.handleMutate.mockResolvedValue({
           success: false,
@@ -374,7 +382,7 @@ describe("Sync Controller Integration Tests", () => {
         isAuthenticated: true,
         userId: "user_transform",
         orgId: "org_transform",
-      } as any);
+      } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
       await request(app)
         .post("/query")
@@ -393,7 +401,7 @@ describe("Sync Controller Integration Tests", () => {
         isAuthenticated: true,
         userId: "user_transform_mutate",
         orgId: "org_transform_mutate",
-      } as any);
+      } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
 
       await request(app)
         .post("/mutate")

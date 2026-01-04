@@ -1,8 +1,36 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
 import { ClerkService } from "../../../services/clerk.service.js";
+import { AppState } from "../../../config/state.js";
+
+// Define mock interfaces for the database operations
+interface MockOnConflictDoNothing {
+  onConflictDoNothing: MockInstance<() => Promise<undefined>>;
+}
+
+interface MockValues {
+  values: MockInstance<(value: unknown) => MockOnConflictDoNothing>;
+}
+
+interface MockInsert {
+  insert: MockInstance<(table: unknown) => MockValues>;
+}
+
+interface MockWhere {
+  where: MockInstance<(condition: unknown) => Promise<undefined>>;
+}
+
+interface MockSet {
+  set: MockInstance<(values: { deleted_at: Date }) => MockWhere>;
+}
+
+interface MockUpdate {
+  update: MockInstance<(table: unknown) => MockSet>;
+}
+
+interface MockDb extends MockInsert, MockUpdate {}
 
 // Mock the database
-function createMockDb() {
+function createMockDb(): MockDb {
   return {
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnValue({
@@ -19,11 +47,11 @@ function createMockDb() {
 
 describe("ClerkService", () => {
   let service: ClerkService;
-  let mockDb: ReturnType<typeof createMockDb>;
+  let mockDb: MockDb;
 
   beforeEach(() => {
     mockDb = createMockDb();
-    service = new ClerkService(mockDb as any);
+    service = new ClerkService(mockDb as unknown as AppState["db"]);
     vi.clearAllMocks();
   });
 

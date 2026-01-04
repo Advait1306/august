@@ -1,24 +1,40 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type MockInstance } from "vitest";
 import { UsageService } from "../../../services/usage.service.js";
+import type { AppState } from "../../../config/state.js";
+
+// Mock interface for the database chain methods that matches drizzle's fluent API
+interface MockOnConflictDoNothing {
+  onConflictDoNothing: MockInstance;
+}
+
+interface MockValues {
+  values: MockInstance<[data: unknown], MockOnConflictDoNothing>;
+}
+
+interface MockInsert {
+  insert: MockInstance<[table: unknown], MockValues>;
+}
+
+type MockDb = MockInsert;
 
 // Mock the database
-function createMockDb() {
+function createMockDb(): MockDb {
   return {
     insert: vi.fn().mockReturnValue({
       values: vi.fn().mockReturnValue({
         onConflictDoNothing: vi.fn().mockResolvedValue(undefined),
       }),
     }),
-  };
+  } as MockDb;
 }
 
 describe("UsageService", () => {
   let service: UsageService;
-  let mockDb: ReturnType<typeof createMockDb>;
+  let mockDb: MockDb;
 
   beforeEach(() => {
     mockDb = createMockDb();
-    service = new UsageService(mockDb as any);
+    service = new UsageService(mockDb as unknown as AppState["db"]);
     vi.clearAllMocks();
   });
 

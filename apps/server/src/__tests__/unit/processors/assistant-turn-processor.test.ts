@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { ServerToolJobData } from "../../../queues/workers/serverToolExecutorWorker.js";
+import type { McpToolJobData } from "../../../queues/workers/mcpToolExecutorWorker.js";
+import type { AppState } from "../../../config/state.js";
 
 // Mock randomUUID before importing the processor
 vi.mock("crypto", () => ({
@@ -10,13 +13,13 @@ const mockAddToServerToolExecutorQueue = vi.fn().mockResolvedValue(undefined);
 const mockAddToMcpToolExecutorQueue = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("../../../queues/workers/serverToolExecutorWorker.js", () => ({
-  addToServerToolExecutorQueue: (...args: any[]) =>
-    mockAddToServerToolExecutorQueue(...args),
+  addToServerToolExecutorQueue: (data: ServerToolJobData) =>
+    mockAddToServerToolExecutorQueue(data),
 }));
 
 vi.mock("../../../queues/workers/mcpToolExecutorWorker.js", () => ({
-  addToMcpToolExecutorQueue: (...args: any[]) =>
-    mockAddToMcpToolExecutorQueue(...args),
+  addToMcpToolExecutorQueue: (data: McpToolJobData) =>
+    mockAddToMcpToolExecutorQueue(data),
 }));
 
 // Mock isServerTool
@@ -61,6 +64,12 @@ function createMockDb() {
     }),
   };
 }
+
+/**
+ * Mock database type that represents the subset of AppState["db"] methods
+ * used by AssistantTurnProcessor.
+ */
+type MockDb = ReturnType<typeof createMockDb>;
 
 // Helper to create message start event
 function createMessageStartEvent(
@@ -136,13 +145,13 @@ function createBlockStopEvent(index: number): BetaRawContentBlockStopEvent {
 }
 
 describe("AssistantTurnProcessor", () => {
-  let mockDb: ReturnType<typeof createMockDb>;
+  let mockDb: MockDb;
   let processor: AssistantTurnProcessor;
 
   beforeEach(() => {
     mockDb = createMockDb();
     processor = new AssistantTurnProcessor(
-      mockDb as any,
+      mockDb as unknown as AppState["db"],
       "task-123",
       "org-456",
       "claude-3-opus"
@@ -154,7 +163,7 @@ describe("AssistantTurnProcessor", () => {
   describe("constructor", () => {
     it("initializes with correct task and turn state", () => {
       const proc = new AssistantTurnProcessor(
-        mockDb as any,
+        mockDb as unknown as AppState["db"],
         "task-id",
         "org-id",
         "claude-3-sonnet"
@@ -167,7 +176,7 @@ describe("AssistantTurnProcessor", () => {
     it("accepts an optional toolToMcpId map", () => {
       const toolToMcpId = new Map([["mcp_tool", "mcp-123"]]);
       const proc = new AssistantTurnProcessor(
-        mockDb as any,
+        mockDb as unknown as AppState["db"],
         "task-id",
         "org-id",
         "claude-3-sonnet",
@@ -534,8 +543,8 @@ describe("AssistantTurnProcessor", () => {
 
       // Unknown delta type should be ignored
       processor.processBlockDelta(createBlockDeltaEvent(0, {
-        type: "unknown_delta" as any,
-      }));
+        type: "unknown_delta",
+      } as unknown as BetaRawContentBlockDeltaEvent["delta"]));
 
       // No error should occur
     });
@@ -604,7 +613,7 @@ describe("AssistantTurnProcessor", () => {
     it("sets status to mcp_pending for MCP tools", () => {
       const toolToMcpId = new Map([["mcp_tool", "mcp-123"]]);
       const proc = new AssistantTurnProcessor(
-        mockDb as any,
+        mockDb as unknown as AppState["db"],
         "task-123",
         "org-456",
         "claude-3-opus",
@@ -746,7 +755,7 @@ describe("AssistantTurnProcessor", () => {
     it("queues MCP tool execution for complete mcp_pending blocks", async () => {
       const toolToMcpId = new Map([["mcp_tool", "mcp-server-123"]]);
       const proc = new AssistantTurnProcessor(
-        mockDb as any,
+        mockDb as unknown as AppState["db"],
         "task-123",
         "org-456",
         "claude-3-opus",
@@ -899,7 +908,7 @@ describe("AssistantTurnProcessor", () => {
     it("sets mcp_pending status for complete MCP tool blocks", () => {
       const toolToMcpId = new Map([["mcp_tool", "mcp-123"]]);
       const proc = new AssistantTurnProcessor(
-        mockDb as any,
+        mockDb as unknown as AppState["db"],
         "task-123",
         "org-456",
         "claude-3-opus",
@@ -1024,8 +1033,8 @@ describe("AssistantTurnProcessor", () => {
         usage: {
           input_tokens: 100,
           output_tokens: 50,
-          // cache tokens not provided
-        } as any,
+          // cache tokens not provided - casting to expected type to test handling of missing properties
+        } as unknown as BetaRawMessageStartEvent["message"]["usage"],
       }));
 
       await processor.processMessageStop();
@@ -1193,7 +1202,7 @@ describe("AssistantTurnProcessor", () => {
     it("processes mixed server and MCP tools", async () => {
       const toolToMcpId = new Map([["mcp_tool", "mcp-123"]]);
       const proc = new AssistantTurnProcessor(
-        mockDb as any,
+        mockDb as unknown as AppState["db"],
         "task-123",
         "org-456",
         "claude-3-opus",
