@@ -10,22 +10,10 @@ import {
 import request from "supertest";
 import express, { Express } from "express";
 import { createBillingController } from "../../../controllers/billing.controller";
-import type { ClerkClient } from "@clerk/express";
 import type { SignedInAuthObject, SignedOutAuthObject } from "@clerk/backend/internal";
-import type DodoPayments from "dodopayments";
+import type { DodoWebhookService, WebhookEvent } from "../../../services/dodo-webhook.service";
+import type { BillingService } from "../../../services/billing.service";
 import type { SubscriptionService } from "../../../services/subscription.service";
-
-// Create a mock verify function that can be controlled per test
-const mockWebhookVerify = vi.fn();
-
-// Mock standardwebhooks Webhook as a proper class
-vi.mock("standardwebhooks", () => {
-  return {
-    Webhook: class MockWebhook {
-      verify = mockWebhookVerify;
-    },
-  };
-});
 
 // Mock @clerk/express
 vi.mock("@clerk/express", () => ({
@@ -35,20 +23,14 @@ vi.mock("@clerk/express", () => ({
 import { getAuth } from "@clerk/express";
 
 // Mock types for testing
-interface MockDb {
-  select: ReturnType<typeof vi.fn>;
+interface MockDodoWebhookService {
+  verifyAndParseWebhook: ReturnType<typeof vi.fn>;
+  handleWebhookEvent: ReturnType<typeof vi.fn>;
+  resolveOrganisationId: ReturnType<typeof vi.fn>;
 }
 
-interface MockClerkClient {
-  users: {
-    getUser: ReturnType<typeof vi.fn>;
-  };
-}
-
-interface MockDodoClient {
-  checkoutSessions: {
-    create: ReturnType<typeof vi.fn>;
-  };
+interface MockBillingService {
+  createCheckoutSession: ReturnType<typeof vi.fn>;
 }
 
 interface MockSubscriptionService {
@@ -62,9 +44,8 @@ type PartialMockAuthObject = Pick<SignedInAuthObject | SignedOutAuthObject, 'isA
 
 describe("Billing Controller Integration Tests", () => {
   let app: Express;
-  let mockClerkClient: MockClerkClient;
-  let mockDb: MockDb;
-  let mockDodoClient: MockDodoClient;
+  let mockDodoWebhookService: MockDodoWebhookService;
+  let mockBillingService: MockBillingService;
   let mockSubscriptionService: MockSubscriptionService;
 
   beforeAll(() => {
@@ -75,36 +56,19 @@ describe("Billing Controller Integration Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Create mock Clerk client
-    mockClerkClient = {
-      users: {
-        getUser: vi.fn().mockResolvedValue({
-          id: "user_123",
-          fullName: "Test User",
-          emailAddresses: [{ emailAddress: "test@example.com" }],
-        }),
-      },
+    // Create mock DodoWebhookService
+    mockDodoWebhookService = {
+      verifyAndParseWebhook: vi.fn(),
+      handleWebhookEvent: vi.fn().mockResolvedValue(undefined),
+      resolveOrganisationId: vi.fn(),
     };
 
-    // Create mock DB
-    mockDb = {
-      select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
+    // Create mock BillingService
+    mockBillingService = {
+      createCheckoutSession: vi.fn().mockResolvedValue({
+        checkoutUrl: "https://checkout.dodopayments.com/session_123",
+        sessionId: "session_123",
       }),
-    };
-
-    // Create mock Dodo client
-    mockDodoClient = {
-      checkoutSessions: {
-        create: vi.fn().mockResolvedValue({
-          checkout_url: "https://checkout.dodopayments.com/session_123",
-          session_id: "session_123",
-        }),
-      },
     };
 
     // Create mock subscription service
@@ -130,9 +94,8 @@ describe("Billing Controller Integration Tests", () => {
     app.use(
       "/",
       createBillingController(
-        mockClerkClient as unknown as ClerkClient,
-        mockDb as unknown as Parameters<typeof createBillingController>[1],
-        mockDodoClient as unknown as DodoPayments,
+        mockDodoWebhookService as unknown as DodoWebhookService,
+        mockBillingService as unknown as BillingService,
         mockSubscriptionService as unknown as SubscriptionService
       )
     );
@@ -158,7 +121,7 @@ describe("Billing Controller Integration Tests", () => {
             metadata: { organisation_id: "org_123" },
           },
         };
-        mockWebhookVerify.mockReturnValue(payload);
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload);
 
         const response = await request(app)
           .post("/api/webhooks/dodo")
@@ -168,14 +131,15 @@ describe("Billing Controller Integration Tests", () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual({ success: true });
-        expect(
-          mockSubscriptionService.updateSubscriptionStatus
-        ).toHaveBeenCalledWith("org_123", "active", "sub_123");
+        expect(mockDodoWebhookService.handleWebhookEvent).toHaveBeenCalledWith(
+          payload,
+          mockSubscriptionService
+        );
       });
     });
 
     describe("subscription.on_hold event", () => {
-      it("should update subscription status to on_hold", async () => {
+      it("should handle on_hold event via webhook service", async () => {
         const payload = {
           type: "subscription.on_hold",
           data: {
@@ -183,7 +147,7 @@ describe("Billing Controller Integration Tests", () => {
             metadata: { organisation_id: "org_456" },
           },
         };
-        mockWebhookVerify.mockReturnValue(payload);
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload);
 
         const response = await request(app)
           .post("/api/webhooks/dodo")
@@ -192,14 +156,15 @@ describe("Billing Controller Integration Tests", () => {
           .send(JSON.stringify(payload));
 
         expect(response.status).toBe(200);
-        expect(
-          mockSubscriptionService.updateSubscriptionStatus
-        ).toHaveBeenCalledWith("org_456", "on_hold");
+        expect(mockDodoWebhookService.handleWebhookEvent).toHaveBeenCalledWith(
+          payload,
+          mockSubscriptionService
+        );
       });
     });
 
     describe("subscription.failed event", () => {
-      it("should update subscription status to failed", async () => {
+      it("should handle failed event via webhook service", async () => {
         const payload = {
           type: "subscription.failed",
           data: {
@@ -207,7 +172,7 @@ describe("Billing Controller Integration Tests", () => {
             metadata: { organisation_id: "org_789" },
           },
         };
-        mockWebhookVerify.mockReturnValue(payload);
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload);
 
         const response = await request(app)
           .post("/api/webhooks/dodo")
@@ -216,14 +181,15 @@ describe("Billing Controller Integration Tests", () => {
           .send(JSON.stringify(payload));
 
         expect(response.status).toBe(200);
-        expect(
-          mockSubscriptionService.updateSubscriptionStatus
-        ).toHaveBeenCalledWith("org_789", "failed");
+        expect(mockDodoWebhookService.handleWebhookEvent).toHaveBeenCalledWith(
+          payload,
+          mockSubscriptionService
+        );
       });
     });
 
     describe("subscription.cancelled event", () => {
-      it("should update subscription status to cancelled", async () => {
+      it("should handle cancelled event via webhook service", async () => {
         const payload = {
           type: "subscription.cancelled",
           data: {
@@ -231,7 +197,7 @@ describe("Billing Controller Integration Tests", () => {
             metadata: { organisation_id: "org_cancel" },
           },
         };
-        mockWebhookVerify.mockReturnValue(payload);
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload);
 
         const response = await request(app)
           .post("/api/webhooks/dodo")
@@ -240,14 +206,15 @@ describe("Billing Controller Integration Tests", () => {
           .send(JSON.stringify(payload));
 
         expect(response.status).toBe(200);
-        expect(
-          mockSubscriptionService.updateSubscriptionStatus
-        ).toHaveBeenCalledWith("org_cancel", "cancelled");
+        expect(mockDodoWebhookService.handleWebhookEvent).toHaveBeenCalledWith(
+          payload,
+          mockSubscriptionService
+        );
       });
     });
 
     describe("subscription.renewed event", () => {
-      it("should update subscription status to active on renewal", async () => {
+      it("should handle renewed event via webhook service", async () => {
         const payload = {
           type: "subscription.renewed",
           data: {
@@ -255,7 +222,7 @@ describe("Billing Controller Integration Tests", () => {
             metadata: { organisation_id: "org_renew" },
           },
         };
-        mockWebhookVerify.mockReturnValue(payload);
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload);
 
         const response = await request(app)
           .post("/api/webhooks/dodo")
@@ -264,14 +231,15 @@ describe("Billing Controller Integration Tests", () => {
           .send(JSON.stringify(payload));
 
         expect(response.status).toBe(200);
-        expect(
-          mockSubscriptionService.updateSubscriptionStatus
-        ).toHaveBeenCalledWith("org_renew", "active");
+        expect(mockDodoWebhookService.handleWebhookEvent).toHaveBeenCalledWith(
+          payload,
+          mockSubscriptionService
+        );
       });
     });
 
     describe("subscription.expired event", () => {
-      it("should update subscription status to expired", async () => {
+      it("should handle expired event via webhook service", async () => {
         const payload = {
           type: "subscription.expired",
           data: {
@@ -279,7 +247,7 @@ describe("Billing Controller Integration Tests", () => {
             metadata: { organisation_id: "org_expire" },
           },
         };
-        mockWebhookVerify.mockReturnValue(payload);
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload);
 
         const response = await request(app)
           .post("/api/webhooks/dodo")
@@ -288,84 +256,10 @@ describe("Billing Controller Integration Tests", () => {
           .send(JSON.stringify(payload));
 
         expect(response.status).toBe(200);
-        expect(
-          mockSubscriptionService.updateSubscriptionStatus
-        ).toHaveBeenCalledWith("org_expire", "expired");
-      });
-    });
-
-    describe("org lookup by subscription_id", () => {
-      it("should find org by subscription_id when metadata is missing", async () => {
-        const payload = {
-          type: "subscription.active",
-          data: {
-            subscription_id: "sub_lookup",
-          },
-        };
-        mockWebhookVerify.mockReturnValue(payload);
-
-        // Mock DB to return org found by subscription_id
-        mockDb.select().from().where().limit.mockResolvedValue([
-          { id: "org_found_by_sub" },
-        ]);
-
-        const response = await request(app)
-          .post("/api/webhooks/dodo")
-          .set("Content-Type", "application/json")
-          .set(validHeaders)
-          .send(JSON.stringify(payload));
-
-        expect(response.status).toBe(200);
-        expect(
-          mockSubscriptionService.updateSubscriptionStatus
-        ).toHaveBeenCalledWith("org_found_by_sub", "active", "sub_lookup");
-      });
-    });
-
-    describe("missing subscription_id", () => {
-      it("should return 400 when subscription_id is missing", async () => {
-        const payload = {
-          type: "subscription.active",
-          data: {
-            metadata: { organisation_id: "org_123" },
-          },
-        };
-        mockWebhookVerify.mockReturnValue(payload);
-
-        const response = await request(app)
-          .post("/api/webhooks/dodo")
-          .set("Content-Type", "application/json")
-          .set(validHeaders)
-          .send(JSON.stringify(payload));
-
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({ error: "Missing subscription_id" });
-      });
-    });
-
-    describe("missing organisation_id", () => {
-      it("should return 400 when org cannot be determined", async () => {
-        const payload = {
-          type: "subscription.active",
-          data: {
-            subscription_id: "sub_unknown",
-          },
-        };
-        mockWebhookVerify.mockReturnValue(payload);
-
-        // DB returns no org
-        mockDb.select().from().where().limit.mockResolvedValue([]);
-
-        const response = await request(app)
-          .post("/api/webhooks/dodo")
-          .set("Content-Type", "application/json")
-          .set(validHeaders)
-          .send(JSON.stringify(payload));
-
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({
-          error: "Could not determine organisation",
-        });
+        expect(mockDodoWebhookService.handleWebhookEvent).toHaveBeenCalledWith(
+          payload,
+          mockSubscriptionService
+        );
       });
     });
 
@@ -377,7 +271,7 @@ describe("Billing Controller Integration Tests", () => {
             payment_id: "pay_123",
           },
         };
-        mockWebhookVerify.mockReturnValue(payload);
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload as unknown as WebhookEvent);
 
         const response = await request(app)
           .post("/api/webhooks/dodo")
@@ -398,9 +292,9 @@ describe("Billing Controller Integration Tests", () => {
             subscription_id: "sub_123",
           },
         };
-        mockWebhookVerify.mockImplementation(() => {
-          throw new Error("Invalid signature");
-        });
+        mockDodoWebhookService.verifyAndParseWebhook.mockRejectedValue(
+          new Error("Invalid signature")
+        );
 
         const response = await request(app)
           .post("/api/webhooks/dodo")
@@ -415,38 +309,18 @@ describe("Billing Controller Integration Tests", () => {
 
     describe("missing webhook secret", () => {
       it("should return 500 when DODO_WEBHOOK_SECRET is not configured", async () => {
-        const originalSecret = process.env.DODO_WEBHOOK_SECRET;
-        delete process.env.DODO_WEBHOOK_SECRET;
-
-        // Recreate app without the secret
-        const tempApp = express();
-        tempApp.use((req, res, next) => {
-          if (req.path === "/api/webhooks/dodo") {
-            express.raw({ type: "application/json" })(req, res, next);
-          } else {
-            express.json()(req, res, next);
-          }
-        });
-        tempApp.use(
-          "/",
-          createBillingController(
-            mockClerkClient as unknown as ClerkClient,
-            mockDb as unknown as Parameters<typeof createBillingController>[1],
-            mockDodoClient as unknown as DodoPayments,
-            mockSubscriptionService as unknown as SubscriptionService
-          )
+        mockDodoWebhookService.verifyAndParseWebhook.mockRejectedValue(
+          new Error("DODO_WEBHOOK_SECRET not configured")
         );
 
-        const response = await request(tempApp)
+        const response = await request(app)
           .post("/api/webhooks/dodo")
           .set("Content-Type", "application/json")
           .set(validHeaders)
           .send(JSON.stringify({ type: "test" }));
 
         expect(response.status).toBe(500);
-        expect(response.body).toEqual({ error: "Webhook not configured" });
-
-        process.env.DODO_WEBHOOK_SECRET = originalSecret;
+        expect(response.body).toEqual({ error: "DODO_WEBHOOK_SECRET not configured" });
       });
     });
 
@@ -459,9 +333,9 @@ describe("Billing Controller Integration Tests", () => {
             metadata: { organisation_id: "org_error" },
           },
         };
-        mockWebhookVerify.mockReturnValue(payload);
-        mockSubscriptionService.updateSubscriptionStatus.mockRejectedValue(
-          new Error("DB error")
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload);
+        mockDodoWebhookService.handleWebhookEvent.mockRejectedValue(
+          new Error("Failed to process subscription event: subscription.active")
         );
 
         const response = await request(app)
@@ -472,7 +346,57 @@ describe("Billing Controller Integration Tests", () => {
 
         expect(response.status).toBe(500);
         expect(response.body).toEqual({
-          error: "Failed to process subscription event",
+          error: "Failed to process subscription event: subscription.active",
+        });
+      });
+    });
+
+    describe("missing subscription_id error", () => {
+      it("should return 500 when subscription_id is missing", async () => {
+        const payload = {
+          type: "subscription.active",
+          data: {
+            metadata: { organisation_id: "org_123" },
+          },
+        };
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload);
+        mockDodoWebhookService.handleWebhookEvent.mockRejectedValue(
+          new Error("Missing subscription_id in webhook payload")
+        );
+
+        const response = await request(app)
+          .post("/api/webhooks/dodo")
+          .set("Content-Type", "application/json")
+          .set(validHeaders)
+          .send(JSON.stringify(payload));
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({ error: "Missing subscription_id in webhook payload" });
+      });
+    });
+
+    describe("missing organisation_id error", () => {
+      it("should return 500 when org cannot be determined", async () => {
+        const payload = {
+          type: "subscription.active",
+          data: {
+            subscription_id: "sub_unknown",
+          },
+        };
+        mockDodoWebhookService.verifyAndParseWebhook.mockResolvedValue(payload);
+        mockDodoWebhookService.handleWebhookEvent.mockRejectedValue(
+          new Error("Could not determine org ID from metadata or subscription lookup")
+        );
+
+        const response = await request(app)
+          .post("/api/webhooks/dodo")
+          .set("Content-Type", "application/json")
+          .set(validHeaders)
+          .send(JSON.stringify(payload));
+
+        expect(response.status).toBe(500);
+        expect(response.body).toEqual({
+          error: "Could not determine org ID from metadata or subscription lookup",
         });
       });
     });
@@ -497,11 +421,15 @@ describe("Billing Controller Integration Tests", () => {
 
         expect(response.status).toBe(200);
         expect(response.body).toEqual({
-          success: true,
           checkoutUrl: "https://checkout.dodopayments.com/session_123",
           sessionId: "session_123",
         });
-        expect(mockDodoClient.checkoutSessions.create).toHaveBeenCalled();
+        expect(mockBillingService.createCheckoutSession).toHaveBeenCalledWith({
+          userId: "user_checkout",
+          organisationId: "user_checkout",
+          returnUrl: "https://example.com/return",
+          memberCount: 3,
+        });
       });
 
       it("should create checkout session for organization", async () => {
@@ -519,45 +447,33 @@ describe("Billing Controller Integration Tests", () => {
         expect(mockSubscriptionService.getOrgMemberCount).toHaveBeenCalledWith(
           "org_checkout"
         );
+        expect(mockBillingService.createCheckoutSession).toHaveBeenCalledWith({
+          userId: "user_org_checkout",
+          organisationId: "org_checkout",
+          returnUrl: "https://example.com/return",
+          memberCount: 3,
+        });
       });
 
-      it("should include addon seats for multiple members", async () => {
+      it("should pass correct member count to billing service", async () => {
         vi.mocked(getAuth).mockReturnValue({
           isAuthenticated: true,
           userId: "user_addon",
           orgId: "org_addon",
         } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
         mockSubscriptionService.getOrgMemberCount.mockResolvedValue(5);
-        mockSubscriptionService.calculateAddonSeats.mockReturnValue(4);
 
         const response = await request(app)
           .post("/api/subscription/checkout")
           .send({ returnUrl: "https://example.com/return" });
 
         expect(response.status).toBe(200);
-        const createCall =
-          mockDodoClient.checkoutSessions.create.mock.calls[0][0];
-        expect(createCall.product_cart[0].addons).toBeDefined();
-        expect(createCall.product_cart[0].addons[0].quantity).toBe(4);
-      });
-
-      it("should not include addons when only 1 member", async () => {
-        vi.mocked(getAuth).mockReturnValue({
-          isAuthenticated: true,
-          userId: "user_single",
-          orgId: null,
-        } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
-        mockSubscriptionService.getOrgMemberCount.mockResolvedValue(1);
-        mockSubscriptionService.calculateAddonSeats.mockReturnValue(0);
-
-        const response = await request(app)
-          .post("/api/subscription/checkout")
-          .send({ returnUrl: "https://example.com/return" });
-
-        expect(response.status).toBe(200);
-        const createCall =
-          mockDodoClient.checkoutSessions.create.mock.calls[0][0];
-        expect(createCall.product_cart[0].addons).toBeUndefined();
+        expect(mockBillingService.createCheckoutSession).toHaveBeenCalledWith({
+          userId: "user_addon",
+          organisationId: "org_addon",
+          returnUrl: "https://example.com/return",
+          memberCount: 5,
+        });
       });
     });
 
@@ -574,25 +490,22 @@ describe("Billing Controller Integration Tests", () => {
           .send({ returnUrl: "https://example.com/return" });
 
         expect(response.status).toBe(401);
-        expect(response.body).toEqual({ error: "User not authenticated" });
+        expect(response.body).toEqual({ error: "Unauthorized" });
       });
-    });
 
-    describe("user not found", () => {
-      it("should return 401 when Clerk user is not found", async () => {
+      it("should return 401 when userId is missing", async () => {
         vi.mocked(getAuth).mockReturnValue({
           isAuthenticated: true,
-          userId: "user_not_found",
+          userId: null,
           orgId: null,
         } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
-        mockClerkClient.users.getUser.mockResolvedValue(null);
 
         const response = await request(app)
           .post("/api/subscription/checkout")
           .send({ returnUrl: "https://example.com/return" });
 
         expect(response.status).toBe(401);
-        expect(response.body).toEqual({ error: "User not found" });
+        expect(response.body).toEqual({ error: "Unauthorized" });
       });
     });
 
@@ -609,7 +522,7 @@ describe("Billing Controller Integration Tests", () => {
           .send({});
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toContain("Invalid return URL");
+        expect(response.body).toEqual({ error: "returnUrl is required" });
       });
 
       it("should return 400 when returnUrl is not a string", async () => {
@@ -624,18 +537,18 @@ describe("Billing Controller Integration Tests", () => {
           .send({ returnUrl: 12345 });
 
         expect(response.status).toBe(400);
-        expect(response.body.error).toContain("Invalid return URL");
+        expect(response.body).toEqual({ error: "returnUrl is required" });
       });
     });
 
     describe("checkout creation errors", () => {
-      it("should return 500 when Dodo checkout fails", async () => {
+      it("should throw error when billing service fails", async () => {
         vi.mocked(getAuth).mockReturnValue({
           isAuthenticated: true,
           userId: "user_dodo_error",
           orgId: null,
         } as unknown as PartialMockAuthObject as ReturnType<typeof getAuth>);
-        mockDodoClient.checkoutSessions.create.mockRejectedValue(
+        mockBillingService.createCheckoutSession.mockRejectedValue(
           new Error("Dodo API error")
         );
 
@@ -644,10 +557,6 @@ describe("Billing Controller Integration Tests", () => {
           .send({ returnUrl: "https://example.com/return" });
 
         expect(response.status).toBe(500);
-        expect(response.body).toEqual({
-          success: false,
-          error: "Failed to create subscription checkout",
-        });
       });
     });
   });

@@ -3,29 +3,6 @@ import type { McpConnection } from "@august/harness";
 import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import type { AppState } from "../../../config/state.js";
 
-// Create mock instances that will be used across tests
-const mockOAuthServiceInstance = {
-  getAccessToken: vi.fn(),
-};
-
-const mockComposioServiceInstance = {
-  getConnectionUrl: vi.fn(),
-};
-
-// Mock OAuthService as a constructor function
-vi.mock("../../../services/oauth.service.js", () => ({
-  OAuthService: function MockOAuthService() {
-    return mockOAuthServiceInstance;
-  },
-}));
-
-// Mock ComposioService as a constructor function
-vi.mock("../../../services/composio.service.js", () => ({
-  ComposioService: function MockComposioService() {
-    return mockComposioServiceInstance;
-  },
-}));
-
 // Mock the @august/harness module
 vi.mock("@august/harness", () => ({
   connectMcpServer: vi.fn(),
@@ -34,7 +11,7 @@ vi.mock("@august/harness", () => ({
 }));
 
 // Import after mocking
-import { McpService } from "../../../services/mcp.service.js";
+import { McpService, type Mcp } from "../../../services/mcp.service.js";
 import {
   connectMcpServer,
   getMcpTools,
@@ -56,7 +33,6 @@ interface MockDb {
 }
 
 // Partial type for mock McpConnection used in tests
-// We only need the properties that are actually used in the tests
 interface MockMcpConnection {
   name: string;
   tools: Array<{ name: string; description: string }>;
@@ -82,17 +58,7 @@ function createMockConnection(partial: MockMcpConnection): McpConnection {
   };
 }
 
-// Type for mock Tool that matches Anthropic SDK Tool interface
-interface MockTool {
-  name: string;
-  description: string;
-  input_schema: { type: string; properties?: Record<string, unknown> };
-}
-
 // Create mock database helper
-// The service uses different query patterns:
-// - .select().from(mcps).where(eq(mcps.author_id, userId)) - returns array directly from where()
-// - .select().from(mcpOauthIntegrationDetails).where(...).limit(1) - returns array from limit()
 function createMockDb(): MockDb {
   const mockSelect = vi.fn();
   const mockFrom = vi.fn();
@@ -102,11 +68,8 @@ function createMockDb(): MockDb {
   // Chain the methods
   mockSelect.mockReturnValue({ from: mockFrom });
   mockFrom.mockReturnValue({ where: mockWhere });
-  // where() can either resolve directly (no limit) or chain to limit
-  // We'll track call count to determine behavior
   mockWhere.mockImplementation(() => {
     const result: { limit: Mock; then?: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => Promise<unknown> } = { limit: mockLimit };
-    // Also make where() thenable so it can be awaited directly
     result.then = (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => {
       return Promise.resolve(mockWhere._directResult ?? []).then(resolve, reject);
     };
@@ -114,7 +77,6 @@ function createMockDb(): MockDb {
   });
   mockLimit.mockResolvedValue([]);
 
-  // Store a reference to set the direct result
   mockWhere._directResult = [];
 
   return {
@@ -122,11 +84,16 @@ function createMockDb(): MockDb {
     _mockFrom: mockFrom,
     _mockWhere: mockWhere,
     _mockLimit: mockLimit,
-    // Helper to set what .where() returns when awaited directly
     setWhereResult: (value: unknown[]) => {
       mockWhere._directResult = value;
     },
   };
+}
+
+// Helper to reset the singleton instance between tests
+function resetSingleton() {
+  // Access private static instance via type assertion
+  (McpService as unknown as { instance: McpService | null }).instance = null;
 }
 
 describe("McpService", () => {
@@ -135,453 +102,368 @@ describe("McpService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSingleton();
     mockDb = createMockDb();
-    service = new McpService(mockDb as unknown as AppState["db"]);
+    service = McpService.getInstance(mockDb as unknown as AppState["db"]);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    resetSingleton();
   });
 
-  describe("connectUserMcps", () => {
-    it("returns empty results when user has no MCPs", async () => {
-      // User has no MCPs - set where result directly
+  describe("getInstance", () => {
+    it("creates a singleton instance", () => {
+      const instance1 = McpService.getInstance(mockDb as unknown as AppState["db"]);
+      const instance2 = McpService.getInstance(mockDb as unknown as AppState["db"]);
+
+      expect(instance1).toBe(instance2);
+    });
+
+    it("returns the same instance even with different db parameter", () => {
+      const instance1 = McpService.getInstance(mockDb as unknown as AppState["db"]);
+      const anotherDb = createMockDb();
+      const instance2 = McpService.getInstance(anotherDb as unknown as AppState["db"]);
+
+      // Should still be the same instance (singleton pattern)
+      expect(instance1).toBe(instance2);
+    });
+  });
+
+  describe("getUserMcps", () => {
+    it("returns empty array when user has no MCPs", async () => {
       mockDb.setWhereResult([]);
 
-      const result = await service.connectUserMcps("user_123");
+      const result = await service.getUserMcps("user_123");
 
-      expect(result).toEqual({
-        connections: [],
-        tools: [],
-        toolToMcpId: new Map(),
-      });
+      expect(result).toEqual([]);
       expect(mockDb.select).toHaveBeenCalled();
     });
 
-    it("connects to OAuth MCP with store ID successfully", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    it("returns user MCPs from database", async () => {
+      const mockMcps = [
+        {
+          id: "mcp_1",
+          name: "Test MCP 1",
+          author_id: "user_123",
+          integration_type: "oauth",
+          mcp_store_id: "store_1",
+          custom_mcp_server_url: null,
+        },
+        {
+          id: "mcp_2",
+          name: "Test MCP 2",
+          author_id: "user_123",
+          integration_type: "composio",
+          mcp_store_id: "store_2",
+          custom_mcp_server_url: null,
+        },
+      ];
 
-      const mockMcp = {
+      mockDb.setWhereResult(mockMcps);
+
+      const result = await service.getUserMcps("user_123");
+
+      expect(result).toHaveLength(2);
+      expect(result[0]?.id).toBe("mcp_1");
+      expect(result[1]?.id).toBe("mcp_2");
+    });
+  });
+
+  describe("getMcpServerUrl", () => {
+    it("returns server URL from OAuth integration details for store MCP", async () => {
+      const mockMcp: Mcp = {
         id: "mcp_1",
-        name: "Test OAuth MCP",
+        name: "Store MCP",
         author_id: "user_123",
+        organisation_id: "org_123",
         integration_type: "oauth",
         mcp_store_id: "store_1",
         custom_mcp_server_url: null,
+        created_at: new Date(),
+        updated_at: new Date(),
       };
 
       const mockOAuthDetails = {
         mcp_server_url: "https://mcp.example.com",
       };
 
-      const mockConnection = {
-        name: "Test OAuth MCP",
-        tools: [{ name: "tool1", description: "Test tool" }],
-      };
-
-      // First query (user MCPs) - returns from .where() directly
-      mockDb.setWhereResult([mockMcp]);
-      // Second query (OAuth details) - returns from .limit()
       mockDb._mockLimit.mockResolvedValueOnce([mockOAuthDetails]);
 
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue("access_token_123");
+      const result = await service.getMcpServerUrl(mockMcp);
 
-      const fullMockConnection = createMockConnection(mockConnection);
-      vi.mocked(connectMcpServer).mockResolvedValue(fullMockConnection);
-      vi.mocked(getMcpTools).mockReturnValue([
-        { name: "tool1", description: "Test tool", input_schema: { type: "object" } },
-      ] as Tool[]);
-
-      const result = await service.connectUserMcps("user_123");
-
-      expect(result.connections).toHaveLength(1);
-      expect(result.connections[0]).toBe(fullMockConnection);
-      expect(result.tools).toHaveLength(1);
-      expect(result.toolToMcpId.get("tool1")).toBe("mcp_1");
-      expect(connectMcpServer).toHaveBeenCalledWith({
-        name: "Test OAuth MCP",
-        url: "https://mcp.example.com",
-        authToken: "access_token_123",
-      });
-
-      consoleSpy.mockRestore();
+      expect(result).toBe("https://mcp.example.com");
     });
 
-    it("connects to OAuth MCP with custom URL successfully", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-
-      const mockMcp = {
+    it("returns custom server URL for custom MCP", async () => {
+      const mockMcp: Mcp = {
         id: "mcp_2",
-        name: "Custom OAuth MCP",
+        name: "Custom MCP",
         author_id: "user_123",
+        organisation_id: "org_123",
         integration_type: "oauth",
         mcp_store_id: null,
         custom_mcp_server_url: "https://custom-mcp.example.com",
+        created_at: new Date(),
+        updated_at: new Date(),
       };
 
-      const mockConnection = {
-        name: "Custom OAuth MCP",
-        tools: [{ name: "customTool", description: "Custom tool" }],
-      };
+      const result = await service.getMcpServerUrl(mockMcp);
 
-      // User MCPs query
-      mockDb.setWhereResult([mockMcp]);
-
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue("custom_token_456");
-
-      const fullMockConnection = createMockConnection(mockConnection);
-      vi.mocked(connectMcpServer).mockResolvedValue(fullMockConnection);
-      vi.mocked(getMcpTools).mockReturnValue([
-        { name: "customTool", description: "Custom tool", input_schema: { type: "object" } },
-      ] as Tool[]);
-
-      const result = await service.connectUserMcps("user_123");
-
-      expect(result.connections).toHaveLength(1);
-      expect(result.toolToMcpId.get("customTool")).toBe("mcp_2");
-      expect(connectMcpServer).toHaveBeenCalledWith({
-        name: "Custom OAuth MCP",
-        url: "https://custom-mcp.example.com",
-        authToken: "custom_token_456",
-      });
-
-      consoleSpy.mockRestore();
+      expect(result).toBe("https://custom-mcp.example.com");
     });
 
-    it("connects to Composio MCP successfully", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-
-      const mockMcp = {
+    it("returns null when no OAuth details found for store MCP", async () => {
+      const mockMcp: Mcp = {
         id: "mcp_3",
-        name: "Composio MCP",
+        name: "Missing Details MCP",
         author_id: "user_123",
-        integration_type: "composio",
-        mcp_store_id: "store_2",
-        custom_mcp_server_url: null,
-      };
-
-      const mockConnection = {
-        name: "Composio MCP",
-        tools: [{ name: "composioTool", description: "Composio tool" }],
-      };
-
-      // User MCPs query
-      mockDb.setWhereResult([mockMcp]);
-
-      mockComposioServiceInstance.getConnectionUrl.mockResolvedValue(
-        "https://composio.example.com/mcp-url-with-auth"
-      );
-
-      const fullMockConnection = createMockConnection(mockConnection);
-      vi.mocked(connectMcpServer).mockResolvedValue(fullMockConnection);
-      vi.mocked(getMcpTools).mockReturnValue([
-        { name: "composioTool", description: "Composio tool", input_schema: { type: "object" } },
-      ] as Tool[]);
-
-      const result = await service.connectUserMcps("user_123");
-
-      expect(result.connections).toHaveLength(1);
-      expect(result.toolToMcpId.get("composioTool")).toBe("mcp_3");
-      expect(connectMcpServer).toHaveBeenCalledWith({
-        name: "Composio MCP",
-        url: "https://composio.example.com/mcp-url-with-auth",
-        authToken: undefined,
-      });
-
-      consoleSpy.mockRestore();
-    });
-
-    it("returns null for OAuth MCP without server URL (store MCP, no OAuth details)", async () => {
-      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      const mockMcp = {
-        id: "mcp_4",
-        name: "Missing URL MCP",
-        author_id: "user_123",
+        organisation_id: "org_123",
         integration_type: "oauth",
-        mcp_store_id: "store_3",
+        mcp_store_id: "store_missing",
         custom_mcp_server_url: null,
+        created_at: new Date(),
+        updated_at: new Date(),
       };
 
-      // User MCPs query
-      mockDb.setWhereResult([mockMcp]);
-      // OAuth details query returns empty
       mockDb._mockLimit.mockResolvedValueOnce([]);
 
-      vi.mocked(getMcpTools).mockReturnValue([]);
+      const result = await service.getMcpServerUrl(mockMcp);
 
-      const result = await service.connectUserMcps("user_123");
-
-      expect(result.connections).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("No server URL found for OAuth MCP")
-      );
-
-      consoleSpy.mockRestore();
+      expect(result).toBeNull();
     });
 
-    it("returns null for OAuth MCP without access token", async () => {
-      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      const mockMcp = {
-        id: "mcp_5",
-        name: "No Token MCP",
+    it("returns null when MCP has neither store ID nor custom URL", async () => {
+      const mockMcp: Mcp = {
+        id: "mcp_4",
+        name: "Empty MCP",
         author_id: "user_123",
+        organisation_id: "org_123",
         integration_type: "oauth",
         mcp_store_id: null,
-        custom_mcp_server_url: "https://mcp.example.com",
-      };
-
-      // User MCPs query
-      mockDb.setWhereResult([mockMcp]);
-
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue(null);
-
-      vi.mocked(getMcpTools).mockReturnValue([]);
-
-      const result = await service.connectUserMcps("user_123");
-
-      expect(result.connections).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("No access token found for MCP")
-      );
-
-      consoleSpy.mockRestore();
-    });
-
-    it("returns null for Composio MCP without connection URL", async () => {
-      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      const mockMcp = {
-        id: "mcp_6",
-        name: "No Composio URL MCP",
-        author_id: "user_123",
-        integration_type: "composio",
-        mcp_store_id: "store_4",
         custom_mcp_server_url: null,
+        created_at: new Date(),
+        updated_at: new Date(),
       };
 
-      // User MCPs query
-      mockDb.setWhereResult([mockMcp]);
+      const result = await service.getMcpServerUrl(mockMcp);
 
-      mockComposioServiceInstance.getConnectionUrl.mockResolvedValue(null);
+      expect(result).toBeNull();
+    });
 
-      vi.mocked(getMcpTools).mockReturnValue([]);
+    it("prioritizes store URL over custom URL when both present", async () => {
+      const mockMcp: Mcp = {
+        id: "mcp_5",
+        name: "Both URLs MCP",
+        author_id: "user_123",
+        organisation_id: "org_123",
+        integration_type: "oauth",
+        mcp_store_id: "store_1",
+        custom_mcp_server_url: "https://custom.example.com",
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
 
-      const result = await service.connectUserMcps("user_123");
+      const mockOAuthDetails = {
+        mcp_server_url: "https://store.example.com",
+      };
 
-      expect(result.connections).toHaveLength(0);
+      mockDb._mockLimit.mockResolvedValueOnce([mockOAuthDetails]);
+
+      const result = await service.getMcpServerUrl(mockMcp);
+
+      expect(result).toBe("https://store.example.com");
+    });
+  });
+
+  describe("connectToMcp", () => {
+    it("connects to MCP server successfully", async () => {
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+      const mockConnection = createMockConnection({
+        name: "Test MCP",
+        tools: [{ name: "tool1", description: "Test tool" }],
+      });
+
+      vi.mocked(connectMcpServer).mockResolvedValue(mockConnection);
+
+      const result = await service.connectToMcp({
+        name: "Test MCP",
+        url: "https://mcp.example.com",
+        authToken: "token_123",
+      });
+
+      expect(result).toBe(mockConnection);
+      expect(connectMcpServer).toHaveBeenCalledWith({
+        name: "Test MCP",
+        url: "https://mcp.example.com",
+        authToken: "token_123",
+      });
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("No Composio connection URL found for MCP")
+        expect.stringContaining("Connecting to MCP: Test MCP")
       );
 
       consoleSpy.mockRestore();
     });
 
-    it("handles connection errors gracefully (graceful degradation)", async () => {
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    it("connects without auth token", async () => {
       vi.spyOn(console, "log").mockImplementation(() => {});
 
-      const mockMcp = {
-        id: "mcp_7",
-        name: "Error MCP",
-        author_id: "user_123",
-        integration_type: "oauth",
-        mcp_store_id: null,
-        custom_mcp_server_url: "https://mcp.example.com",
-      };
+      const mockConnection = createMockConnection({
+        name: "No Auth MCP",
+        tools: [],
+      });
 
-      // User MCPs query
-      mockDb.setWhereResult([mockMcp]);
+      vi.mocked(connectMcpServer).mockResolvedValue(mockConnection);
 
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue("token_123");
+      const result = await service.connectToMcp({
+        name: "No Auth MCP",
+        url: "https://mcp.example.com",
+      });
+
+      expect(result).toBe(mockConnection);
+      expect(connectMcpServer).toHaveBeenCalledWith({
+        name: "No Auth MCP",
+        url: "https://mcp.example.com",
+        authToken: undefined,
+      });
+    });
+
+    it("propagates connection errors", async () => {
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       vi.mocked(connectMcpServer).mockRejectedValue(new Error("Connection failed"));
-      vi.mocked(getMcpTools).mockReturnValue([]);
 
-      const result = await service.connectUserMcps("user_123");
-
-      expect(result.connections).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to connect to MCP"),
-        expect.any(Error)
-      );
-
-      consoleSpy.mockRestore();
+      await expect(
+        service.connectToMcp({
+          name: "Failing MCP",
+          url: "https://mcp.example.com",
+        })
+      ).rejects.toThrow("Connection failed");
     });
 
-    it("connects to multiple MCPs and aggregates tools", async () => {
-      vi.spyOn(console, "log").mockImplementation(() => {});
+    it("logs tool count on successful connection", async () => {
+      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-      const mockMcps = [
-        {
-          id: "mcp_a",
-          name: "MCP A",
-          author_id: "user_123",
-          integration_type: "oauth",
-          mcp_store_id: null,
-          custom_mcp_server_url: "https://mcp-a.example.com",
-        },
-        {
-          id: "mcp_b",
-          name: "MCP B",
-          author_id: "user_123",
-          integration_type: "composio",
-          mcp_store_id: "store_b",
-          custom_mcp_server_url: null,
-        },
-      ];
-
-      const mockConnectionA = {
-        name: "MCP A",
-        tools: [{ name: "toolA", description: "Tool A" }],
-      };
-
-      const mockConnectionB = {
-        name: "MCP B",
-        tools: [{ name: "toolB", description: "Tool B" }],
-      };
-
-      // User MCPs query
-      mockDb.setWhereResult(mockMcps);
-
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue("token_a");
-      mockComposioServiceInstance.getConnectionUrl.mockResolvedValue("https://composio-b.example.com");
-
-      const fullMockConnectionA = createMockConnection(mockConnectionA);
-      const fullMockConnectionB = createMockConnection(mockConnectionB);
-      vi.mocked(connectMcpServer)
-        .mockResolvedValueOnce(fullMockConnectionA)
-        .mockResolvedValueOnce(fullMockConnectionB);
-
-      vi.mocked(getMcpTools).mockReturnValue([
-        { name: "toolA", description: "Tool A", input_schema: { type: "object" } },
-        { name: "toolB", description: "Tool B", input_schema: { type: "object" } },
-      ] as Tool[]);
-
-      const result = await service.connectUserMcps("user_123");
-
-      expect(result.connections).toHaveLength(2);
-      expect(result.toolToMcpId.get("toolA")).toBe("mcp_a");
-      expect(result.toolToMcpId.get("toolB")).toBe("mcp_b");
-      expect(result.tools).toHaveLength(2);
-    });
-
-    it("handles mixed success and failure for multiple MCPs", async () => {
-      vi.spyOn(console, "log").mockImplementation(() => {});
-      vi.spyOn(console, "error").mockImplementation(() => {});
-
-      const mockMcps = [
-        {
-          id: "mcp_success",
-          name: "Success MCP",
-          author_id: "user_123",
-          integration_type: "oauth",
-          mcp_store_id: null,
-          custom_mcp_server_url: "https://success.example.com",
-        },
-        {
-          id: "mcp_fail",
-          name: "Fail MCP",
-          author_id: "user_123",
-          integration_type: "oauth",
-          mcp_store_id: null,
-          custom_mcp_server_url: "https://fail.example.com",
-        },
-      ];
-
-      const mockConnection = {
-        name: "Success MCP",
-        tools: [{ name: "successTool", description: "Success tool" }],
-      };
-
-      // User MCPs query
-      mockDb.setWhereResult(mockMcps);
-
-      mockOAuthServiceInstance.getAccessToken
-        .mockResolvedValueOnce("token_success")
-        .mockResolvedValueOnce("token_fail");
-
-      const fullMockConnection = createMockConnection(mockConnection);
-      vi.mocked(connectMcpServer)
-        .mockResolvedValueOnce(fullMockConnection)
-        .mockRejectedValueOnce(new Error("Connection refused"));
-
-      vi.mocked(getMcpTools).mockReturnValue([
-        { name: "successTool", description: "Success tool", input_schema: { type: "object" } },
-      ] as Tool[]);
-
-      const result = await service.connectUserMcps("user_123");
-
-      // Only successful connection should be in the result
-      expect(result.connections).toHaveLength(1);
-      expect(result.connections[0]).toBe(fullMockConnection);
-      expect(result.toolToMcpId.get("successTool")).toBe("mcp_success");
-    });
-
-    it("handles unknown integration type gracefully", async () => {
-      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      const mockMcp = {
-        id: "mcp_unknown",
-        name: "Unknown Type MCP",
-        author_id: "user_123",
-        integration_type: "unknown_type",
-        mcp_store_id: null,
-        custom_mcp_server_url: null,
-      };
-
-      // User MCPs query
-      mockDb.setWhereResult([mockMcp]);
-
-      vi.mocked(getMcpTools).mockReturnValue([]);
-
-      const result = await service.connectUserMcps("user_123");
-
-      expect(result.connections).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining("No server URL found for MCP")
-      );
-
-      consoleSpy.mockRestore();
-    });
-
-    it("maps multiple tools from a single MCP connection", async () => {
-      vi.spyOn(console, "log").mockImplementation(() => {});
-
-      const mockMcp = {
-        id: "mcp_multi",
-        name: "Multi Tool MCP",
-        author_id: "user_123",
-        integration_type: "oauth",
-        mcp_store_id: null,
-        custom_mcp_server_url: "https://multi.example.com",
-      };
-
-      const mockConnection = {
+      const mockConnection = createMockConnection({
         name: "Multi Tool MCP",
         tools: [
           { name: "tool1", description: "Tool 1" },
           { name: "tool2", description: "Tool 2" },
           { name: "tool3", description: "Tool 3" },
         ],
-      };
+      });
 
-      mockDb.setWhereResult([mockMcp]);
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue("token_multi");
-      const fullMockConnection = createMockConnection(mockConnection);
-      vi.mocked(connectMcpServer).mockResolvedValue(fullMockConnection);
-      vi.mocked(getMcpTools).mockReturnValue([
+      vi.mocked(connectMcpServer).mockResolvedValue(mockConnection);
+
+      await service.connectToMcp({
+        name: "Multi Tool MCP",
+        url: "https://mcp.example.com",
+      });
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("tools: 3")
+      );
+
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe("getToolsFromConnections", () => {
+    it("returns tools from connections using getMcpTools", () => {
+      const mockTools: Tool[] = [
         { name: "tool1", description: "Tool 1", input_schema: { type: "object" } },
         { name: "tool2", description: "Tool 2", input_schema: { type: "object" } },
-        { name: "tool3", description: "Tool 3", input_schema: { type: "object" } },
-      ] as Tool[]);
+      ];
 
-      const result = await service.connectUserMcps("user_123");
+      vi.mocked(getMcpTools).mockReturnValue(mockTools);
 
-      expect(result.toolToMcpId.get("tool1")).toBe("mcp_multi");
-      expect(result.toolToMcpId.get("tool2")).toBe("mcp_multi");
-      expect(result.toolToMcpId.get("tool3")).toBe("mcp_multi");
+      const connections = [
+        createMockConnection({ name: "MCP 1", tools: [] }),
+        createMockConnection({ name: "MCP 2", tools: [] }),
+      ];
+
+      const result = service.getToolsFromConnections(connections);
+
+      expect(getMcpTools).toHaveBeenCalledWith(connections);
+      expect(result).toBe(mockTools);
+    });
+
+    it("returns empty array for empty connections", () => {
+      vi.mocked(getMcpTools).mockReturnValue([]);
+
+      const result = service.getToolsFromConnections([]);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe("buildToolToMcpIdMap", () => {
+    it("builds mapping from tool names to MCP IDs", () => {
+      const connections = [
+        createMockConnection({
+          name: "MCP A",
+          tools: [
+            { name: "toolA1", description: "Tool A1" },
+            { name: "toolA2", description: "Tool A2" },
+          ],
+        }),
+        createMockConnection({
+          name: "MCP B",
+          tools: [
+            { name: "toolB1", description: "Tool B1" },
+          ],
+        }),
+      ];
+
+      const mcpIds = ["mcp_a", "mcp_b"];
+
+      const result = service.buildToolToMcpIdMap(connections, mcpIds);
+
+      expect(result.get("toolA1")).toBe("mcp_a");
+      expect(result.get("toolA2")).toBe("mcp_a");
+      expect(result.get("toolB1")).toBe("mcp_b");
+      expect(result.size).toBe(3);
+    });
+
+    it("handles empty connections and mcpIds", () => {
+      const result = service.buildToolToMcpIdMap([], []);
+
+      expect(result.size).toBe(0);
+    });
+
+    it("handles mismatched array lengths gracefully", () => {
+      const connections = [
+        createMockConnection({
+          name: "MCP A",
+          tools: [{ name: "toolA", description: "Tool A" }],
+        }),
+        createMockConnection({
+          name: "MCP B",
+          tools: [{ name: "toolB", description: "Tool B" }],
+        }),
+      ];
+
+      // Only one MCP ID provided
+      const mcpIds = ["mcp_a"];
+
+      const result = service.buildToolToMcpIdMap(connections, mcpIds);
+
+      expect(result.get("toolA")).toBe("mcp_a");
+      // toolB should not be mapped since no corresponding mcpId
+      expect(result.get("toolB")).toBeUndefined();
+    });
+
+    it("handles connections with empty tool lists", () => {
+      const connections = [
+        createMockConnection({ name: "Empty MCP", tools: [] }),
+      ];
+
+      const mcpIds = ["mcp_empty"];
+
+      const result = service.buildToolToMcpIdMap(connections, mcpIds);
+
+      expect(result.size).toBe(0);
     });
   });
 
@@ -613,7 +495,7 @@ describe("McpService", () => {
     });
 
     it("handles disconnect errors", async () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      vi.spyOn(console, "log").mockImplementation(() => {});
 
       const mockConnections: McpConnection[] = [
         createMockConnection({ name: "MCP 1", tools: [] }),
@@ -624,8 +506,6 @@ describe("McpService", () => {
       await expect(
         service.disconnectAllConnections(mockConnections)
       ).rejects.toThrow("Disconnect failed");
-
-      consoleSpy.mockRestore();
     });
 
     it("logs the correct number of connections being disconnected", async () => {
@@ -668,75 +548,61 @@ describe("McpService", () => {
     });
   });
 
-  describe("constructor", () => {
-    it("creates a new McpService instance", () => {
-      const testDb = createMockDb();
-      const testService = new McpService(testDb as unknown as AppState["db"]);
-
-      expect(testService).toBeInstanceOf(McpService);
-    });
-
-    it("accepts a database instance", () => {
-      const testDb = createMockDb();
-
-      // Should not throw
-      expect(() => new McpService(testDb as unknown as AppState["db"])).not.toThrow();
-    });
-  });
-
-  describe("edge cases", () => {
-    it("handles empty tool list from MCP connection", async () => {
+  describe("integration scenarios", () => {
+    it("supports typical workflow: get MCPs, get URL, connect", async () => {
       vi.spyOn(console, "log").mockImplementation(() => {});
 
-      const mockMcp = {
-        id: "mcp_empty",
-        name: "Empty Tools MCP",
-        author_id: "user_123",
-        integration_type: "oauth",
-        mcp_store_id: null,
-        custom_mcp_server_url: "https://empty.example.com",
-      };
+      // Step 1: Get user's MCPs
+      const mockMcps = [
+        {
+          id: "mcp_1",
+          name: "Workflow MCP",
+          author_id: "user_123",
+          organisation_id: "org_123",
+          integration_type: "oauth",
+          mcp_store_id: null,
+          custom_mcp_server_url: "https://workflow.example.com",
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+      mockDb.setWhereResult(mockMcps);
 
-      const mockConnection = {
-        name: "Empty Tools MCP",
-        tools: [],
-      };
+      const userMcps = await service.getUserMcps("user_123");
+      expect(userMcps).toHaveLength(1);
 
-      mockDb.setWhereResult([mockMcp]);
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue("token_empty");
-      const fullMockConnection = createMockConnection(mockConnection);
-      vi.mocked(connectMcpServer).mockResolvedValue(fullMockConnection);
-      vi.mocked(getMcpTools).mockReturnValue([]);
+      // Step 2: Get server URL for the MCP
+      const serverUrl = await service.getMcpServerUrl(userMcps[0] as Mcp);
+      expect(serverUrl).toBe("https://workflow.example.com");
 
-      const result = await service.connectUserMcps("user_123");
+      // Step 3: Connect to the MCP (auth token would come from OAuth service)
+      const mockConnection = createMockConnection({
+        name: "Workflow MCP",
+        tools: [{ name: "workflowTool", description: "Workflow tool" }],
+      });
+      vi.mocked(connectMcpServer).mockResolvedValue(mockConnection);
 
-      expect(result.connections).toHaveLength(1);
-      expect(result.tools).toHaveLength(0);
-      expect(result.toolToMcpId.size).toBe(0);
-    });
+      const connection = await service.connectToMcp({
+        name: userMcps[0]!.name,
+        url: serverUrl!,
+        authToken: "external_token",
+      });
 
-    it("handles database query error for OAuth details", async () => {
-      vi.spyOn(console, "error").mockImplementation(() => {});
-      vi.spyOn(console, "log").mockImplementation(() => {});
+      expect(connection.tools).toHaveLength(1);
 
-      const mockMcp = {
-        id: "mcp_db_error",
-        name: "DB Error MCP",
-        author_id: "user_123",
-        integration_type: "oauth",
-        mcp_store_id: "store_error",
-        custom_mcp_server_url: null,
-      };
+      // Step 4: Build tool mapping
+      const toolMap = service.buildToolToMcpIdMap([connection], [userMcps[0]!.id]);
+      expect(toolMap.get("workflowTool")).toBe("mcp_1");
 
-      mockDb.setWhereResult([mockMcp]);
-      mockDb._mockLimit.mockRejectedValueOnce(new Error("OAuth details query failed"));
+      // Step 5: Get aggregated tools
+      vi.mocked(getMcpTools).mockReturnValue(connection.tools);
+      const tools = service.getToolsFromConnections([connection]);
+      expect(tools).toHaveLength(1);
 
-      vi.mocked(getMcpTools).mockReturnValue([]);
-
-      const result = await service.connectUserMcps("user_123");
-
-      // Should handle the error gracefully and return empty connections
-      expect(result.connections).toHaveLength(0);
+      // Step 6: Disconnect
+      vi.mocked(disconnectAll).mockResolvedValue(undefined);
+      await service.disconnectAllConnections([connection]);
+      expect(disconnectAll).toHaveBeenCalled();
     });
   });
 });

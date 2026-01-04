@@ -3,7 +3,16 @@ import { organisations, users } from "@jupiter/sync/db/schema";
 import { AppState } from "../config/state";
 
 export class ClerkService {
-  constructor(private db: AppState["db"]) {}
+  private static instance: ClerkService;
+
+  private constructor(private db: AppState["db"]) {}
+
+  public static getInstance(db: AppState["db"]): ClerkService {
+    if (!ClerkService.instance) {
+      ClerkService.instance = new ClerkService(db);
+    }
+    return ClerkService.instance;
+  }
 
   /**
    * Create a new user in the database (upsert to handle out-of-order webhooks)

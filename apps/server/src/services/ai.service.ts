@@ -15,7 +15,6 @@ import {
   ToolResultBlockParam,
   ToolUseBlockParam,
 } from "@anthropic-ai/sdk/resources";
-import { McpService } from "./mcp.service";
 
 // const MAX_ITERATIONS = 50;
 
@@ -29,15 +28,20 @@ interface ProcessBlockParams {
   task: TaskWithTurns;
   turn: InferSelectModel<typeof turns>;
   block: InferSelectModel<typeof blocks>;
+  mcpContext?: McpContext;
+}
+
+export interface McpContext {
+  connections: McpConnection[];
+  tools: ReturnType<typeof getMcpTools>;
+  toolToMcpId: Map<string, string>;
 }
 
 export class AiService {
   private static instance: AiService;
-  private mcpService: McpService;
 
-  private constructor(private db: AppState["db"]) {
-    this.mcpService = new McpService(db);
-  }
+  private constructor(private db: AppState["db"]) {}
+
 
   public static getInstance(state: AppState) {
     if (!AiService.instance) {
@@ -46,7 +50,12 @@ export class AiService {
     return AiService.instance;
   }
 
-  async processBlock(taskId: string, turnId: string, blockId: string) {
+  async processBlock(
+    taskId: string,
+    turnId: string,
+    blockId: string,
+    mcpContext?: McpContext
+  ) {
     const task = await this.db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
       with: {
@@ -88,9 +97,9 @@ export class AiService {
     }
 
     if (block.type === "tool_result") {
-      return this.processToolResultBlock({ task, turn, block });
+      return this.processToolResultBlock({ task, turn, block, mcpContext });
     } else if (block.type === "text") {
-      return this.processTextBlock({ task, turn, block });
+      return this.processTextBlock({ task, turn, block, mcpContext });
     }
   }
 
@@ -159,7 +168,7 @@ export class AiService {
       })
     ) {
       // All tool use blocks are answered, start the agent loop
-      await this.runAgentLoop(params.task.id);
+      await this.runAgentLoop(params.task.id, params.mcpContext);
     }
   }
 
@@ -174,10 +183,10 @@ export class AiService {
       .where(eq(blocks.id, params.block.id));
 
     // Start agent loop
-    await this.runAgentLoop(params.task.id);
+    await this.runAgentLoop(params.task.id, params.mcpContext);
   }
 
-  private async runAgentLoop(taskId: string) {
+  private async runAgentLoop(taskId: string, mcpContext?: McpContext) {
     const task = await this.db.query.tasks.findFirst({
       where: eq(tasks.id, taskId),
       with: {
@@ -213,20 +222,9 @@ export class AiService {
     // Server tools are always available
     const tools = [...shellTools, ...serverToolDefinitions];
 
-    // Connect to user's MCP servers and get their tools
-    let mcpConnections: McpConnection[] = [];
-    let mcpTools: ReturnType<typeof getMcpTools> = [];
-    let toolToMcpId = new Map<string, string>();
-
-    try {
-      const mcpResult = await this.mcpService.connectUserMcps(task.author_id);
-      mcpConnections = mcpResult.connections;
-      mcpTools = mcpResult.tools;
-      toolToMcpId = mcpResult.toolToMcpId;
-    } catch (error) {
-      console.error("[AiService] Failed to connect to MCP servers:", error);
-      // Continue without MCP tools - graceful degradation
-    }
+    // Use MCP context if provided, otherwise run without MCP tools (graceful degradation)
+    const mcpTools = mcpContext?.tools ?? [];
+    const toolToMcpId = mcpContext?.toolToMcpId ?? new Map<string, string>();
 
     // TODO: Use iterations once pause_turn is implemented
     // let iterations = 0;
@@ -269,50 +267,45 @@ export class AiService {
         description: ts.skill.description,
       })) ?? [];
 
-    try {
-      for await (const event of agentLoop({
-        messages,
-        tools,
-        mcpTools,
-        cwd: task.metadata?.cwd,
-        container: containerId,
-        skills: taskSkillsList,
-      })) {
-        switch (event.type) {
-          case "message_start": {
-            assistantTurnProcessor.processMessageStart(event);
-            break;
-          }
-          case "message_delta": {
-            assistantTurnProcessor.processMessageDelta(event);
-            break;
-          }
-          case "message_stop": {
-            await assistantTurnProcessor.processMessageStop();
-            break;
-          }
-          case "content_block_start": {
-            assistantTurnProcessor.processBlockStart(event);
-            break;
-          }
-          case "content_block_delta": {
-            assistantTurnProcessor.processBlockDelta(event);
-            break;
-          }
-          case "content_block_stop": {
-            assistantTurnProcessor.processBlockStop(event);
-            break;
-          }
+    for await (const event of agentLoop({
+      messages,
+      tools,
+      mcpTools,
+      cwd: task.metadata?.cwd,
+      container: containerId,
+      skills: taskSkillsList,
+    })) {
+      switch (event.type) {
+        case "message_start": {
+          assistantTurnProcessor.processMessageStart(event);
+          break;
         }
-
-        if (Date.now() - lastFlush > 200) {
-          await assistantTurnProcessor.flushToDb();
-          lastFlush = Date.now();
+        case "message_delta": {
+          assistantTurnProcessor.processMessageDelta(event);
+          break;
+        }
+        case "message_stop": {
+          await assistantTurnProcessor.processMessageStop();
+          break;
+        }
+        case "content_block_start": {
+          assistantTurnProcessor.processBlockStart(event);
+          break;
+        }
+        case "content_block_delta": {
+          assistantTurnProcessor.processBlockDelta(event);
+          break;
+        }
+        case "content_block_stop": {
+          assistantTurnProcessor.processBlockStop(event);
+          break;
         }
       }
-    } finally {
-      // Always disconnect MCP connections when done
-      await this.mcpService.disconnectAllConnections(mcpConnections);
+
+      if (Date.now() - lastFlush > 200) {
+        await assistantTurnProcessor.flushToDb();
+        lastFlush = Date.now();
+      }
     }
 
     // }

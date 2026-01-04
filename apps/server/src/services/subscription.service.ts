@@ -24,11 +24,28 @@ export const ADDON_SEAT_PRODUCT_ID =
 export type SubscriptionStatus = (typeof subscriptionStatus.enumValues)[number];
 
 export class SubscriptionService {
-  constructor(
+  private static instance: SubscriptionService;
+
+  private constructor(
     private db: AppState["db"],
     private dodoClient: DodoPayments,
     private clerkClient: ClerkClient
   ) {}
+
+  static getInstance(
+    db: AppState["db"],
+    dodoClient: DodoPayments,
+    clerkClient: ClerkClient
+  ): SubscriptionService {
+    if (!SubscriptionService.instance) {
+      SubscriptionService.instance = new SubscriptionService(
+        db,
+        dodoClient,
+        clerkClient
+      );
+    }
+    return SubscriptionService.instance;
+  }
 
   /**
    * Get the number of members in an organization from Clerk

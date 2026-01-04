@@ -1,15 +1,15 @@
 import { Router, Request, Response } from "express";
 import { getAuth } from "@clerk/express";
-import { eq } from "drizzle-orm";
 import { OAuthService } from "../services/oauth.service";
 import { ComposioService } from "../services/composio.service";
-import { mcpStore } from "@jupiter/sync/db/schema";
-import { AppState } from "../config/state";
+import { McpService } from "../services/mcp.service";
 
-export function createMCPController(db: AppState["db"]): Router {
+export function createMCPController(
+  oauthService: OAuthService,
+  composioService: ComposioService,
+  mcpService: McpService
+): Router {
   const router = Router();
-  const oauthService = new OAuthService(db);
-  const composioService = new ComposioService(db);
 
   /**
    * POST /api/mcp/authorize
@@ -53,11 +53,7 @@ export function createMCPController(db: AppState["db"]): Router {
 
       // For template MCPs, check the integration type to route to the correct service
       if (hasTemplateMcp) {
-        const [store] = await db
-          .select()
-          .from(mcpStore)
-          .where(eq(mcpStore.id, mcp_store_id!))
-          .limit(1);
+        const store = await mcpService.getMcpStoreById(mcp_store_id!);
 
         if (!store) {
           res.status(404).json({ error: "MCP not found in store" });

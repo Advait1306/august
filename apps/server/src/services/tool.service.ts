@@ -5,14 +5,8 @@
 import { eq } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { getServerTool } from "../server-tools";
-import {
-  blocks,
-  mcps,
-  mcpOauthIntegrationDetails,
-} from "@jupiter/sync/db/schema";
+import { blocks } from "@jupiter/sync/db/schema";
 import { addToAgentLoopQueue } from "../queues/workers/agentLoopWorker";
-import { OAuthService } from "./oauth.service";
-import { ComposioService } from "./composio.service";
 import { connectMcpServer } from "@august/harness";
 import type {
   ToolResultBlockParam,
@@ -132,7 +126,7 @@ export class ToolService {
    * @param blockId - The tool_use block (database ID)
    * @param toolName - The name of the tool to execute
    * @param toolInput - The tool input
-   * @param mcpId - The MCP server ID to execute the tool on
+   * @param connectionInfo - The MCP connection info (mcpName, serverUrl, authToken)
    */
   async executeMcpTool(
     taskId: string,
@@ -140,7 +134,7 @@ export class ToolService {
     blockId: string,
     toolName: string,
     toolInput: unknown,
-    mcpId: string
+    connectionInfo: { mcpName: string; serverUrl: string; authToken?: string }
   ): Promise<void> {
     // Fetch the tool_use block to get the Anthropic API tool_use_id
     const toolBlock = await this.db.query.blocks.findFirst({
@@ -159,7 +153,7 @@ export class ToolService {
 
     try {
       result = await this.executeToolOnMcp({
-        mcpId,
+        connectionInfo,
         toolName,
         args: toolInput as Record<string, unknown>,
       });
@@ -212,79 +206,21 @@ export class ToolService {
    * Creates a temporary connection, executes the tool, and disconnects
    */
   private async executeToolOnMcp(params: {
-    mcpId: string;
+    connectionInfo: { mcpName: string; serverUrl: string; authToken?: string };
     toolName: string;
     args: Record<string, unknown>;
   }): Promise<unknown> {
-    const { mcpId, toolName, args } = params;
+    const { connectionInfo, toolName, args } = params;
 
-    // Fetch the MCP
-    const [mcp] = await this.db
-      .select()
-      .from(mcps)
-      .where(eq(mcps.id, mcpId))
-      .limit(1);
-
-    if (!mcp) {
-      throw new Error(`MCP not found: ${mcpId}`);
-    }
-
-    const oauthService = new OAuthService(this.db);
-    const composioService = new ComposioService(this.db);
-
-    let serverUrl: string | null = null;
-    let authToken: string | null = null;
-
-    switch (mcp.integration_type) {
-      case "oauth": {
-        // Get the MCP server URL
-        if (mcp.mcp_store_id) {
-          const [oauthDetails] = await this.db
-            .select()
-            .from(mcpOauthIntegrationDetails)
-            .where(eq(mcpOauthIntegrationDetails.mcp_store_id, mcp.mcp_store_id))
-            .limit(1);
-
-          if (oauthDetails) {
-            serverUrl = oauthDetails.mcp_server_url;
-          }
-        } else if (mcp.custom_mcp_server_url) {
-          serverUrl = mcp.custom_mcp_server_url;
-        }
-
-        if (!serverUrl) {
-          throw new Error(`No server URL found for OAuth MCP: ${mcpId}`);
-        }
-
-        // Get the access token
-        authToken = await oauthService.getAccessToken({ mcpId });
-
-        if (!authToken) {
-          throw new Error(`No access token found for MCP: ${mcpId}`);
-        }
-        break;
-      }
-      case "composio": {
-        serverUrl = await composioService.getConnectionUrl({ mcpId });
-
-        if (!serverUrl) {
-          throw new Error(`No Composio connection URL found for MCP: ${mcpId}`);
-        }
-        break;
-      }
-    }
-
-    if (!serverUrl) {
-      throw new Error(`No server URL found for MCP: ${mcpId}`);
-    }
-
-    console.log(`[ToolService] Executing tool ${toolName} on MCP: ${mcp.name} (${mcpId})`);
+    console.log(
+      `[ToolService] Executing tool ${toolName} on MCP: ${connectionInfo.mcpName}`
+    );
 
     // Connect to the MCP
     const connection = await connectMcpServer({
-      name: mcp.name,
-      url: serverUrl,
-      authToken: authToken ?? undefined,
+      name: connectionInfo.mcpName,
+      url: connectionInfo.serverUrl,
+      authToken: connectionInfo.authToken,
     });
 
     try {

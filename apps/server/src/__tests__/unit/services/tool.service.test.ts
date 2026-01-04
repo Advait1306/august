@@ -20,15 +20,6 @@ interface MockMcpConnectionMethods {
   disconnect: Mock<() => Promise<void>>;
 }
 
-// Create mock instances that will be returned by constructors
-const mockOAuthServiceInstance = {
-  getAccessToken: vi.fn(),
-};
-
-const mockComposioServiceInstance = {
-  getConnectionUrl: vi.fn(),
-};
-
 // Mock the server-tools module
 vi.mock("../../../server-tools", () => ({
   getServerTool: vi.fn(),
@@ -37,24 +28,6 @@ vi.mock("../../../server-tools", () => ({
 // Mock the agentLoopWorker queue
 vi.mock("../../../queues/workers/agentLoopWorker", () => ({
   addToAgentLoopQueue: vi.fn().mockResolvedValue(undefined),
-}));
-
-// Mock the OAuthService as a class
-vi.mock("../../../services/oauth.service", () => ({
-  OAuthService: class MockOAuthService {
-    constructor() {
-      return mockOAuthServiceInstance;
-    }
-  },
-}));
-
-// Mock the ComposioService as a class
-vi.mock("../../../services/composio.service", () => ({
-  ComposioService: class MockComposioService {
-    constructor() {
-      return mockComposioServiceInstance;
-    }
-  },
 }));
 
 // Mock the MCP client connection from @august/harness
@@ -126,14 +99,6 @@ describe("ToolService", () => {
     resetToolServiceInstance();
     mockDb = createMockDb();
     service = ToolService.getInstance({ db: mockDb } as unknown as AppState);
-
-    // Reset mock service instances
-    mockOAuthServiceInstance.getAccessToken.mockReset();
-    mockComposioServiceInstance.getConnectionUrl.mockReset();
-
-    // Default mock implementations
-    mockOAuthServiceInstance.getAccessToken.mockResolvedValue("access-token-xyz");
-    mockComposioServiceInstance.getConnectionUrl.mockResolvedValue("https://composio-url.example.com");
 
     // Suppress console logs during tests
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -350,17 +315,10 @@ describe("ToolService", () => {
       },
     };
 
-    const mockMcpRecord = {
-      id: "mcp-123",
-      name: "Linear",
-      integration_type: "oauth",
-      mcp_store_id: "store-123",
-      custom_mcp_server_url: null,
-    };
-
-    const mockOAuthDetails = {
-      mcp_store_id: "store-123",
-      mcp_server_url: "https://linear-mcp.example.com",
+    const mockConnectionInfo = {
+      mcpName: "Linear",
+      serverUrl: "https://linear-mcp.example.com",
+      authToken: "test-token-xyz",
     };
 
     const mockMcpConnection: MockMcpConnectionMethods = {
@@ -370,30 +328,24 @@ describe("ToolService", () => {
 
     beforeEach(() => {
       mockDb._mocks.queryFindFirst.mockResolvedValue(mockToolBlock);
-      mockDb._mocks.selectLimit.mockResolvedValue([mockMcpRecord]);
       vi.mocked(connectMcpServer).mockResolvedValue(mockMcpConnection as unknown as McpConnection);
     });
 
-    it("successfully executes an OAuth MCP tool", async () => {
-      // First query returns MCP record, second returns OAuth details
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcpRecord])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
+    it("successfully executes an MCP tool with connection info", async () => {
       await service.executeMcpTool(
         "task-123",
         "turn-456",
         "block-123",
         "linear__create_issue",
         { title: "New Issue" },
-        "mcp-123"
+        mockConnectionInfo
       );
 
-      // Verify MCP connection was established
+      // Verify MCP connection was established with provided connection info
       expect(connectMcpServer).toHaveBeenCalledWith({
         name: "Linear",
         url: "https://linear-mcp.example.com",
-        authToken: "access-token-xyz",
+        authToken: "test-token-xyz",
       });
 
       // Verify tool was executed
@@ -415,27 +367,25 @@ describe("ToolService", () => {
       expect(addToAgentLoopQueue).toHaveBeenCalled();
     });
 
-    it("successfully executes a Composio MCP tool", async () => {
-      const composioMcp = {
-        ...mockMcpRecord,
-        integration_type: "composio",
+    it("successfully executes an MCP tool without auth token", async () => {
+      const connectionInfoWithoutToken = {
+        mcpName: "PublicMCP",
+        serverUrl: "https://public-mcp.example.com",
       };
-
-      mockDb._mocks.selectLimit.mockResolvedValue([composioMcp]);
 
       await service.executeMcpTool(
         "task-123",
         "turn-456",
         "block-123",
-        "gmail__send_email",
-        { to: "test@example.com" },
-        "mcp-123"
+        "public__tool",
+        { param: "value" },
+        connectionInfoWithoutToken
       );
 
-      // Verify MCP connection was established without auth token for Composio
+      // Verify MCP connection was established without auth token
       expect(connectMcpServer).toHaveBeenCalledWith({
-        name: "Linear",
-        url: "https://composio-url.example.com",
+        name: "PublicMCP",
+        url: "https://public-mcp.example.com",
         authToken: undefined,
       });
 
@@ -454,133 +404,12 @@ describe("ToolService", () => {
           "nonexistent-block",
           "tool",
           {},
-          "mcp-123"
+          mockConnectionInfo
         )
       ).rejects.toThrow("Tool block not found: nonexistent-block");
     });
 
-    it("handles MCP not found error gracefully", async () => {
-      mockDb._mocks.selectLimit.mockResolvedValue([]);
-
-      await service.executeMcpTool(
-        "task-123",
-        "turn-456",
-        "block-123",
-        "linear__create_issue",
-        {},
-        "nonexistent-mcp"
-      );
-
-      // Verify error was captured in tool_result
-      expect(mockDb.insert).toHaveBeenCalled();
-      const insertCall = mockDb._mocks.insertValues.mock.calls[0][0];
-      expect(insertCall.content.is_error).toBe(true);
-      expect(insertCall.content.content).toContain("MCP not found");
-    });
-
-    it("handles OAuth server URL not found error", async () => {
-      const mcpWithNoServerUrl = {
-        ...mockMcpRecord,
-        mcp_store_id: null,
-        custom_mcp_server_url: null,
-      };
-
-      mockDb._mocks.selectLimit.mockResolvedValue([mcpWithNoServerUrl]);
-
-      await service.executeMcpTool(
-        "task-123",
-        "turn-456",
-        "block-123",
-        "linear__create_issue",
-        {},
-        "mcp-123"
-      );
-
-      // Verify error was captured
-      const insertCall = mockDb._mocks.insertValues.mock.calls[0][0];
-      expect(insertCall.content.is_error).toBe(true);
-      expect(insertCall.content.content).toContain("No server URL found");
-    });
-
-    it("uses custom_mcp_server_url when mcp_store_id is not present", async () => {
-      const customMcp = {
-        ...mockMcpRecord,
-        mcp_store_id: null,
-        custom_mcp_server_url: "https://custom-mcp.example.com",
-      };
-
-      mockDb._mocks.selectLimit.mockResolvedValue([customMcp]);
-
-      await service.executeMcpTool(
-        "task-123",
-        "turn-456",
-        "block-123",
-        "custom__tool",
-        {},
-        "mcp-123"
-      );
-
-      expect(connectMcpServer).toHaveBeenCalledWith({
-        name: "Linear",
-        url: "https://custom-mcp.example.com",
-        authToken: "access-token-xyz",
-      });
-    });
-
-    it("handles missing access token error", async () => {
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcpRecord])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
-      // Return null access token
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue(null);
-
-      await service.executeMcpTool(
-        "task-123",
-        "turn-456",
-        "block-123",
-        "linear__create_issue",
-        {},
-        "mcp-123"
-      );
-
-      // Verify error was captured
-      const insertCall = mockDb._mocks.insertValues.mock.calls[0][0];
-      expect(insertCall.content.is_error).toBe(true);
-      expect(insertCall.content.content).toContain("No access token found");
-    });
-
-    it("handles Composio connection URL not found error", async () => {
-      const composioMcp = {
-        ...mockMcpRecord,
-        integration_type: "composio",
-      };
-
-      mockDb._mocks.selectLimit.mockResolvedValue([composioMcp]);
-
-      // Return null connection URL
-      mockComposioServiceInstance.getConnectionUrl.mockResolvedValue(null);
-
-      await service.executeMcpTool(
-        "task-123",
-        "turn-456",
-        "block-123",
-        "gmail__send_email",
-        {},
-        "mcp-123"
-      );
-
-      // Verify error was captured
-      const insertCall = mockDb._mocks.insertValues.mock.calls[0][0];
-      expect(insertCall.content.is_error).toBe(true);
-      expect(insertCall.content.content).toContain("No Composio connection URL found");
-    });
-
     it("handles MCP tool execution error gracefully", async () => {
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcpRecord])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
       mockMcpConnection.execute.mockRejectedValue(new Error("MCP execution failed"));
 
       await service.executeMcpTool(
@@ -589,7 +418,7 @@ describe("ToolService", () => {
         "block-123",
         "linear__create_issue",
         {},
-        "mcp-123"
+        mockConnectionInfo
       );
 
       // Verify connection was still disconnected
@@ -602,10 +431,6 @@ describe("ToolService", () => {
     });
 
     it("handles MCP connection error gracefully", async () => {
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcpRecord])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
       vi.mocked(connectMcpServer).mockRejectedValue(new Error("Connection failed"));
 
       await service.executeMcpTool(
@@ -614,7 +439,7 @@ describe("ToolService", () => {
         "block-123",
         "linear__create_issue",
         {},
-        "mcp-123"
+        mockConnectionInfo
       );
 
       // Verify error was captured in tool_result
@@ -624,10 +449,6 @@ describe("ToolService", () => {
     });
 
     it("handles string result from MCP tool", async () => {
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcpRecord])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
       mockMcpConnection.execute.mockResolvedValue("Plain string result");
 
       await service.executeMcpTool(
@@ -636,7 +457,7 @@ describe("ToolService", () => {
         "block-123",
         "linear__create_issue",
         {},
-        "mcp-123"
+        mockConnectionInfo
       );
 
       // Verify string result is stored directly (not JSON stringified again)
@@ -645,10 +466,6 @@ describe("ToolService", () => {
     });
 
     it("JSON stringifies object results from MCP tool", async () => {
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcpRecord])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
       const objectResult = { id: "123", status: "created" };
       mockMcpConnection.execute.mockResolvedValue(objectResult);
 
@@ -658,7 +475,7 @@ describe("ToolService", () => {
         "block-123",
         "linear__create_issue",
         {},
-        "mcp-123"
+        mockConnectionInfo
       );
 
       // Verify object result is JSON stringified
@@ -667,10 +484,6 @@ describe("ToolService", () => {
     });
 
     it("handles non-Error thrown values in MCP execution", async () => {
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcpRecord])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
       mockMcpConnection.execute.mockRejectedValue("string error message");
 
       await service.executeMcpTool(
@@ -679,7 +492,7 @@ describe("ToolService", () => {
         "block-123",
         "linear__create_issue",
         {},
-        "mcp-123"
+        mockConnectionInfo
       );
 
       // Verify string error was captured
@@ -689,17 +502,13 @@ describe("ToolService", () => {
     });
 
     it("marks tool_use block as completed after execution", async () => {
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcpRecord])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
       await service.executeMcpTool(
         "task-123",
         "turn-456",
         "block-123",
         "linear__create_issue",
         {},
-        "mcp-123"
+        mockConnectionInfo
       );
 
       // Verify update was called to mark block as completed
@@ -710,17 +519,13 @@ describe("ToolService", () => {
     });
 
     it("adds job to agent loop queue with correct parameters", async () => {
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcpRecord])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
       await service.executeMcpTool(
         "task-123",
         "turn-456",
         "block-123",
         "linear__create_issue",
         {},
-        "mcp-123"
+        mockConnectionInfo
       );
 
       expect(addToAgentLoopQueue).toHaveBeenCalledWith({
@@ -728,29 +533,6 @@ describe("ToolService", () => {
         turn_id: "turn-456",
         block_id: expect.any(String),
       });
-    });
-
-    it("handles MCP with undefined integration type", async () => {
-      const mcpWithNoType = {
-        ...mockMcpRecord,
-        integration_type: undefined,
-      };
-
-      mockDb._mocks.selectLimit.mockResolvedValue([mcpWithNoType]);
-
-      await service.executeMcpTool(
-        "task-123",
-        "turn-456",
-        "block-123",
-        "tool",
-        {},
-        "mcp-123"
-      );
-
-      // Verify error was captured because no server URL could be determined
-      const insertCall = mockDb._mocks.insertValues.mock.calls[0][0];
-      expect(insertCall.content.is_error).toBe(true);
-      expect(insertCall.content.content).toContain("No server URL found");
     });
   });
 
@@ -767,35 +549,23 @@ describe("ToolService", () => {
       },
     };
 
+    const mockConnectionInfo = {
+      mcpName: "TestMCP",
+      serverUrl: "https://test-mcp.example.com",
+      authToken: "test-token",
+    };
+
     beforeEach(() => {
       mockDb._mocks.queryFindFirst.mockResolvedValue(mockToolBlock);
     });
 
     it("ensures disconnect is called even when execute throws", async () => {
-      const mockMcp = {
-        id: "mcp-123",
-        name: "TestMCP",
-        integration_type: "oauth",
-        mcp_store_id: "store-123",
-        custom_mcp_server_url: null,
-      };
-
-      const mockOAuthDetails = {
-        mcp_store_id: "store-123",
-        mcp_server_url: "https://test-mcp.example.com",
-      };
-
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcp])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
       const localMockConnection: MockMcpConnectionMethods = {
         execute: vi.fn().mockRejectedValue(new Error("Execute failed")),
         disconnect: vi.fn().mockResolvedValue(undefined),
       };
 
       vi.mocked(connectMcpServer).mockResolvedValue(localMockConnection as unknown as McpConnection);
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue("token");
 
       await service.executeMcpTool(
         "task-123",
@@ -803,38 +573,20 @@ describe("ToolService", () => {
         "block-123",
         "tool",
         {},
-        "mcp-123"
+        mockConnectionInfo
       );
 
       // Disconnect should still be called
       expect(localMockConnection.disconnect).toHaveBeenCalled();
     });
 
-    it("fetches OAuth details from mcp_store_id", async () => {
-      const mockMcp = {
-        id: "mcp-123",
-        name: "TestMCP",
-        integration_type: "oauth",
-        mcp_store_id: "store-id-abc",
-        custom_mcp_server_url: null,
-      };
-
-      const mockOAuthDetails = {
-        mcp_store_id: "store-id-abc",
-        mcp_server_url: "https://oauth-mcp.example.com",
-      };
-
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcp])
-        .mockResolvedValueOnce([mockOAuthDetails]);
-
+    it("passes connection info correctly to connectMcpServer", async () => {
       const localMockConnection: MockMcpConnectionMethods = {
         execute: vi.fn().mockResolvedValue("result"),
         disconnect: vi.fn().mockResolvedValue(undefined),
       };
 
       vi.mocked(connectMcpServer).mockResolvedValue(localMockConnection as unknown as McpConnection);
-      mockOAuthServiceInstance.getAccessToken.mockResolvedValue("token-xyz");
 
       await service.executeMcpTool(
         "task-123",
@@ -842,43 +594,19 @@ describe("ToolService", () => {
         "block-123",
         "tool",
         {},
-        "mcp-123"
+        {
+          mcpName: "CustomMCP",
+          serverUrl: "https://custom-mcp.example.com",
+          authToken: "custom-token-xyz",
+        }
       );
 
-      // Verify the correct URL was used
+      // Verify the correct connection info was used
       expect(connectMcpServer).toHaveBeenCalledWith({
-        name: "TestMCP",
-        url: "https://oauth-mcp.example.com",
-        authToken: "token-xyz",
+        name: "CustomMCP",
+        url: "https://custom-mcp.example.com",
+        authToken: "custom-token-xyz",
       });
-    });
-
-    it("handles missing OAuth details for store MCP", async () => {
-      const mockMcp = {
-        id: "mcp-123",
-        name: "TestMCP",
-        integration_type: "oauth",
-        mcp_store_id: "store-id-abc",
-        custom_mcp_server_url: null,
-      };
-
-      mockDb._mocks.selectLimit
-        .mockResolvedValueOnce([mockMcp])
-        .mockResolvedValueOnce([]); // No OAuth details found
-
-      await service.executeMcpTool(
-        "task-123",
-        "turn-456",
-        "block-123",
-        "tool",
-        {},
-        "mcp-123"
-      );
-
-      // Verify error was captured
-      const insertCall = mockDb._mocks.insertValues.mock.calls[0][0];
-      expect(insertCall.content.is_error).toBe(true);
-      expect(insertCall.content.content).toContain("No server URL found");
     });
   });
 

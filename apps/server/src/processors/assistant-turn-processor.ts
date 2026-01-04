@@ -97,7 +97,7 @@ export class AssistantTurnProcessor {
     toolToMcpId: Map<string, string> = new Map()
   ) {
     this.db = db;
-    this.usageService = new UsageService(db);
+    this.usageService = UsageService.getInstance(db);
     this.toolToMcpId = toolToMcpId;
     this.model = model;
     this.task = {

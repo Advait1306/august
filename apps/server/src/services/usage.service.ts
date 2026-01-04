@@ -13,7 +13,16 @@ interface UsageData {
 }
 
 export class UsageService {
-  constructor(private db: AppState["db"]) {}
+  private static instance: UsageService;
+
+  private constructor(private db: AppState["db"]) {}
+
+  public static getInstance(db: AppState["db"]): UsageService {
+    if (!UsageService.instance) {
+      UsageService.instance = new UsageService(db);
+    }
+    return UsageService.instance;
+  }
 
   /**
    * Record usage for a message. Deduplicates using unique constraint on message_id.

@@ -30,11 +30,17 @@ vi.mock("../../../server-tools/index.js", () => ({
 
 // Mock UsageService
 const mockRecordUsage = vi.fn().mockResolvedValue(undefined);
+const mockUsageServiceInstance = {
+  recordUsage: mockRecordUsage,
+};
 vi.mock("../../../services/usage.service.js", () => ({
-  UsageService: class MockUsageService {
-    recordUsage = mockRecordUsage;
+  UsageService: {
+    getInstance: vi.fn(() => mockUsageServiceInstance),
   },
 }));
+
+// Import UsageService for resetting the singleton in tests
+import { UsageService } from "../../../services/usage.service.js";
 
 // Import after mocks are set up
 import { AssistantTurnProcessor } from "../../../processors/assistant-turn-processor.js";
@@ -85,11 +91,16 @@ function createMessageStartEvent(
       model: "claude-3-opus",
       stop_reason: null,
       stop_sequence: null,
+      container: null,
+      context_management: null,
       usage: {
         input_tokens: 100,
         output_tokens: 50,
         cache_creation_input_tokens: 10,
         cache_read_input_tokens: 20,
+        cache_creation: null,
+        server_tool_use: null,
+        service_tier: null,
       },
       ...overrides,
     },
@@ -98,7 +109,7 @@ function createMessageStartEvent(
 
 // Helper to create message delta event
 function createMessageDeltaEvent(
-  overrides: Partial<BetaRawMessageDeltaEvent["delta"]> = {},
+  overrides: Omit<Partial<BetaRawMessageDeltaEvent["delta"]>, "container"> & { container?: BetaRawMessageDeltaEvent["delta"]["container"] } = {},
   usage: { output_tokens: number } = { output_tokens: 100 }
 ): BetaRawMessageDeltaEvent {
   return {
@@ -106,9 +117,17 @@ function createMessageDeltaEvent(
     delta: {
       stop_reason: "end_turn",
       stop_sequence: null,
+      container: null,
       ...overrides,
     },
-    usage,
+    context_management: null,
+    usage: {
+      output_tokens: usage.output_tokens,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+      input_tokens: 0,
+      server_tool_use: null,
+    },
   };
 }
 
@@ -149,6 +168,9 @@ describe("AssistantTurnProcessor", () => {
   let processor: AssistantTurnProcessor;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset the UsageService singleton for each test
+    (UsageService as unknown as { instance: UsageService | null }).instance = null;
     mockDb = createMockDb();
     processor = new AssistantTurnProcessor(
       mockDb as unknown as AppState["db"],
@@ -156,7 +178,6 @@ describe("AssistantTurnProcessor", () => {
       "org-456",
       "claude-3-opus"
     );
-    vi.clearAllMocks();
     mockIsServerTool.mockReturnValue(false);
   });
 
@@ -196,6 +217,9 @@ describe("AssistantTurnProcessor", () => {
           output_tokens: 100,
           cache_creation_input_tokens: 50,
           cache_read_input_tokens: 25,
+          cache_creation: null,
+          server_tool_use: null,
+          service_tier: null,
         },
       });
 
@@ -207,7 +231,7 @@ describe("AssistantTurnProcessor", () => {
 
     it("sets container when present in message", () => {
       const event = createMessageStartEvent({
-        container: { id: "container-123", expires_at: "2024-01-01" },
+        container: { id: "container-123", expires_at: "2024-01-01", skills: [] },
       });
 
       processor.processMessageStart(event);
@@ -228,7 +252,7 @@ describe("AssistantTurnProcessor", () => {
     it("processes complete blocks in message content", () => {
       const event = createMessageStartEvent({
         content: [
-          { type: "text", text: "Hello world" },
+          { type: "text", text: "Hello world", citations: null },
         ],
       });
 
@@ -240,8 +264,8 @@ describe("AssistantTurnProcessor", () => {
     it("processes multiple complete blocks", () => {
       const event = createMessageStartEvent({
         content: [
-          { type: "text", text: "First block" },
-          { type: "text", text: "Second block" },
+          { type: "text", text: "First block", citations: null },
+          { type: "text", text: "Second block", citations: null },
         ],
       });
 
@@ -264,7 +288,7 @@ describe("AssistantTurnProcessor", () => {
 
     it("updates container from delta", () => {
       const event = createMessageDeltaEvent({
-        container: { id: "container-456", expires_at: "2024-02-01" },
+        container: { id: "container-456", expires_at: "2024-02-01", skills: [] },
       });
 
       processor.processMessageDelta(event);
@@ -280,6 +304,9 @@ describe("AssistantTurnProcessor", () => {
           output_tokens: 25,
           cache_creation_input_tokens: 10,
           cache_read_input_tokens: 5,
+          cache_creation: null,
+          server_tool_use: null,
+          service_tier: null,
         },
       }));
 
@@ -349,6 +376,9 @@ describe("AssistantTurnProcessor", () => {
           output_tokens: 250,
           cache_creation_input_tokens: 100,
           cache_read_input_tokens: 50,
+          cache_creation: null,
+          server_tool_use: null,
+          service_tier: null,
         },
       }));
 
@@ -389,6 +419,7 @@ describe("AssistantTurnProcessor", () => {
       const event = createBlockStartEvent(0, {
         type: "text",
         text: "",
+        citations: null,
       });
 
       processor.processBlockStart(event);
@@ -448,6 +479,7 @@ describe("AssistantTurnProcessor", () => {
         id: "server_tool_use_123",
         name: "web_search",
         input: {},
+        caller: { type: "direct" },
       });
 
       processor.processBlockStart(event);
@@ -462,6 +494,7 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "Hello",
+        citations: null,
       }));
 
       // Add delta
@@ -477,6 +510,7 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "",
+        citations: null,
       }));
 
       processor.processBlockDelta(createBlockDeltaEvent(0, {
@@ -539,6 +573,7 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "test",
+        citations: null,
       }));
 
       // Unknown delta type should be ignored
@@ -555,6 +590,7 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "Hello",
+        citations: null,
       }));
 
       processor.processBlockStop(createBlockStopEvent(0));
@@ -651,6 +687,7 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "test",
+        citations: null,
       }));
 
       processor.processBlockStop(createBlockStopEvent(0));
@@ -694,6 +731,7 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "Hello",
+        citations: null,
       }));
 
       processor.processBlockStop(createBlockStopEvent(0));
@@ -808,6 +846,7 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "Hello",
+        citations: null,
       }));
 
       processor.processBlockStop(createBlockStopEvent(0));
@@ -822,6 +861,7 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "Hello",
+        citations: null,
       }));
 
       processor.processBlockStop(createBlockStopEvent(0));
@@ -840,12 +880,14 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "First",
+        citations: null,
       }));
       processor.processBlockStop(createBlockStopEvent(0));
 
       processor.processBlockStart(createBlockStartEvent(1, {
         type: "text",
         text: "Second",
+        citations: null,
       }));
       processor.processBlockStop(createBlockStopEvent(1));
 
@@ -860,7 +902,7 @@ describe("AssistantTurnProcessor", () => {
     it("handles complete block from message start", () => {
       const event = createMessageStartEvent({
         content: [
-          { type: "text", text: "Complete text block" },
+          { type: "text", text: "Complete text block", citations: null },
         ],
       });
 
@@ -955,12 +997,13 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "Initial",
+        citations: null,
       }));
 
       // Then process complete block at same index (overwrites)
       const event = createMessageStartEvent({
         content: [
-          { type: "text", text: "Complete replacement" },
+          { type: "text", text: "Complete replacement", citations: null },
         ],
       });
 
@@ -977,6 +1020,7 @@ describe("AssistantTurnProcessor", () => {
         id: "server_tool_use_123",
         name: "web_search",
         input: {},
+        caller: { type: "direct" },
       }));
 
       processor.processBlockDelta(createBlockDeltaEvent(0, {
@@ -993,11 +1037,13 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "Block 0",
+        citations: null,
       }));
 
       processor.processBlockStart(createBlockStartEvent(5, {
         type: "text",
         text: "Block 5",
+        citations: null,
       }));
 
       processor.processBlockStop(createBlockStopEvent(0));
@@ -1014,6 +1060,9 @@ describe("AssistantTurnProcessor", () => {
           output_tokens: 50,
           cache_creation_input_tokens: 0,
           cache_read_input_tokens: 0,
+          cache_creation: null,
+          server_tool_use: null,
+          service_tier: null,
         },
       }));
 
@@ -1055,6 +1104,9 @@ describe("AssistantTurnProcessor", () => {
           output_tokens: 25,
           cache_creation_input_tokens: 100,
           cache_read_input_tokens: 50,
+          cache_creation: null,
+          server_tool_use: null,
+          service_tier: null,
         },
       }));
 
@@ -1093,12 +1145,18 @@ describe("AssistantTurnProcessor", () => {
         usage: {
           input_tokens: 100,
           output_tokens: 10,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 0,
+          cache_creation: null,
+          server_tool_use: null,
+          service_tier: null,
         },
       }));
 
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "",
+        citations: null,
       }));
 
       processor.processBlockDelta(createBlockDeltaEvent(0, {
@@ -1135,6 +1193,7 @@ describe("AssistantTurnProcessor", () => {
       processor.processBlockStart(createBlockStartEvent(0, {
         type: "text",
         text: "",
+        citations: null,
       }));
 
       processor.processBlockDelta(createBlockDeltaEvent(0, {

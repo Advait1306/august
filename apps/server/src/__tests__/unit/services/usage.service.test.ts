@@ -1,18 +1,18 @@
-import { describe, it, expect, vi, beforeEach, type MockInstance } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { UsageService } from "../../../services/usage.service.js";
 import type { AppState } from "../../../config/state.js";
 
 // Mock interface for the database chain methods that matches drizzle's fluent API
 interface MockOnConflictDoNothing {
-  onConflictDoNothing: MockInstance;
+  onConflictDoNothing: Mock<(target?: unknown) => Promise<void>>;
 }
 
 interface MockValues {
-  values: MockInstance<[data: unknown], MockOnConflictDoNothing>;
+  values: Mock<(data?: unknown) => MockOnConflictDoNothing>;
 }
 
 interface MockInsert {
-  insert: MockInstance<[table: unknown], MockValues>;
+  insert: Mock<(table?: unknown) => MockValues>;
 }
 
 type MockDb = MockInsert;
@@ -33,9 +33,11 @@ describe("UsageService", () => {
   let mockDb: MockDb;
 
   beforeEach(() => {
-    mockDb = createMockDb();
-    service = new UsageService(mockDb as unknown as AppState["db"]);
     vi.clearAllMocks();
+    // Reset singleton
+    (UsageService as unknown as { instance: UsageService | null }).instance = null;
+    mockDb = createMockDb();
+    service = UsageService.getInstance(mockDb as unknown as AppState["db"]);
   });
 
   describe("recordUsage", () => {

@@ -1,30 +1,30 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
 import { ClerkService } from "../../../services/clerk.service.js";
 import { AppState } from "../../../config/state.js";
 
 // Define mock interfaces for the database operations
 interface MockOnConflictDoNothing {
-  onConflictDoNothing: MockInstance<() => Promise<undefined>>;
+  onConflictDoNothing: Mock<() => Promise<undefined>>;
 }
 
 interface MockValues {
-  values: MockInstance<(value: unknown) => MockOnConflictDoNothing>;
+  values: Mock<(value?: unknown) => MockOnConflictDoNothing>;
 }
 
 interface MockInsert {
-  insert: MockInstance<(table: unknown) => MockValues>;
+  insert: Mock<(table?: unknown) => MockValues>;
 }
 
 interface MockWhere {
-  where: MockInstance<(condition: unknown) => Promise<undefined>>;
+  where: Mock<(condition?: unknown) => Promise<undefined>>;
 }
 
 interface MockSet {
-  set: MockInstance<(values: { deleted_at: Date }) => MockWhere>;
+  set: Mock<(values?: { deleted_at: Date }) => MockWhere>;
 }
 
 interface MockUpdate {
-  update: MockInstance<(table: unknown) => MockSet>;
+  update: Mock<(table?: unknown) => MockSet>;
 }
 
 interface MockDb extends MockInsert, MockUpdate {}
@@ -50,9 +50,11 @@ describe("ClerkService", () => {
   let mockDb: MockDb;
 
   beforeEach(() => {
-    mockDb = createMockDb();
-    service = new ClerkService(mockDb as unknown as AppState["db"]);
     vi.clearAllMocks();
+    // Reset singleton
+    (ClerkService as unknown as { instance: ClerkService | null }).instance = null;
+    mockDb = createMockDb();
+    service = ClerkService.getInstance(mockDb as unknown as AppState["db"]);
   });
 
   describe("createUser", () => {
@@ -97,7 +99,7 @@ describe("ClerkService", () => {
       const afterTime = new Date();
 
       expect(mockDb.update).toHaveBeenCalled();
-      const setCall = mockDb.update().set.mock.calls[0][0];
+      const setCall = mockDb.update().set.mock.calls[0]![0]!;
       expect(setCall.deleted_at).toBeInstanceOf(Date);
       expect(setCall.deleted_at.getTime()).toBeGreaterThanOrEqual(
         beforeTime.getTime()
@@ -117,7 +119,7 @@ describe("ClerkService", () => {
       const afterTime = new Date();
 
       expect(mockDb.update).toHaveBeenCalled();
-      const setCall = mockDb.update().set.mock.calls[0][0];
+      const setCall = mockDb.update().set.mock.calls[0]![0]!;
       expect(setCall.deleted_at).toBeInstanceOf(Date);
       expect(setCall.deleted_at.getTime()).toBeGreaterThanOrEqual(
         beforeTime.getTime()

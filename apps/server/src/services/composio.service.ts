@@ -11,14 +11,22 @@ import {
 } from "@jupiter/sync/db/schema";
 
 export class ComposioService {
+  private static instance: ComposioService;
   private composio: Composio;
 
-  constructor(private db: AppState["db"]) {
+  private constructor(private db: AppState["db"]) {
     const apiKey = process.env.COMPOSIO_API_KEY;
     if (!apiKey) {
       throw new Error("COMPOSIO_API_KEY environment variable is not set");
     }
     this.composio = new Composio({ apiKey });
+  }
+
+  public static getInstance(db: AppState["db"]): ComposioService {
+    if (!ComposioService.instance) {
+      ComposioService.instance = new ComposioService(db);
+    }
+    return ComposioService.instance;
   }
 
   /**

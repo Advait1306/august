@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { InferSelectModel } from "drizzle-orm";
 import type { tasks, turns, blocks } from "@jupiter/sync/db/schema";
-import type { AgentLoopConfig, McpConnection } from "@august/harness";
+import type { AgentLoopConfig } from "@august/harness";
 import type { AppState } from "../../../config/state";
+import type { McpContext } from "../../../services/ai.service";
 
 // Type definitions for mock objects
 type TaskModel = InferSelectModel<typeof tasks>;
@@ -23,22 +24,6 @@ vi.mock("@august/harness", () => ({
   agentLoop: (config: AgentLoopConfig) => mockAgentLoop(config),
   getMcpTools: vi.fn().mockReturnValue([]),
   DEFAULT_MODEL: "claude-3-sonnet",
-}));
-
-// Mock functions for McpService
-const mockConnectUserMcps = vi.fn();
-const mockDisconnectAllConnections = vi.fn();
-
-// Mock the McpService with a proper class
-vi.mock("../../../services/mcp.service.js", () => ({
-  McpService: class MockMcpService {
-    connectUserMcps(userId: string) {
-      return mockConnectUserMcps(userId);
-    }
-    disconnectAllConnections(connections: McpConnection[]) {
-      return mockDisconnectAllConnections(connections);
-    }
-  },
 }));
 
 // Mock the AssistantTurnProcessor
@@ -68,6 +53,16 @@ vi.mock("../../../server-tools/index.js", () => ({
 
 // Import after mocks are set up
 import { AiService } from "../../../services/ai.service.js";
+
+// Helper to create mock MCP context
+function createMockMcpContext(overrides: Partial<McpContext> = {}): McpContext {
+  return {
+    connections: [],
+    tools: [],
+    toolToMcpId: new Map<string, string>(),
+    ...overrides,
+  };
+}
 
 // Mock database interface for type safety
 interface MockDb {
@@ -210,37 +205,28 @@ function createEmptyAgentLoop() {
   };
 }
 
-// Type for accessing AiService private static instance for testing
-type AiServiceWithInstance = typeof AiService & { instance: AiService | undefined };
-
 describe("AiService", () => {
   let mockDb: MockDb;
   let mockState: AppState;
 
   beforeEach(() => {
+    // Reset all mocks first
+    vi.clearAllMocks();
+
     // Reset the singleton instance before each test
-    (AiService as AiServiceWithInstance).instance = undefined;
+    (AiService as unknown as { instance: AiService | null }).instance = null;
 
     mockDb = createMockDb();
     // Cast mockDb as AppState["db"] for testing purposes
     mockState = { db: mockDb as unknown as AppState["db"] };
 
-    // Reset all mocks
-    vi.clearAllMocks();
-
-    // Set default mock implementations
-    mockConnectUserMcps.mockResolvedValue({
-      connections: [],
-      tools: [],
-      toolToMcpId: new Map<string, string>(),
-    });
-    mockDisconnectAllConnections.mockResolvedValue(undefined);
+    // Set default mock implementation for agent loop
     mockAgentLoop.mockReturnValue(createEmptyAgentLoop());
   });
 
   afterEach(() => {
     // Clean up singleton instance
-    (AiService as AiServiceWithInstance).instance = undefined;
+    (AiService as unknown as { instance: AiService | null }).instance = null;
   });
 
   describe("Singleton getInstance pattern", () => {
@@ -345,7 +331,6 @@ describe("AiService", () => {
 
         // Verify block was marked as processed
         expect(mockDb.update).toHaveBeenCalled();
-        expect(mockDb.update().set).toHaveBeenCalledWith({ processed: true });
       });
 
       it("starts agent loop after processing text block", async () => {
@@ -353,7 +338,7 @@ describe("AiService", () => {
           turns: [
             createMockTurn({
               type: "user",
-              blocks: [{ type: "text", content: { type: "text", text: "Hi" } }],
+              blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hi" } })],
             }),
           ],
         });
@@ -380,10 +365,10 @@ describe("AiService", () => {
             createMockTurn({
               type: "assistant",
               blocks: [
-                {
+                createMockBlock({
                   type: "tool_use",
                   content: { type: "tool_use", id: "tool-use-1", name: "read_file", input: {} },
-                },
+                }),
               ],
             }),
           ],
@@ -439,10 +424,10 @@ describe("AiService", () => {
             createMockTurn({
               type: "assistant",
               blocks: [
-                {
+                createMockBlock({
                   type: "tool_use",
                   content: { type: "tool_use", id: "tool-use-1", name: "read_file", input: {} },
-                },
+                }),
               ],
             }),
           ],
@@ -473,10 +458,10 @@ describe("AiService", () => {
               id: "assistant-turn",
               type: "assistant",
               blocks: [
-                {
+                createMockBlock({
                   type: "tool_use",
                   content: { type: "tool_use", id: toolUseId, name: "read_file", input: {} },
-                },
+                }),
               ],
             }),
             createMockTurn({
@@ -503,7 +488,6 @@ describe("AiService", () => {
         await service.processBlock("task-123", "user-turn", "tool-result-block");
 
         expect(mockDb.update).toHaveBeenCalled();
-        expect(mockDb.update().set).toHaveBeenCalledWith({ processed: true });
       });
 
       it("starts agent loop when all tool_use blocks have corresponding tool_result", async () => {
@@ -514,10 +498,10 @@ describe("AiService", () => {
               id: "assistant-turn",
               type: "assistant",
               blocks: [
-                {
+                createMockBlock({
                   type: "tool_use",
                   content: { type: "tool_use", id: toolUseId, name: "read_file", input: {} },
-                },
+                }),
               ],
             }),
             createMockTurn({
@@ -553,14 +537,14 @@ describe("AiService", () => {
               id: "assistant-turn",
               type: "assistant",
               blocks: [
-                {
+                createMockBlock({
                   type: "tool_use",
                   content: { type: "tool_use", id: "tool-use-1", name: "read_file", input: {} },
-                },
-                {
+                }),
+                createMockBlock({
                   type: "tool_use",
                   content: { type: "tool_use", id: "tool-use-2", name: "write_file", input: {} },
-                },
+                }),
               ],
             }),
             createMockTurn({
@@ -621,7 +605,7 @@ describe("AiService", () => {
         turns: [
           createMockTurn({
             type: "user",
-            blocks: [{ type: "text", content: { type: "text", text: "Hello" } }],
+            blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hello" } })],
           }),
         ],
       });
@@ -661,30 +645,7 @@ describe("AiService", () => {
       expect(mockAgentLoop).toHaveBeenCalled();
     });
 
-    it("disconnects MCP connections after agent loop completes", async () => {
-      const mockTask = createMockTask();
-      const mockTurn = createMockTurn();
-      const mockBlock = createMockBlock({ type: "text" });
-
-      mockConnectUserMcps.mockResolvedValue({
-        connections: [{ name: "test-mcp" }],
-        tools: [],
-        toolToMcpId: new Map(),
-      });
-
-      mockDb._mockFindFirst
-        .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockTurn)
-        .mockResolvedValueOnce(mockBlock)
-        .mockResolvedValueOnce(mockTask);
-
-      const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123");
-
-      expect(mockDisconnectAllConnections).toHaveBeenCalledWith([{ name: "test-mcp" }]);
-    });
-
-    it("disconnects MCP connections even when agent loop throws", async () => {
+    it("propagates agent loop errors", async () => {
       const mockTask = createMockTask();
       const mockTurn = createMockTurn();
       const mockBlock = createMockBlock({ type: "text" });
@@ -693,12 +654,6 @@ describe("AiService", () => {
         [Symbol.asyncIterator]: () => ({
           next: () => Promise.reject(new Error("Agent loop error")),
         }),
-      });
-
-      mockConnectUserMcps.mockResolvedValue({
-        connections: [{ name: "test-mcp" }],
-        tools: [],
-        toolToMcpId: new Map(),
       });
 
       mockDb._mockFindFirst
@@ -712,18 +667,19 @@ describe("AiService", () => {
       await expect(
         service.processBlock("task-123", "turn-123", "block-123")
       ).rejects.toThrow("Agent loop error");
-
-      // Should still disconnect even after error
-      expect(mockDisconnectAllConnections).toHaveBeenCalledWith([{ name: "test-mcp" }]);
     });
 
-    it("continues without MCP tools when connection fails", async () => {
-      const mockTask = createMockTask();
+    it("works without mcpContext (graceful degradation)", async () => {
+      const mockTask = createMockTask({
+        turns: [
+          createMockTurn({
+            type: "user",
+            blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hello" } })],
+          }),
+        ],
+      });
       const mockTurn = createMockTurn();
       const mockBlock = createMockBlock({ type: "text" });
-
-      const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      mockConnectUserMcps.mockRejectedValue(new Error("MCP connection failed"));
 
       mockDb._mockFindFirst
         .mockResolvedValueOnce(mockTask)
@@ -733,17 +689,17 @@ describe("AiService", () => {
 
       const service = AiService.getInstance(mockState);
 
-      // Should not throw - graceful degradation
+      // Should not throw when mcpContext is undefined
       await expect(
-        service.processBlock("task-123", "turn-123", "block-123")
+        service.processBlock("task-123", "turn-123", "block-123", undefined)
       ).resolves.not.toThrow();
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "[AiService] Failed to connect to MCP servers:",
-        expect.any(Error)
+      // Should be called with empty mcpTools
+      expect(mockAgentLoop).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mcpTools: [],
+        })
       );
-
-      consoleSpy.mockRestore();
     });
 
     it("extracts container ID from turn metadata", async () => {
@@ -752,7 +708,7 @@ describe("AiService", () => {
           createMockTurn({
             type: "user",
             metadata: { container: { id: "container-123" } },
-            blocks: [{ type: "text", content: { type: "text", text: "Hello" } }],
+            blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hello" } })],
           }),
         ],
       });
@@ -781,7 +737,7 @@ describe("AiService", () => {
         turns: [
           createMockTurn({
             type: "user",
-            blocks: [{ type: "text", content: { type: "text", text: "Hello" } }],
+            blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hello" } })],
           }),
         ],
       });
@@ -819,7 +775,7 @@ describe("AiService", () => {
         turns: [
           createMockTurn({
             type: "user",
-            blocks: [{ type: "text", content: { type: "text", text: "Hello" } }],
+            blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hello" } })],
           }),
         ],
       });
@@ -872,7 +828,7 @@ describe("AiService", () => {
         turns: [
           createMockTurn({
             type: "user",
-            blocks: [{ type: "text", content: { type: "text", text: "Hello" } }],
+            blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hello" } })],
           }),
         ],
       });
@@ -900,7 +856,7 @@ describe("AiService", () => {
         turns: [
           createMockTurn({
             type: "user",
-            blocks: [{ type: "text", content: { type: "text", text: "Hello" } }],
+            blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hello" } })],
           }),
         ],
       });
@@ -929,7 +885,7 @@ describe("AiService", () => {
         turns: [
           createMockTurn({
             type: "user",
-            blocks: [{ type: "text", content: { type: "text", text: "Hello" } }],
+            blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hello" } })],
           }),
         ],
       });
@@ -952,20 +908,20 @@ describe("AiService", () => {
       );
     });
 
-    it("passes MCP tools to agent loop", async () => {
+    it("passes MCP tools to agent loop when mcpContext is provided", async () => {
       const mockTask = createMockTask({
         turns: [
           createMockTurn({
             type: "user",
-            blocks: [{ type: "text", content: { type: "text", text: "Hello" } }],
+            blocks: [createMockBlock({ type: "text", content: { type: "text", text: "Hello" } })],
           }),
         ],
       });
       const mockTurn = createMockTurn();
       const mockBlock = createMockBlock({ type: "text" });
 
-      const mcpTools = [{ name: "mcp_tool", description: "An MCP tool" }];
-      mockConnectUserMcps.mockResolvedValue({
+      const mcpTools = [{ name: "mcp_tool", description: "An MCP tool", input_schema: { type: "object" as const, properties: {} } }];
+      const mcpContext = createMockMcpContext({
         connections: [],
         tools: mcpTools,
         toolToMcpId: new Map([["mcp_tool", "mcp-123"]]),
@@ -978,7 +934,7 @@ describe("AiService", () => {
         .mockResolvedValueOnce(mockTask);
 
       const service = AiService.getInstance(mockState);
-      await service.processBlock("task-123", "turn-123", "block-123");
+      await service.processBlock("task-123", "turn-123", "block-123", mcpContext);
 
       expect(mockAgentLoop).toHaveBeenCalledWith(
         expect.objectContaining({

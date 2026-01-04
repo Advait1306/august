@@ -10,12 +10,24 @@ import { addToAgentLoopQueue } from "../queues/workers/agentLoopWorker";
 import { DbProviderType } from "../config/state";
 
 export class SyncService {
-  constructor(
+  private static instance: SyncService;
+
+  private constructor(
     private dbProvider: DbProviderType,
     private mp: Mixpanel,
-    private oauthService: OAuthService,
     private dodoClient: DodoPayments
   ) {}
+
+  static getInstance(
+    dbProvider: DbProviderType,
+    mp: Mixpanel,
+    dodoClient: DodoPayments
+  ): SyncService {
+    if (!SyncService.instance) {
+      SyncService.instance = new SyncService(dbProvider, mp, dodoClient);
+    }
+    return SyncService.instance;
+  }
 
   /**
    * Handle Zero query request
@@ -43,7 +55,7 @@ export class SyncService {
     const serverMutators = createServerMutators(
       asyncTasks,
       this.mp,
-      this.oauthService,
+      OAuthService.getInstance(),
       addToAgentLoopQueue,
       this.dodoClient
     );

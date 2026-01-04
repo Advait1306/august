@@ -79,24 +79,40 @@ describe("ComposioService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset singleton
+    (ComposioService as unknown as { instance: ComposioService | null }).instance = null;
     mockDb = createMockDb();
-    service = new ComposioService(mockDb as unknown as AppState["db"]);
+    service = ComposioService.getInstance(mockDb as unknown as AppState["db"]);
   });
 
-  describe("constructor", () => {
+  describe("getInstance", () => {
     it("creates a new ComposioService instance with API key", () => {
+      // Reset singleton to test fresh instance creation
+      (ComposioService as unknown as { instance: ComposioService | null }).instance = null;
       const testDb = createMockDb();
-      const testService = new ComposioService(testDb as unknown as AppState["db"]);
+      const testService = ComposioService.getInstance(testDb as unknown as AppState["db"]);
 
       expect(testService).toBeInstanceOf(ComposioService);
       // Verify that the service was created successfully (Composio constructor was called internally)
     });
 
+    it("returns the same instance on subsequent calls", () => {
+      // Reset singleton
+      (ComposioService as unknown as { instance: ComposioService | null }).instance = null;
+      const testDb = createMockDb();
+      const firstInstance = ComposioService.getInstance(testDb as unknown as AppState["db"]);
+      const secondInstance = ComposioService.getInstance(testDb as unknown as AppState["db"]);
+
+      expect(firstInstance).toBe(secondInstance);
+    });
+
     it("throws error when COMPOSIO_API_KEY is not set", () => {
+      // Reset singleton
+      (ComposioService as unknown as { instance: ComposioService | null }).instance = null;
       const originalApiKey = process.env.COMPOSIO_API_KEY;
       delete process.env.COMPOSIO_API_KEY;
 
-      expect(() => new ComposioService(mockDb as unknown as AppState["db"])).toThrow(
+      expect(() => ComposioService.getInstance(mockDb as unknown as AppState["db"])).toThrow(
         "COMPOSIO_API_KEY environment variable is not set"
       );
 

@@ -81,9 +81,11 @@ describe("OAuthService", () => {
   const originalFetch = global.fetch;
 
   beforeEach(() => {
-    mockDb = createMockDb();
-    service = new OAuthService(mockDb as unknown as AppState["db"]);
     vi.clearAllMocks();
+    // Reset singleton
+    (OAuthService as unknown as { instance: OAuthService | null }).instance = null;
+    mockDb = createMockDb();
+    service = OAuthService.getInstance(mockDb as unknown as AppState["db"]);
     // Reset console spies
     vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});

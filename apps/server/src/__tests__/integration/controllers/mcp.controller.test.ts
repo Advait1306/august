@@ -6,34 +6,15 @@ import {
   beforeEach,
   beforeAll,
   afterAll,
-  type Mock,
 } from "vitest";
 import request from "supertest";
 import express, { Express } from "express";
-import type { AppState } from "../../../config/state";
 
 // Mock auth return type that matches the properties we test from Clerk's getAuth
 interface MockAuthResult {
   isAuthenticated: boolean;
   userId: string | null;
   orgId: string | null;
-}
-
-// Mock database types for testing
-interface MockDbSelectChain {
-  from: Mock<() => MockDbFromChain>;
-}
-
-interface MockDbFromChain {
-  where: Mock<() => MockDbWhereChain>;
-}
-
-interface MockDbWhereChain {
-  limit: Mock<() => Promise<Array<{ id: string; integration_type: string }>>>;
-}
-
-interface MockDatabase {
-  select: Mock<() => MockDbSelectChain>;
 }
 
 // Mock @clerk/express
@@ -52,28 +33,15 @@ const mockComposioServiceInstance = {
   handleComposioCallback: vi.fn(),
 };
 
-// Mock OAuthService as a class
-vi.mock("../../../services/oauth.service", () => {
-  return {
-    OAuthService: class MockOAuthService {
-      initiateOAuthFlow = mockOAuthServiceInstance.initiateOAuthFlow;
-      handleOAuthCallback = mockOAuthServiceInstance.handleOAuthCallback;
-    },
-  };
-});
-
-// Mock ComposioService as a class
-vi.mock("../../../services/composio.service", () => {
-  return {
-    ComposioService: class MockComposioService {
-      initiateComposioFlow = mockComposioServiceInstance.initiateComposioFlow;
-      handleComposioCallback = mockComposioServiceInstance.handleComposioCallback;
-    },
-  };
-});
+const mockMcpServiceInstance = {
+  getMcpStoreById: vi.fn(),
+};
 
 import { getAuth } from "@clerk/express";
 import { createMCPController } from "../../../controllers/mcp.controller";
+import type { OAuthService } from "../../../services/oauth.service";
+import type { ComposioService } from "../../../services/composio.service";
+import type { McpService } from "../../../services/mcp.service";
 
 // Helper to create a properly typed mock auth result
 function createMockAuth(auth: MockAuthResult): ReturnType<typeof getAuth> {
@@ -82,7 +50,6 @@ function createMockAuth(auth: MockAuthResult): ReturnType<typeof getAuth> {
 
 describe("MCP Controller Integration Tests", () => {
   let app: Express;
-  let mockDb: MockDatabase;
 
   beforeAll(() => {
     process.env.WEB_URL = "http://localhost:3000";
@@ -90,21 +57,6 @@ describe("MCP Controller Integration Tests", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    // Create mock DB with proper chained method types
-    const mockLimit = vi.fn().mockResolvedValue([]) as MockDbWhereChain["limit"];
-    const mockWhere = vi.fn().mockReturnValue({
-      limit: mockLimit,
-    }) as MockDbFromChain["where"];
-    const mockFrom = vi.fn().mockReturnValue({
-      where: mockWhere,
-    }) as MockDbSelectChain["from"];
-
-    mockDb = {
-      select: vi.fn().mockReturnValue({
-        from: mockFrom,
-      }) as MockDatabase["select"],
-    };
 
     // Setup default mock service responses
     mockOAuthServiceInstance.initiateOAuthFlow.mockResolvedValue({
@@ -123,10 +75,20 @@ describe("MCP Controller Integration Tests", () => {
       redirectUri: "http://localhost:3000/integrations?status=success",
     });
 
-    // Create Express app with controller
+    // Default: no MCP store found
+    mockMcpServiceInstance.getMcpStoreById.mockResolvedValue(null);
+
+    // Create Express app with controller using injected mock services
     app = express();
     app.use(express.json());
-    app.use("/", createMCPController(mockDb as unknown as AppState["db"]));
+    app.use(
+      "/",
+      createMCPController(
+        mockOAuthServiceInstance as unknown as OAuthService,
+        mockComposioServiceInstance as unknown as ComposioService,
+        mockMcpServiceInstance as unknown as McpService
+      )
+    );
   });
 
   afterAll(() => {
@@ -148,10 +110,11 @@ describe("MCP Controller Integration Tests", () => {
           })
         );
 
-        // Mock DB to return OAuth-type MCP
-        mockDb.select().from().where().limit.mockResolvedValue([
-          { id: "mcp_oauth", integration_type: "oauth" },
-        ]);
+        // Mock mcpService to return OAuth-type MCP
+        mockMcpServiceInstance.getMcpStoreById.mockResolvedValue({
+          id: "mcp_oauth",
+          integration_type: "oauth",
+        });
 
         const response = await request(app)
           .post("/api/mcp/authorize")
@@ -179,10 +142,11 @@ describe("MCP Controller Integration Tests", () => {
           })
         );
 
-        // Mock DB to return Composio-type MCP
-        mockDb.select().from().where().limit.mockResolvedValue([
-          { id: "mcp_composio", integration_type: "composio" },
-        ]);
+        // Mock mcpService to return Composio-type MCP
+        mockMcpServiceInstance.getMcpStoreById.mockResolvedValue({
+          id: "mcp_composio",
+          integration_type: "composio",
+        });
 
         const response = await request(app)
           .post("/api/mcp/authorize")
@@ -208,8 +172,8 @@ describe("MCP Controller Integration Tests", () => {
           })
         );
 
-        // Mock DB to return empty result
-        mockDb.select().from().where().limit.mockResolvedValue([]);
+        // Mock mcpService to return null (not found)
+        mockMcpServiceInstance.getMcpStoreById.mockResolvedValue(null);
 
         const response = await request(app)
           .post("/api/mcp/authorize")

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { SyncService } from "../../../services/sync.service.js";
+import { OAuthService } from "../../../services/oauth.service.js";
 import type { DbProviderType } from "../../../config/state.js";
-import type { OAuthService } from "../../../services/oauth.service.js";
 import type { Mixpanel } from "mixpanel";
 import type DodoPayments from "dodopayments";
 
@@ -51,11 +51,6 @@ interface MockMixpanel {
   };
 }
 
-interface MockOAuthService {
-  getToken: ReturnType<typeof vi.fn>;
-  refreshToken: ReturnType<typeof vi.fn>;
-}
-
 interface MockDodoClient {
   subscriptions: {
     retrieve: ReturnType<typeof vi.fn>;
@@ -74,13 +69,6 @@ function createMockMixpanel(): MockMixpanel {
     people: {
       set: vi.fn(),
     },
-  };
-}
-
-function createMockOAuthService(): MockOAuthService {
-  return {
-    getToken: vi.fn(),
-    refreshToken: vi.fn(),
   };
 }
 
@@ -104,23 +92,26 @@ describe("SyncService", () => {
   let service: SyncService;
   let mockDbProvider: ReturnType<typeof createMockDbProvider>;
   let mockMp: MockMixpanel;
-  let mockOAuthService: MockOAuthService;
   let mockDodoClient: MockDodoClient;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset singletons
+    (SyncService as unknown as { instance: SyncService | null }).instance = null;
+    (OAuthService as unknown as { instance: OAuthService | null }).instance = null;
+
     mockDbProvider = createMockDbProvider();
     mockMp = createMockMixpanel();
-    mockOAuthService = createMockOAuthService();
     mockDodoClient = createMockDodoClient();
 
-    service = new SyncService(
+    // Initialize OAuthService singleton (required by SyncService.handleMutate internally)
+    OAuthService.getInstance({ select: vi.fn(), insert: vi.fn(), update: vi.fn(), delete: vi.fn() } as unknown as Parameters<typeof OAuthService.getInstance>[0]);
+
+    service = SyncService.getInstance(
       mockDbProvider as unknown as DbProviderType,
       mockMp as unknown as Mixpanel,
-      mockOAuthService as unknown as OAuthService,
       mockDodoClient as unknown as DodoPayments
     );
-
-    vi.clearAllMocks();
   });
 
   describe("handleQuery", () => {
@@ -232,7 +223,7 @@ describe("SyncService", () => {
       expect(createServerMutators).toHaveBeenCalledWith(
         expect.any(Array), // asyncTasks array
         mockMp,
-        mockOAuthService,
+        OAuthService.getInstance(), // OAuthService singleton is called internally
         expect.any(Function), // addToAgentLoopQueue
         mockDodoClient
       );

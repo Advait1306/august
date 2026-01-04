@@ -31,10 +31,21 @@ function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
 }
 
 export class OAuthService {
+  private static instance: OAuthService;
   private serverUrl: string;
 
-  constructor(private db: AppState["db"]) {
+  private constructor(private db: AppState["db"]) {
     this.serverUrl = process.env.SERVER_URL || "http://localhost:8080";
+  }
+
+  public static getInstance(db?: AppState["db"]): OAuthService {
+    if (!OAuthService.instance) {
+      if (!db) {
+        throw new Error("OAuthService not initialized. Call getInstance(db) first.");
+      }
+      OAuthService.instance = new OAuthService(db);
+    }
+    return OAuthService.instance;
   }
 
   /**

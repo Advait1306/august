@@ -102,15 +102,17 @@ describe("SubscriptionService", () => {
   let mockClerkClient: ReturnType<typeof createMockClerkClient>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset singleton
+    (SubscriptionService as unknown as { instance: SubscriptionService | null }).instance = null;
     mockDb = createMockDb();
     mockDodoClient = createMockDodoClient();
     mockClerkClient = createMockClerkClient();
-    service = new SubscriptionService(
+    service = SubscriptionService.getInstance(
       mockDb as unknown as AppState["db"],
       mockDodoClient as unknown as DodoPayments,
       mockClerkClient as unknown as ClerkClient
     );
-    vi.clearAllMocks();
   });
 
   describe("getOrgMemberCount", () => {

@@ -19,6 +19,10 @@ import { ClerkService } from "./services/clerk.service";
 import { SubscriptionService } from "./services/subscription.service";
 import { SyncService } from "./services/sync.service";
 import { OAuthService } from "./services/oauth.service";
+import { ComposioService } from "./services/composio.service";
+import { McpService } from "./services/mcp.service";
+import { DodoWebhookService } from "./services/dodo-webhook.service";
+import { BillingService } from "./services/billing.service";
 
 // Controllers
 import { createClerkController } from "./controllers/clerk.controller";
@@ -53,15 +57,19 @@ app.use(cors());
 app.use(apiKeyToAuthMiddleware);
 app.use(clerkMiddleware());
 
-// Initialize services
-const clerkService = new ClerkService(db);
-const subscriptionService = new SubscriptionService(
+// Initialize services (all singletons)
+const clerkService = ClerkService.getInstance(db);
+const oauthService = OAuthService.getInstance(db);
+const composioService = ComposioService.getInstance(db);
+const subscriptionService = SubscriptionService.getInstance(
   db,
   dodoClient,
   clerkClient
 );
-const oauthService = new OAuthService(db);
-const syncService = new SyncService(dbProvider, mp, oauthService, dodoClient);
+const mcpService = McpService.getInstance(db);
+const syncService = SyncService.getInstance(dbProvider, mp, dodoClient);
+const dodoWebhookService = DodoWebhookService.getInstance(db);
+const billingService = BillingService.getInstance(db, dodoClient);
 
 // Clerk webhook needs raw body parser
 app.use("/clerk", bodyParser.raw({ type: "application/json" }));
@@ -77,9 +85,9 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 app.use(createClerkController(clerkService, subscriptionService));
 app.use(createSyncController(syncService));
 app.use(
-  createBillingController(clerkClient, db, dodoClient, subscriptionService)
+  createBillingController(dodoWebhookService, billingService, subscriptionService)
 );
-app.use(createMCPController(db));
+app.use(createMCPController(oauthService, composioService, mcpService));
 app.use(createRedirectController());
 
 // Mount Bull Dashboard
