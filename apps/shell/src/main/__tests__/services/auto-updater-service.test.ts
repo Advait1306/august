@@ -94,7 +94,7 @@ describe("AutoUpdaterService", () => {
   });
 
   describe("setMainWindow", () => {
-    it("should store the main window reference", async () => {
+    it("should store the main window reference and enable sending to renderer", async () => {
       const { AutoUpdaterService } = await import(
         "../../services/auto-updater-service"
       );
@@ -102,8 +102,18 @@ describe("AutoUpdaterService", () => {
       const service = AutoUpdaterService.getInstance();
       service.setMainWindow(mockBrowserWindow as unknown as Electron.BrowserWindow);
 
-      // The window is stored - we can verify by triggering an event
-      // and checking if send was called
+      // Trigger the 'update-available' event handler to verify window is stored
+      const updateAvailableCall = mockAutoUpdater.on.mock.calls.find(
+        (call: unknown[]) => call[0] === "update-available"
+      );
+      const handler = updateAvailableCall?.[1] as (info: unknown) => void;
+      handler({ version: "1.0.0" });
+
+      // Verify that send was called on the stored window
+      expect(mockBrowserWindow.webContents.send).toHaveBeenCalledWith(
+        "auto-updater:update-available",
+        { version: "1.0.0" }
+      );
     });
   });
 
@@ -170,10 +180,17 @@ describe("AutoUpdaterService", () => {
       );
 
       const service = AutoUpdaterService.getInstance();
+      const checkSpy = vi.spyOn(service, "checkForUpdates");
+
+      // Destroy the service to clear the interval
       service.destroy();
 
-      // After destroy, the interval should be cleared
-      // We can verify by advancing time and checking no additional calls
+      // Advance time by 4 hours - the interval should no longer trigger
+      const fourHoursInMs = 4 * 60 * 60 * 1000;
+      vi.advanceTimersByTime(fourHoursInMs);
+
+      // checkForUpdates should NOT have been called since interval was cleared
+      expect(checkSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -183,7 +200,8 @@ describe("AutoUpdaterService", () => {
         "../../services/auto-updater-service"
       );
 
-      AutoUpdaterService.getInstance();
+      const service = AutoUpdaterService.getInstance();
+      const checkSpy = vi.spyOn(service, "checkForUpdates");
 
       // The interval should be set to 4 hours
       const fourHoursInMs = 4 * 60 * 60 * 1000;
@@ -191,8 +209,11 @@ describe("AutoUpdaterService", () => {
       // Advance time by 4 hours
       vi.advanceTimersByTime(fourHoursInMs);
 
-      // In development mode, checkForUpdatesAndNotify should still not be called
-      // because app.isPackaged is false
+      // Verify that checkForUpdates was called by the interval
+      expect(checkSpy).toHaveBeenCalled();
+
+      // In development mode, the underlying checkForUpdatesAndNotify should not be called
+      expect(mockAutoUpdater.checkForUpdatesAndNotify).not.toHaveBeenCalled();
     });
   });
 });
