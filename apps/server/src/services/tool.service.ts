@@ -2,6 +2,7 @@
  * Tool service - handles execution of server-side and MCP tools
  */
 
+import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { getServerTool } from "../server-tools";
@@ -88,7 +89,7 @@ export class ToolService {
     }
 
     // Create tool_result block in the response turn
-    const resultBlockId = crypto.randomUUID();
+    const resultBlockId = randomUUID();
 
     await this.db.insert(blocks).values({
       id: resultBlockId,
@@ -170,7 +171,7 @@ export class ToolService {
     }
 
     // Create tool_result block in the response turn
-    const resultBlockId = crypto.randomUUID();
+    const resultBlockId = randomUUID();
 
     await this.db.insert(blocks).values({
       id: resultBlockId,

@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto, { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { AppState } from "../config/state";
 import {
@@ -233,7 +233,7 @@ export class OAuthService {
 
     console.log("[OAuth Flow] Storing OAuth state");
     await this.db.insert(oauthStates).values({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       state,
       user_id: userId,
       organisation_id: organisationId,
@@ -421,7 +421,7 @@ export class OAuthService {
       });
 
       // Create the MCP record
-      const newMcpId = crypto.randomUUID();
+      const newMcpId = randomUUID();
       await this.db.insert(mcps).values({
         id: newMcpId,
         organisation_id: stateRecord.organisation_id,
@@ -439,7 +439,7 @@ export class OAuthService {
       // STEP 3: Create OAuth connection
       console.log("[OAuth Callback] Creating OAuth connection");
       await this.db.insert(mcpOauthConnections).values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         mcp_id: newMcpId,
         oauth_client_id: storedMetadata.client_id,
         oauth_client_secret: storedMetadata.client_secret
