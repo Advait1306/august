@@ -2,8 +2,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   MockDataStore,
   createMockContext,
+  createMockTransaction,
   setSharedStore,
   type MockContext,
+  type MockTransaction,
 } from "../../helpers/mock-zero";
 import {
   createSkillFixture,
@@ -134,16 +136,18 @@ import { skillQueries, skillDocumentQueries } from "../../../features/skills/que
 describe("skills/queries", () => {
   let store: MockDataStore;
   let ctx: MockContext;
+  let tx: MockTransaction;
 
   beforeEach(() => {
     store = new MockDataStore();
     setSharedStore(store);
     ctx = createMockContext("user-1", "org-1");
+    tx = createMockTransaction(store);
   });
 
   describe("skillQueries", () => {
     describe("all", () => {
-      it("should return skills filtered by organisation_id", () => {
+      it("should return skills filtered by organisation_id", async () => {
         store.set(
           "skills",
           "skill-1",
@@ -173,13 +177,13 @@ describe("skills/queries", () => {
         );
 
         const query = skillQueries.all.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(2);
-        expect(results.every((s: any) => s.organisation_id === "org-1")).toBe(true);
+        expect(results.every((s: { organisation_id: string }) => s.organisation_id === "org-1")).toBe(true);
       });
 
-      it("should order by created_at descending", () => {
+      it("should order by created_at descending", async () => {
         store.set(
           "skills",
           "skill-1",
@@ -209,18 +213,18 @@ describe("skills/queries", () => {
         );
 
         const query = skillQueries.all.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
-        expect(results[0].id).toBe("skill-2"); // Most recent
-        expect(results[1].id).toBe("skill-3");
-        expect(results[2].id).toBe("skill-1"); // Oldest
+        expect(results[0]!.id).toBe("skill-2"); // Most recent
+        expect(results[1]!.id).toBe("skill-3");
+        expect(results[2]!.id).toBe("skill-1"); // Oldest
       });
     });
   });
 
   describe("skillDocumentQueries", () => {
     describe("bySkill", () => {
-      it("should return documents for a specific skill", () => {
+      it("should return documents for a specific skill", async () => {
         store.set(
           "skillDocuments",
           "doc-1",
@@ -253,13 +257,13 @@ describe("skills/queries", () => {
           ctx,
           args: { skillId: "skill-1" },
         });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(2);
-        expect(results.every((d: any) => d.skill_id === "skill-1")).toBe(true);
+        expect(results.every((d: { skill_id: string }) => d.skill_id === "skill-1")).toBe(true);
       });
 
-      it("should order by created_at ascending", () => {
+      it("should order by created_at ascending", async () => {
         store.set(
           "skillDocuments",
           "doc-1",
@@ -283,10 +287,10 @@ describe("skills/queries", () => {
           ctx,
           args: { skillId: "skill-1" },
         });
-        const results = query.execute();
+        const results = await tx.run(query);
 
-        expect(results[0].id).toBe("doc-2"); // Oldest first
-        expect(results[1].id).toBe("doc-1");
+        expect(results[0]!.id).toBe("doc-2"); // Oldest first
+        expect(results[1]!.id).toBe("doc-1");
       });
     });
   });

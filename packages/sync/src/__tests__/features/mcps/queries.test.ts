@@ -2,8 +2,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   MockDataStore,
   createMockContext,
+  createMockTransaction,
   setSharedStore,
   type MockContext,
+  type MockTransaction,
 } from "../../helpers/mock-zero";
 import { createMcpFixture, createMcpStoreFixture } from "../../helpers/fixtures";
 
@@ -131,16 +133,18 @@ import { mcpQueries, mcpStoreQueries } from "../../../features/mcps/queries";
 describe("mcps/queries", () => {
   let store: MockDataStore;
   let ctx: MockContext;
+  let tx: MockTransaction;
 
   beforeEach(() => {
     store = new MockDataStore();
     setSharedStore(store);
     ctx = createMockContext("user-1", "org-1");
+    tx = createMockTransaction(store);
   });
 
   describe("mcpQueries", () => {
     describe("all", () => {
-      it("should return MCPs filtered by author_id and organisation_id", () => {
+      it("should return MCPs filtered by author_id and organisation_id", async () => {
         store.set(
           "mcps",
           "mcp-1",
@@ -173,13 +177,13 @@ describe("mcps/queries", () => {
         );
 
         const query = mcpQueries.all.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(2);
-        expect(results.every((m: any) => m.author_id === "user-1")).toBe(true);
+        expect(results.every((m: { author_id: string }) => m.author_id === "user-1")).toBe(true);
       });
 
-      it("should order by created_at descending", () => {
+      it("should order by created_at descending", async () => {
         store.set(
           "mcps",
           "mcp-1",
@@ -202,17 +206,17 @@ describe("mcps/queries", () => {
         );
 
         const query = mcpQueries.all.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
-        expect(results[0].id).toBe("mcp-2"); // Most recent
-        expect(results[1].id).toBe("mcp-1");
+        expect(results[0]!.id).toBe("mcp-2"); // Most recent
+        expect(results[1]!.id).toBe("mcp-1");
       });
     });
   });
 
   describe("mcpStoreQueries", () => {
     describe("active", () => {
-      it("should return MCP store items where is_active = 1", () => {
+      it("should return MCP store items where is_active = 1", async () => {
         store.set(
           "mcpStore",
           "store-1",
@@ -242,13 +246,13 @@ describe("mcps/queries", () => {
         );
 
         const query = mcpStoreQueries.active.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(2);
-        expect(results.every((s: any) => s.is_active === 1)).toBe(true);
+        expect(results.every((s: { is_active: number }) => s.is_active === 1)).toBe(true);
       });
 
-      it("should order by sort_order ascending", () => {
+      it("should order by sort_order ascending", async () => {
         store.set(
           "mcpStore",
           "store-1",
@@ -278,11 +282,11 @@ describe("mcps/queries", () => {
         );
 
         const query = mcpStoreQueries.active.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
-        expect(results[0].id).toBe("store-2"); // sort_order: 1
-        expect(results[1].id).toBe("store-3"); // sort_order: 2
-        expect(results[2].id).toBe("store-1"); // sort_order: 3
+        expect(results[0]!.id).toBe("store-2"); // sort_order: 1
+        expect(results[1]!.id).toBe("store-3"); // sort_order: 2
+        expect(results[2]!.id).toBe("store-1"); // sort_order: 3
       });
     });
   });

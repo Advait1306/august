@@ -345,6 +345,11 @@ function createTableMutator(
  */
 export function createMockTransaction(store: MockDataStore) {
   return {
+    // AnyTransaction required properties
+    location: "server" as const,
+    clientID: "mock-client-id",
+    mutationID: 1,
+    reason: "authoritative" as const,
     run: vi.fn(async (query: any) => {
       // If query has execute method, call it (for lazy query objects)
       if (query && typeof query.execute === "function") {

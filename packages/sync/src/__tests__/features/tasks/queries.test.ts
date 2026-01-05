@@ -2,8 +2,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   MockDataStore,
   createMockContext,
+  createMockTransaction,
   setSharedStore,
   type MockContext,
+  type MockTransaction,
 } from "../../helpers/mock-zero";
 import {
   createTaskFixture,
@@ -141,16 +143,18 @@ import {
 describe("tasks/queries", () => {
   let store: MockDataStore;
   let ctx: MockContext;
+  let tx: MockTransaction;
 
   beforeEach(() => {
     store = new MockDataStore();
     setSharedStore(store);
     ctx = createMockContext("user-1", "org-1");
+    tx = createMockTransaction(store);
   });
 
   describe("taskQueries", () => {
     describe("all", () => {
-      it("should return tasks filtered by author_id and organisation_id", () => {
+      it("should return tasks filtered by author_id and organisation_id", async () => {
         // Set up tasks
         store.set(
           "tasks",
@@ -186,15 +190,15 @@ describe("tasks/queries", () => {
         // Execute the query
         const query = taskQueries.all.fn({ ctx, args: {} });
 
-        // The query is a builder chain, execute it
-        const results = query.execute();
+        // The query is a builder chain, execute it via tx.run
+        const results = await tx.run(query);
 
         // Should only include user-1's tasks
         expect(results).toHaveLength(2);
-        expect(results.every((t: any) => t.author_id === "user-1")).toBe(true);
+        expect(results.every((t: { author_id: string }) => t.author_id === "user-1")).toBe(true);
       });
 
-      it("should order tasks by created_at descending", () => {
+      it("should order tasks by created_at descending", async () => {
         store.set(
           "tasks",
           "task-1",
@@ -227,14 +231,14 @@ describe("tasks/queries", () => {
         );
 
         const query = taskQueries.all.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
-        expect(results[0].id).toBe("task-2"); // Most recent
-        expect(results[1].id).toBe("task-3");
-        expect(results[2].id).toBe("task-1"); // Oldest
+        expect(results[0]!.id).toBe("task-2"); // Most recent
+        expect(results[1]!.id).toBe("task-3");
+        expect(results[2]!.id).toBe("task-1"); // Oldest
       });
 
-      it("should return empty array when no tasks match", () => {
+      it("should return empty array when no tasks match", async () => {
         store.set(
           "tasks",
           "task-1",
@@ -246,7 +250,7 @@ describe("tasks/queries", () => {
         );
 
         const query = taskQueries.all.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(0);
       });
@@ -255,7 +259,7 @@ describe("tasks/queries", () => {
 
   describe("turnQueries", () => {
     describe("byTask", () => {
-      it("should return turns for a specific task", () => {
+      it("should return turns for a specific task", async () => {
         store.set(
           "turns",
           "turn-1",
@@ -288,13 +292,13 @@ describe("tasks/queries", () => {
           ctx,
           args: { taskId: "task-1" },
         });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(2);
-        expect(results.every((t: any) => t.task_id === "task-1")).toBe(true);
+        expect(results.every((t: { task_id: string }) => t.task_id === "task-1")).toBe(true);
       });
 
-      it("should order turns by created_at ascending", () => {
+      it("should order turns by created_at ascending", async () => {
         store.set(
           "turns",
           "turn-1",
@@ -327,18 +331,18 @@ describe("tasks/queries", () => {
           ctx,
           args: { taskId: "task-1" },
         });
-        const results = query.execute();
+        const results = await tx.run(query);
 
-        expect(results[0].id).toBe("turn-2"); // Oldest first
-        expect(results[1].id).toBe("turn-3");
-        expect(results[2].id).toBe("turn-1"); // Most recent last
+        expect(results[0]!.id).toBe("turn-2"); // Oldest first
+        expect(results[1]!.id).toBe("turn-3");
+        expect(results[2]!.id).toBe("turn-1"); // Most recent last
       });
     });
   });
 
   describe("blockQueries", () => {
     describe("byTurn", () => {
-      it("should return blocks for a specific turn", () => {
+      it("should return blocks for a specific turn", async () => {
         store.set(
           "blocks",
           "block-1",
@@ -371,13 +375,13 @@ describe("tasks/queries", () => {
           ctx,
           args: { turnId: "turn-1" },
         });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(2);
-        expect(results.every((b: any) => b.turn_id === "turn-1")).toBe(true);
+        expect(results.every((b: { turn_id: string }) => b.turn_id === "turn-1")).toBe(true);
       });
 
-      it("should order blocks by created_at ascending", () => {
+      it("should order blocks by created_at ascending", async () => {
         store.set(
           "blocks",
           "block-1",
@@ -401,10 +405,10 @@ describe("tasks/queries", () => {
           ctx,
           args: { turnId: "turn-1" },
         });
-        const results = query.execute();
+        const results = await tx.run(query);
 
-        expect(results[0].id).toBe("block-2"); // Oldest first
-        expect(results[1].id).toBe("block-1");
+        expect(results[0]!.id).toBe("block-2"); // Oldest first
+        expect(results[1]!.id).toBe("block-1");
       });
     });
 
@@ -430,7 +434,7 @@ describe("tasks/queries", () => {
         );
       });
 
-      it("should return blocks with status client_pending, type tool_use, complete true", () => {
+      it("should return blocks with status client_pending, type tool_use, complete true", async () => {
         store.set(
           "blocks",
           "pending-1",
@@ -466,13 +470,13 @@ describe("tasks/queries", () => {
         );
 
         const query = blockQueries.getPendingShellTools.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(1);
-        expect(results[0].id).toBe("pending-1");
+        expect(results[0]!.id).toBe("pending-1");
       });
 
-      it("should return empty when no pending tools exist", () => {
+      it("should return empty when no pending tools exist", async () => {
         store.set(
           "blocks",
           "completed",
@@ -483,7 +487,7 @@ describe("tasks/queries", () => {
         );
 
         const query = blockQueries.getPendingShellTools.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(0);
       });
@@ -492,7 +496,7 @@ describe("tasks/queries", () => {
 
   describe("todoQueries", () => {
     describe("byTask", () => {
-      it("should return turns for a task", () => {
+      it("should return turns for a task", async () => {
         store.set(
           "turns",
           "turn-1",
@@ -516,12 +520,12 @@ describe("tasks/queries", () => {
           ctx,
           args: { taskId: "task-1" },
         });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(2);
       });
 
-      it("should order by created_at descending", () => {
+      it("should order by created_at descending", async () => {
         store.set(
           "turns",
           "turn-1",
@@ -545,10 +549,10 @@ describe("tasks/queries", () => {
           ctx,
           args: { taskId: "task-1" },
         });
-        const results = query.execute();
+        const results = await tx.run(query);
 
-        expect(results[0].id).toBe("turn-2"); // Most recent first
-        expect(results[1].id).toBe("turn-1");
+        expect(results[0]!.id).toBe("turn-2"); // Most recent first
+        expect(results[1]!.id).toBe("turn-1");
       });
     });
   });

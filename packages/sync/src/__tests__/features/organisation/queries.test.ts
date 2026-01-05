@@ -2,8 +2,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   MockDataStore,
   createMockContext,
+  createMockTransaction,
   setSharedStore,
   type MockContext,
+  type MockTransaction,
 } from "../../helpers/mock-zero";
 import {
   createOrganisationFixture,
@@ -139,16 +141,18 @@ import {
 describe("organisation/queries", () => {
   let store: MockDataStore;
   let ctx: MockContext;
+  let tx: MockTransaction;
 
   beforeEach(() => {
     store = new MockDataStore();
     setSharedStore(store);
     ctx = createMockContext("user-1", "org-1");
+    tx = createMockTransaction(store);
   });
 
   describe("organisationQueries", () => {
     describe("current", () => {
-      it("should return organisation by ctx.orgId", () => {
+      it("should return organisation by ctx.orgId", async () => {
         store.set(
           "organisations",
           "org-1",
@@ -164,13 +168,13 @@ describe("organisation/queries", () => {
           })
         );
 
-        // organisationQueries.current already calls .one() internally
-        const result = organisationQueries.current.fn({ ctx, args: {} });
+        const query = organisationQueries.current.fn({ ctx, args: {} });
+        const result = await tx.run(query);
 
         expect(result?.id).toBe("org-1");
       });
 
-      it("should return one() result", () => {
+      it("should return one() result", async () => {
         store.set(
           "organisations",
           "org-1",
@@ -180,16 +184,16 @@ describe("organisation/queries", () => {
           })
         );
 
-        // organisationQueries.current already calls .one() internally
-        const result = organisationQueries.current.fn({ ctx, args: {} });
+        const query = organisationQueries.current.fn({ ctx, args: {} });
+        const result = await tx.run(query);
 
         expect(result).toBeDefined();
         expect(result?.subscription_status).toBe("active");
       });
 
-      it("should return undefined when organisation not found", () => {
-        // organisationQueries.current already calls .one() internally
-        const result = organisationQueries.current.fn({ ctx, args: {} });
+      it("should return undefined when organisation not found", async () => {
+        const query = organisationQueries.current.fn({ ctx, args: {} });
+        const result = await tx.run(query);
 
         expect(result).toBeUndefined();
       });
@@ -198,7 +202,7 @@ describe("organisation/queries", () => {
 
   describe("usageQueries", () => {
     describe("recent", () => {
-      it("should return usage filtered by organisation_id", () => {
+      it("should return usage filtered by organisation_id", async () => {
         store.set(
           "usage",
           "1",
@@ -228,15 +232,15 @@ describe("organisation/queries", () => {
         );
 
         const query = usageQueries.recent.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(2);
         expect(
-          results.every((u: any) => u.organisation_id === "org-1")
+          results.every((u: { organisation_id: string }) => u.organisation_id === "org-1")
         ).toBe(true);
       });
 
-      it("should order by created_at descending", () => {
+      it("should order by created_at descending", async () => {
         store.set(
           "usage",
           "1",
@@ -266,14 +270,14 @@ describe("organisation/queries", () => {
         );
 
         const query = usageQueries.recent.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
-        expect(results[0].id).toBe(2); // Most recent
-        expect(results[1].id).toBe(3);
-        expect(results[2].id).toBe(1); // Oldest
+        expect(results[0]!.id).toBe(2); // Most recent
+        expect(results[1]!.id).toBe(3);
+        expect(results[2]!.id).toBe(1); // Oldest
       });
 
-      it("should limit to 50 records", () => {
+      it("should limit to 50 records", async () => {
         // Add 60 usage records
         for (let i = 1; i <= 60; i++) {
           store.set(
@@ -288,7 +292,7 @@ describe("organisation/queries", () => {
         }
 
         const query = usageQueries.recent.fn({ ctx, args: {} });
-        const results = query.execute();
+        const results = await tx.run(query);
 
         expect(results).toHaveLength(50);
       });
@@ -297,7 +301,7 @@ describe("organisation/queries", () => {
 
   describe("dodoCustomerPortalQueries", () => {
     describe("current", () => {
-      it("should return portal by organisation_id", () => {
+      it("should return portal by organisation_id", async () => {
         store.set(
           "dodoCustomerPortal",
           "org-1",
@@ -307,14 +311,14 @@ describe("organisation/queries", () => {
           })
         );
 
-        // dodoCustomerPortalQueries.current already calls .one() internally
-        const result = dodoCustomerPortalQueries.current.fn({ ctx, args: {} });
+        const query = dodoCustomerPortalQueries.current.fn({ ctx, args: {} });
+        const result = await tx.run(query);
 
         expect(result).toBeDefined();
         expect(result?.link).toBe("https://portal.example.com/session");
       });
 
-      it("should return one() result", () => {
+      it("should return one() result", async () => {
         store.set(
           "dodoCustomerPortal",
           "org-1",
@@ -323,15 +327,15 @@ describe("organisation/queries", () => {
           })
         );
 
-        // dodoCustomerPortalQueries.current already calls .one() internally
-        const result = dodoCustomerPortalQueries.current.fn({ ctx, args: {} });
+        const query = dodoCustomerPortalQueries.current.fn({ ctx, args: {} });
+        const result = await tx.run(query);
 
         expect(result?.organisation_id).toBe("org-1");
       });
 
-      it("should return undefined when no portal exists", () => {
-        // dodoCustomerPortalQueries.current already calls .one() internally
-        const result = dodoCustomerPortalQueries.current.fn({ ctx, args: {} });
+      it("should return undefined when no portal exists", async () => {
+        const query = dodoCustomerPortalQueries.current.fn({ ctx, args: {} });
+        const result = await tx.run(query);
 
         expect(result).toBeUndefined();
       });

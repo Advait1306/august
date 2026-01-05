@@ -15,7 +15,8 @@
     "build": "tsc && tsc-esm-fix --target=dist",
     "zero:generate": "drizzle-zero generate --format --output ./src/zero/zero-schema.gen.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/pg": "^8.15.5",

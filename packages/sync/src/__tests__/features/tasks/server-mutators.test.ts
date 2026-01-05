@@ -205,7 +205,7 @@ describe("tasks/server-mutators", () => {
       expect(asyncTasks).toHaveLength(2);
 
       // Execute the first async task (queue)
-      await asyncTasks[0]();
+      await asyncTasks[0]!();
       expect(addToAgentLoopQueue).toHaveBeenCalledWith({
         task_id: "task-1",
         turn_id: "turn-1",
@@ -230,7 +230,7 @@ describe("tasks/server-mutators", () => {
       expect(asyncTasks).toHaveLength(2);
 
       // Execute the analytics task
-      await asyncTasks[1]();
+      await asyncTasks[1]!();
       expect(createTrackEvent).toHaveBeenCalledWith("user-1", "org-1");
     });
   });
@@ -341,7 +341,7 @@ describe("tasks/server-mutators", () => {
 
       // Execute async task
       expect(asyncTasks).toHaveLength(1);
-      await asyncTasks[0]();
+      await asyncTasks[0]!();
       expect(addToAgentLoopQueue).toHaveBeenCalledWith({
         task_id: "task-1",
         turn_id: "turn-1",
@@ -430,7 +430,7 @@ describe("tasks/server-mutators", () => {
       });
 
       expect(asyncTasks).toHaveLength(1);
-      await asyncTasks[0]();
+      await asyncTasks[0]!();
       expect(addToAgentLoopQueue).toHaveBeenCalledWith({
         task_id: "task-1",
         turn_id: "turn-1",
@@ -559,7 +559,7 @@ describe("tasks/server-mutators", () => {
       });
 
       expect(asyncTasks).toHaveLength(1);
-      await asyncTasks[0]();
+      await asyncTasks[0]!();
       expect(addToAgentLoopQueue).toHaveBeenCalledWith({
         task_id: "task-1",
         turn_id: "turn-1",
