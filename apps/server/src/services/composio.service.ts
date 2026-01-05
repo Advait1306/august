@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { AppState } from "../config/state";
 import { Composio } from "@composio/core";
@@ -102,7 +102,7 @@ export class ComposioService {
 
     console.log("[Composio Flow] Storing Composio state");
     await this.db.insert(composioStates).values({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       connection_request_id: connectionRequest.id,
       user_id: userId,
       organisation_id: organisationId,
@@ -211,7 +211,7 @@ export class ComposioService {
       });
 
       // Create the MCP record
-      const newMcpId = crypto.randomUUID();
+      const newMcpId = randomUUID();
       await this.db.insert(mcps).values({
         id: newMcpId,
         organisation_id: organisationId,
@@ -228,7 +228,7 @@ export class ComposioService {
 
       // Create the Composio connection record with the generated URL
       await this.db.insert(mcpComposioConnections).values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         mcp_id: newMcpId,
         connection_url: instance.url,
         created_at: new Date(),
