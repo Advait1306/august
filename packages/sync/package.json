@@ -13,13 +13,17 @@
   },
   "scripts": {
     "build": "tsc && tsc-esm-fix --target=dist",
-    "zero:generate": "drizzle-zero generate --format --output ./src/zero/zero-schema.gen.ts"
+    "zero:generate": "drizzle-zero generate --format --output ./src/zero/zero-schema.gen.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/pg": "^8.15.5",
     "drizzle-kit": "^0.31.5",
     "tsc-esm-fix": "^3.1.2",
-    "tsx": "^4.20.6"
+    "tsx": "^4.20.6",
+    "vitest": "^4.0.15"
   },
   "exports": {
     "./queries/*": {
