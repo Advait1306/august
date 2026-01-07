@@ -1,42 +1,60 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import Image from "next/image";
+import { visitedPages } from "@/lib/visited-pages";
 
 export default function Home() {
+  const isFirstVisit = !visitedPages.has("/");
+  const [shouldAnimate] = useState(isFirstVisit);
+
+  useEffect(() => {
+    visitedPages.add("/");
+  }, []);
+
   return (
     <div className="flex flex-col">
       {/* Hero Section - constrained width, full height on mobile */}
       <section className="w-full max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12 py-16 sm:py-24 min-h-dvh sm:min-h-0 flex flex-col justify-center">
         <div className="flex flex-col gap-8">
-          <motion.div
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.6,
-              delay: 0.1,
-              ease: [0.25, 0.4, 0.25, 1],
-            }}
-            className="flex flex-col gap-5 max-w-2xl"
-          >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.1] text-foreground">
+          <div className="flex flex-col gap-5 max-w-2xl">
+            <motion.h1
+              initial={{ opacity: shouldAnimate ? 0 : 1 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                duration: 0.6,
+                delay: shouldAnimate ? 0 : 0,
+                ease: [0.25, 0.4, 0.25, 1],
+              }}
+              className="text-4xl sm:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.1] text-foreground"
+            >
               Artificial helpers
               <br />
               <span className="text-muted-foreground/80">for your team</span>
-            </h1>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl">
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: shouldAnimate ? 0 : 1 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                duration: 0.6,
+                delay: shouldAnimate ? 0.7 : 0,
+                ease: [0.25, 0.4, 0.25, 1],
+              }}
+              className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl"
+            >
               Create, manage, and deploy agents for your company. Focus on
               decision-making while your agents handle execution.
-            </p>
-          </motion.div>
+            </motion.p>
+          </div>
 
           {/* Hero Image */}
           <motion.div
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: shouldAnimate ? 0 : 1 }}
+            animate={{ opacity: 1 }}
             transition={{
               duration: 0.7,
-              delay: 0.25,
+              delay: shouldAnimate ? 0.9 : 0,
               ease: [0.25, 0.4, 0.25, 1],
             }}
             className="relative"

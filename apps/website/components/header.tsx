@@ -2,15 +2,32 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import DownloadButton from "@/components/download-button";
+import { visitedPages } from "@/lib/visited-pages";
 
 export function Header() {
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
+
+  const isFirstVisit = !visitedPages.has(pathname);
+  const [shouldAnimate] = useState(isFirstVisit);
+
+  useEffect(() => {
+    visitedPages.add(pathname);
+  }, [pathname]);
+
   return (
     <motion.header
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.4, 0.25, 1] }}
+      initial={{ opacity: shouldAnimate ? 0 : 1 }}
+      animate={{ opacity: 1 }}
+      transition={{
+        duration: 0.5,
+        delay: shouldAnimate && isHomePage ? 1.1 : 0,
+        ease: [0.25, 0.4, 0.25, 1],
+      }}
       className="w-full flex flex-row items-center justify-between"
     >
       <Link href="/" className="flex items-center gap-3 group">
@@ -27,6 +44,12 @@ export function Header() {
       </Link>
 
       <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-8">
+        <Link
+          href="/"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
+        >
+          Product
+        </Link>
         <Link
           href="/#features"
           scroll={true}

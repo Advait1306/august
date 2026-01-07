@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { motion } from "motion/react";
 import DownloadButton from "@/components/download-button";
+import { visitedPages } from "@/lib/visited-pages";
 
 const features = [
   "Share skills across your team",
@@ -12,6 +14,13 @@ const features = [
 ];
 
 export default function PricingPage() {
+  const isFirstVisit = !visitedPages.has("/pricing");
+  const [shouldAnimate] = useState(isFirstVisit);
+
+  useEffect(() => {
+    visitedPages.add("/pricing");
+  }, []);
+
   return (
     <div className="w-full max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12 py-16 sm:py-24">
       <div className="flex flex-col items-center text-center mb-16">
@@ -28,15 +37,15 @@ export default function PricingPage() {
         <motion.div
           className="relative w-full max-w-md"
           style={{ perspective: '1000px' }}
-          initial={{ opacity: 0 }}
+          initial={{ opacity: shouldAnimate ? 0 : 1 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, ease: [0.25, 0.4, 0.25, 1] }}
         >
           <motion.div
             className="relative w-full aspect-[1.6/1] rounded-2xl p-8 flex flex-col justify-between overflow-hidden bg-[linear-gradient(135deg,#e8e8e8_0%,#d4d4d4_25%,#f5f5f5_50%,#c9c9c9_75%,#e0e0e0_100%)] dark:bg-[linear-gradient(135deg,#3a3a3a_0%,#2a2a2a_25%,#4a4a4a_50%,#1f1f1f_75%,#333333_100%)] shadow-2xl"
-            initial={{ rotateX: 50, y: 40 }}
+            initial={{ rotateX: shouldAnimate ? 50 : 0, y: shouldAnimate ? 40 : 0 }}
             animate={{ rotateX: 0, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.1, ease: [0.25, 0.4, 0.25, 1] }}
+            transition={{ duration: 0.9, delay: shouldAnimate ? 0.1 : 0, ease: [0.25, 0.4, 0.25, 1] }}
             style={{ transformStyle: 'preserve-3d', transformOrigin: 'center bottom' }}
           >
             {/* Shine effect */}
