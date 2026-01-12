@@ -11,7 +11,7 @@ import { UpdateProvider } from "@/src/contexts/update-context";
 import { UpdateToast } from "@/components/update-toast";
 import { SyncEngine } from "../components/sync_engine";
 import { Analytics } from "@/src/components/analytics";
-import { ProtectedApp } from "../components/protected-app";
+import { AgentRunner } from "../components/agent-runner";
 
 function WindowDragRegion() {
   return (
@@ -68,7 +68,7 @@ const RootLayout = () => {
                 <Analytics>
                   <SyncEngine>
                     <SignedIn>
-                      <ProtectedApp />
+                      <AgentRunner />
                     </SignedIn>
                     <SignedOut>
                       <Guard />

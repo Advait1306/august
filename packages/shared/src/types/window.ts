@@ -33,6 +33,44 @@ declare global {
           input: IPC.ShellTools.ToolInputMap[T]
         ) => Promise<IPC.ShellTools.ToolOutputMap[T]>;
       };
+      terminal: {
+        create: (
+          options: IPC.Terminal.CreateRequest
+        ) => Promise<IPC.Terminal.CreateResponse>;
+        write: (
+          terminalId: string,
+          data: string
+        ) => Promise<IPC.Terminal.OperationResponse>;
+        resize: (
+          terminalId: string,
+          cols: number,
+          rows: number
+        ) => Promise<IPC.Terminal.OperationResponse>;
+        destroy: (terminalId: string) => Promise<IPC.Terminal.OperationResponse>;
+        onData: (callback: (event: IPC.Terminal.DataEvent) => void) => () => void;
+        onExit: (callback: (event: IPC.Terminal.ExitEvent) => void) => () => void;
+      };
+      fileSystem: {
+        readDir: (path: string) => Promise<IPC.FileSystem.ReadDirResponse>;
+        createFile: (path: string) => Promise<IPC.FileSystem.OperationResponse>;
+        createFolder: (path: string) => Promise<IPC.FileSystem.OperationResponse>;
+        rename: (
+          oldPath: string,
+          newPath: string
+        ) => Promise<IPC.FileSystem.OperationResponse>;
+        delete: (path: string) => Promise<IPC.FileSystem.OperationResponse>;
+        getHomeDir: () => Promise<string>;
+        readFile: (path: string) => Promise<IPC.FileSystem.ReadFileResponse>;
+        writeFile: (
+          path: string,
+          content: string
+        ) => Promise<IPC.FileSystem.OperationResponse>;
+        watchFile: (path: string) => Promise<IPC.FileSystem.WatchResponse>;
+        unwatchFile: (path: string) => Promise<IPC.FileSystem.WatchResponse>;
+        onFileChanged: (
+          callback: (event: IPC.FileSystem.FileChangedEvent) => void
+        ) => () => void;
+      };
     };
   }
 }
