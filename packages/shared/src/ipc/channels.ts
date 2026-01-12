@@ -27,4 +27,12 @@ export const IPC_CHANNELS = {
     GET_MANIFEST: 'shell-tools:get-manifest',
     EXECUTE: 'shell-tools:execute',
   },
+  TERMINAL: {
+    CREATE: 'terminal:create',
+    WRITE: 'terminal:write',
+    RESIZE: 'terminal:resize',
+    DESTROY: 'terminal:destroy',
+    DATA: 'terminal:data',
+    EXIT: 'terminal:exit',
+  },
 } as const;

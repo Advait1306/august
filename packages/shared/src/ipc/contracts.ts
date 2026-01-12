@@ -110,4 +110,50 @@ export namespace IPC {
     export type ExecuteResponse<T extends keyof ToolOutputMap = keyof ToolOutputMap> =
       ToolOutputMap[T];
   }
+
+  export namespace Terminal {
+    export interface CreateRequest {
+      cols: number;
+      rows: number;
+      cwd?: string;
+      env?: Record<string, string>;
+    }
+
+    export interface CreateResponse {
+      success: boolean;
+      terminalId?: string;
+      error?: string;
+    }
+
+    export interface WriteRequest {
+      terminalId: string;
+      data: string;
+    }
+
+    export interface ResizeRequest {
+      terminalId: string;
+      cols: number;
+      rows: number;
+    }
+
+    export interface DestroyRequest {
+      terminalId: string;
+    }
+
+    export interface DataEvent {
+      terminalId: string;
+      data: string;
+    }
+
+    export interface ExitEvent {
+      terminalId: string;
+      exitCode: number;
+      signal?: string;
+    }
+
+    export interface OperationResponse {
+      success: boolean;
+      error?: string;
+    }
+  }
 }

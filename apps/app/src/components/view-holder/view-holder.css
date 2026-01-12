@@ -1,0 +1,79 @@
+/**
+ * ViewHolder theme overrides for Dockview
+ * Matches the app's design system using CSS variables
+ */
+
+.view-holder {
+  --dv-background-color: var(--background);
+  --dv-paneview-header-border-color: var(--border);
+  --dv-tabs-and-actions-container-background-color: var(--muted);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--background);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--muted);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--muted);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--muted);
+  --dv-tab-divider-color: var(--border);
+  --dv-separator-border: var(--border);
+  --dv-tabs-and-actions-container-font-size: 13px;
+  --dv-active-sash-color: var(--primary);
+  --dv-group-view-background-color: var(--background);
+  --dv-tabs-container-scrollbar-color: var(--muted-foreground);
+  --dv-icon-hover-background-color: var(--accent);
+  --dv-floating-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode specific overrides */
+.dark .view-holder {
+  --dv-floating-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Tab styling */
+.view-holder .tab {
+  border-radius: 4px 4px 0 0;
+  font-family: var(--font-sans);
+}
+
+/* Panel content area */
+.view-holder .dv-default-tab-content {
+  padding: 0 8px;
+}
+
+/* Ensure panel content fills available space */
+.view-holder .dv-view-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.view-holder .dv-view-content > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Separator/sash styling */
+.view-holder .sash {
+  background: transparent;
+  transition: background 150ms ease;
+}
+
+.view-holder .sash:hover {
+  background: var(--accent);
+}
+
+.view-holder .sash.active {
+  background: var(--primary);
+}
+
+/* Tab close button */
+.view-holder .dv-default-tab-action {
+  opacity: 0.6;
+  transition: opacity 150ms ease;
+}
+
+.view-holder .dv-default-tab-action:hover {
+  opacity: 1;
+}
+
+/* Empty state styling */
+.view-holder .dv-watermark {
+  color: var(--muted-foreground);
+  font-family: var(--font-sans);
+}

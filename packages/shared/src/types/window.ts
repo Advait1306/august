@@ -33,6 +33,23 @@ declare global {
           input: IPC.ShellTools.ToolInputMap[T]
         ) => Promise<IPC.ShellTools.ToolOutputMap[T]>;
       };
+      terminal: {
+        create: (
+          options: IPC.Terminal.CreateRequest
+        ) => Promise<IPC.Terminal.CreateResponse>;
+        write: (
+          terminalId: string,
+          data: string
+        ) => Promise<IPC.Terminal.OperationResponse>;
+        resize: (
+          terminalId: string,
+          cols: number,
+          rows: number
+        ) => Promise<IPC.Terminal.OperationResponse>;
+        destroy: (terminalId: string) => Promise<IPC.Terminal.OperationResponse>;
+        onData: (callback: (event: IPC.Terminal.DataEvent) => void) => () => void;
+        onExit: (callback: (event: IPC.Terminal.ExitEvent) => void) => () => void;
+      };
     };
   }
 }

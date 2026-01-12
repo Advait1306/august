@@ -32,6 +32,30 @@ const api = {
       input: IPC.ShellTools.ToolInputMap[T]
     ): Promise<IPC.ShellTools.ToolOutputMap[T]> =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.SHELL_TOOLS.EXECUTE, { name, input })
+  },
+  terminal: {
+    create: (options: IPC.Terminal.CreateRequest): Promise<IPC.Terminal.CreateResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.CREATE, options),
+    write: (terminalId: string, data: string): Promise<IPC.Terminal.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.WRITE, { terminalId, data }),
+    resize: (
+      terminalId: string,
+      cols: number,
+      rows: number
+    ): Promise<IPC.Terminal.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.RESIZE, { terminalId, cols, rows }),
+    destroy: (terminalId: string): Promise<IPC.Terminal.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.DESTROY, { terminalId }),
+    onData: (callback: (event: IPC.Terminal.DataEvent) => void) => {
+      const handler = (_: unknown, event: IPC.Terminal.DataEvent) => callback(event)
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.TERMINAL.DATA, handler)
+      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.DATA, handler)
+    },
+    onExit: (callback: (event: IPC.Terminal.ExitEvent) => void) => {
+      const handler = (_: unknown, event: IPC.Terminal.ExitEvent) => callback(event)
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.TERMINAL.EXIT, handler)
+      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.EXIT, handler)
+    }
   }
 }
 
