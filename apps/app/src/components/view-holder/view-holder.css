@@ -3,16 +3,16 @@
  * Uses direct selectors for reliable theming across light/dark modes
  */
 
-/* Tab container bar - using Tailwind color variables via oklch */
+/* Tab container bar - using sidebar color */
 .view-holder .dv-tabs-and-actions-container {
-  background-color: oklch(0.9702 0 0); /* muted light */
-  border-bottom: 1px solid oklch(0.87 0 0); /* border light */
+  background-color: #e5e5e5;
+  border-bottom: 1px solid oklch(0.9219 0 0);
   height: 36px;
 }
 
 .dark .view-holder .dv-tabs-and-actions-container {
-  background-color: oklch(0.2178 0 0); /* muted dark */
-  border-bottom: 1px solid oklch(0.371 0 0); /* border dark */
+  background-color: #171717;
+  border-bottom: 1px solid #232323;
 }
 
 /* Remove default tab wrapper padding/margins */

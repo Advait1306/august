@@ -41,12 +41,16 @@ export function AgentRunner() {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="h-screen w-full flex">
-        <WorkspaceSidebar />
-        <SidebarInset className="pr-0 pb-0">
-          <header className="h-[32px] shrink-0" />
-          <div className="flex-1 w-full relative overflow-hidden">
+    <SidebarProvider
+      defaultOpen={true}
+      style={{ "--header-height": "40px" } as React.CSSProperties}
+    >
+      <div className="h-screen w-full flex flex-col">
+        <header className="h-[var(--header-height)] shrink-0 border-b border-neutral-300 dark:border-neutral-700 bg-background" />
+        <div className="flex flex-1 overflow-hidden">
+          <WorkspaceSidebar />
+          <SidebarInset className="pr-0 pb-0">
+            <div className="flex-1 w-full relative overflow-hidden">
             {workspaces.map((workspace) => {
               const isActive = workspace.id === activeWorkspaceId
               return (
@@ -69,8 +73,9 @@ export function AgentRunner() {
                 </div>
               )
             })}
-          </div>
-        </SidebarInset>
+            </div>
+          </SidebarInset>
+        </div>
       </div>
     </SidebarProvider>
   )

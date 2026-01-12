@@ -4,8 +4,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarGroupAction,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -61,16 +59,19 @@ export function WorkspaceSidebar() {
   return (
     <>
       <Sidebar collapsible="icon" variant="sidebar">
-        <SidebarContent className="pt-[32px]">
-          <SidebarGroup>
-            <SidebarGroupLabel>Workspaces</SidebarGroupLabel>
-            <SidebarGroupAction
-              title="Add Workspace"
-              onClick={() => setIsAddDialogOpen(true)}
-            >
-              <Plus className="h-4 w-4" />
-            </SidebarGroupAction>
-            <SidebarGroupContent>
+        <SidebarContent>
+          <SidebarGroup className="p-0">
+            <div className="flex h-[36px] items-center justify-between px-3 border-b border-neutral-300 dark:border-neutral-700">
+              <span className="text-xs font-medium text-sidebar-foreground/70">Workspaces</span>
+              <button
+                title="Add Workspace"
+                onClick={() => setIsAddDialogOpen(true)}
+                className="flex h-6 w-6 items-center justify-center rounded hover:bg-sidebar-accent transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+            <SidebarGroupContent className="p-2">
               <SidebarMenu>
                 {workspaces.map((workspace) => (
                   <SidebarMenuItem key={workspace.id}>

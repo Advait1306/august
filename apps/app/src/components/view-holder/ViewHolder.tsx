@@ -70,15 +70,16 @@ function RightHeaderActions({ containerApi, workspaceCwd }: RightHeaderActionsPr
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          className="flex h-6 w-6 items-center justify-center rounded hover:bg-[var(--dv-icon-hover-background-color)] transition-colors"
-          title="Add Panel"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-      </PopoverTrigger>
+    <div className="flex h-full items-center pr-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            className="flex h-6 w-6 items-center justify-center rounded hover:bg-[var(--dv-icon-hover-background-color)] transition-colors"
+            title="Add Panel"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </PopoverTrigger>
       <PopoverContent align="end" className="w-48 p-1">
         <button
           onClick={handleAddTerminal}
@@ -98,6 +99,7 @@ function RightHeaderActions({ containerApi, workspaceCwd }: RightHeaderActionsPr
         </button>
       </PopoverContent>
     </Popover>
+    </div>
   )
 }
 
