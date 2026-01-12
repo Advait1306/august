@@ -1,4 +1,4 @@
-import { TerminalSquare } from 'lucide-react'
+import { TerminalSquare, FolderOpen } from 'lucide-react'
 import type { ViewType, ViewTypeRegistration } from './types'
 
 /**
@@ -44,5 +44,16 @@ registerViewType({
   defaultParams: {
     cwd: undefined,
     env: undefined,
+  },
+})
+
+// Register File Viewer view
+registerViewType({
+  type: 'file-viewer',
+  displayName: 'File Viewer',
+  icon: FolderOpen,
+  defaultParams: {
+    rootPath: undefined,
+    showHidden: false,
   },
 })

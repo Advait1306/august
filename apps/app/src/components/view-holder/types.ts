@@ -3,7 +3,7 @@ import type { DockviewApi } from 'dockview-react'
 /**
  * Supported view types - extend this union as new views are added
  */
-export type ViewType = 'terminal'
+export type ViewType = 'terminal' | 'file-viewer'
 
 /**
  * Terminal-specific panel props
@@ -14,10 +14,19 @@ export interface TerminalPanelParams {
 }
 
 /**
+ * File viewer panel props
+ */
+export interface FileViewerPanelParams {
+  rootPath?: string
+  showHidden?: boolean
+}
+
+/**
  * Type-safe params mapping for each view type
  */
 export interface ViewParamsMap {
   terminal: TerminalPanelParams
+  'file-viewer': FileViewerPanelParams
 }
 
 /**

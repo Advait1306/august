@@ -35,4 +35,14 @@ export const IPC_CHANNELS = {
     DATA: 'terminal:data',
     EXIT: 'terminal:exit',
   },
+  FILE_SYSTEM: {
+    READ_DIR: 'fs:readDir',
+    CREATE_FILE: 'fs:createFile',
+    CREATE_FOLDER: 'fs:createFolder',
+    RENAME: 'fs:rename',
+    DELETE: 'fs:delete',
+    GET_HOME_DIR: 'fs:getHomeDir',
+    READ_FILE: 'fs:readFile',
+    WRITE_FILE: 'fs:writeFile',
+  },
 } as const;

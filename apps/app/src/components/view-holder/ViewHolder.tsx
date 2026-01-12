@@ -5,11 +5,13 @@ import {
   type DockviewApi,
   type IDockviewHeaderActionsProps,
 } from 'dockview-react'
-import { Plus } from 'lucide-react'
+import { Plus, TerminalSquare, FolderOpen } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { ViewHolderProvider } from './ViewHolderProvider'
 import { TerminalPanel } from './panels/TerminalPanel'
+import { FileViewerPanel } from './panels/FileViewerPanel'
 import type { ViewHolderProps } from './types'
 
 import 'dockview-react/dist/styles/dockview.css'
@@ -22,12 +24,15 @@ const STORAGE_KEY_PREFIX = 'august-view-holder-'
  */
 const components = {
   terminal: TerminalPanel,
+  'file-viewer': FileViewerPanel,
 }
 
 /**
- * Add new terminal button in tab bar
+ * Add new panel button with dropdown menu
  */
 function RightHeaderActions({ containerApi }: IDockviewHeaderActionsProps) {
+  const [open, setOpen] = useState(false)
+
   const handleAddTerminal = () => {
     containerApi.addPanel({
       id: `terminal-${nanoid(8)}`,
@@ -35,16 +40,48 @@ function RightHeaderActions({ containerApi }: IDockviewHeaderActionsProps) {
       title: 'Terminal',
       params: {},
     })
+    setOpen(false)
+  }
+
+  const handleAddFileViewer = () => {
+    containerApi.addPanel({
+      id: `file-viewer-${nanoid(8)}`,
+      component: 'file-viewer',
+      title: 'File Viewer',
+      params: {},
+    })
+    setOpen(false)
   }
 
   return (
-    <button
-      onClick={handleAddTerminal}
-      className="flex h-6 w-6 items-center justify-center rounded hover:bg-[var(--dv-icon-hover-background-color)] transition-colors"
-      title="New Terminal (⌘T)"
-    >
-      <Plus className="h-4 w-4" />
-    </button>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className="flex h-6 w-6 items-center justify-center rounded hover:bg-[var(--dv-icon-hover-background-color)] transition-colors"
+          title="Add Panel"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-48 p-1">
+        <button
+          onClick={handleAddTerminal}
+          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-gray-700/50 transition-colors"
+        >
+          <TerminalSquare className="h-4 w-4 text-gray-400" />
+          <span>Terminal</span>
+          <span className="ml-auto text-xs text-gray-500">⌘T</span>
+        </button>
+        <button
+          onClick={handleAddFileViewer}
+          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-gray-700/50 transition-colors"
+        >
+          <FolderOpen className="h-4 w-4 text-gray-400" />
+          <span>File Viewer</span>
+          <span className="ml-auto text-xs text-gray-500">⌘E</span>
+        </button>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -62,19 +99,31 @@ export function ViewHolder({
   const [api, setApi] = useState<DockviewApi | null>(null)
   const fullStorageKey = `${STORAGE_KEY_PREFIX}${storageKey}`
 
-  // Keyboard shortcut: Cmd+T / Ctrl+T to add new terminal
+  // Keyboard shortcuts: Cmd+T for terminal, Cmd+E for file viewer
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!api) return
+
+      // Cmd+T / Ctrl+T - New Terminal
       if ((e.metaKey || e.ctrlKey) && e.key === 't') {
         e.preventDefault()
-        if (api) {
-          api.addPanel({
-            id: `terminal-${nanoid(8)}`,
-            component: 'terminal',
-            title: 'Terminal',
-            params: {},
-          })
-        }
+        api.addPanel({
+          id: `terminal-${nanoid(8)}`,
+          component: 'terminal',
+          title: 'Terminal',
+          params: {},
+        })
+      }
+
+      // Cmd+E / Ctrl+E - New File Viewer
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+        e.preventDefault()
+        api.addPanel({
+          id: `file-viewer-${nanoid(8)}`,
+          component: 'file-viewer',
+          title: 'File Viewer',
+          params: {},
+        })
       }
     }
 

@@ -156,4 +156,29 @@ export namespace IPC {
       error?: string;
     }
   }
+
+  export namespace FileSystem {
+    export interface DirEntry {
+      name: string;
+      path: string;
+      isDirectory: boolean;
+    }
+
+    export interface ReadDirResponse {
+      success: boolean;
+      entries?: DirEntry[];
+      error?: string;
+    }
+
+    export interface ReadFileResponse {
+      success: boolean;
+      content?: string;
+      error?: string;
+    }
+
+    export interface OperationResponse {
+      success: boolean;
+      error?: string;
+    }
+  }
 }

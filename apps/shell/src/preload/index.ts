@@ -56,6 +56,24 @@ const api = {
       electronAPI.ipcRenderer.on(IPC_CHANNELS.TERMINAL.EXIT, handler)
       return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.EXIT, handler)
     }
+  },
+  fileSystem: {
+    readDir: (path: string): Promise<IPC.FileSystem.ReadDirResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.READ_DIR, path),
+    createFile: (path: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.CREATE_FILE, path),
+    createFolder: (path: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.CREATE_FOLDER, path),
+    rename: (oldPath: string, newPath: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.RENAME, oldPath, newPath),
+    delete: (path: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.DELETE, path),
+    getHomeDir: (): Promise<string> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.GET_HOME_DIR),
+    readFile: (path: string): Promise<IPC.FileSystem.ReadFileResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.READ_FILE, path),
+    writeFile: (path: string, content: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.WRITE_FILE, path, content)
   }
 }
 

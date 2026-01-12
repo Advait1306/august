@@ -50,6 +50,22 @@ declare global {
         onData: (callback: (event: IPC.Terminal.DataEvent) => void) => () => void;
         onExit: (callback: (event: IPC.Terminal.ExitEvent) => void) => () => void;
       };
+      fileSystem: {
+        readDir: (path: string) => Promise<IPC.FileSystem.ReadDirResponse>;
+        createFile: (path: string) => Promise<IPC.FileSystem.OperationResponse>;
+        createFolder: (path: string) => Promise<IPC.FileSystem.OperationResponse>;
+        rename: (
+          oldPath: string,
+          newPath: string
+        ) => Promise<IPC.FileSystem.OperationResponse>;
+        delete: (path: string) => Promise<IPC.FileSystem.OperationResponse>;
+        getHomeDir: () => Promise<string>;
+        readFile: (path: string) => Promise<IPC.FileSystem.ReadFileResponse>;
+        writeFile: (
+          path: string,
+          content: string
+        ) => Promise<IPC.FileSystem.OperationResponse>;
+      };
     };
   }
 }
