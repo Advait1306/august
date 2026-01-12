@@ -9,9 +9,11 @@ import { Plus, TerminalSquare, FolderOpen } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { useTheme } from '@/src/components/theme'
 import { ViewHolderProvider } from './ViewHolderProvider'
 import { TerminalPanel } from './panels/TerminalPanel'
 import { FileViewerPanel } from './panels/FileViewerPanel'
+import { ThemedTab } from './ThemedTab'
 import type { ViewHolderProps } from './types'
 
 import 'dockview-react/dist/styles/dockview.css'
@@ -28,9 +30,23 @@ const components = {
 }
 
 /**
+ * Custom tab components for proper theming
+ */
+const tabComponents = {
+  default: ThemedTab,
+}
+
+/**
+ * Props for RightHeaderActions including workspace context
+ */
+interface RightHeaderActionsProps extends IDockviewHeaderActionsProps {
+  workspaceCwd?: string
+}
+
+/**
  * Add new panel button with dropdown menu
  */
-function RightHeaderActions({ containerApi }: IDockviewHeaderActionsProps) {
+function RightHeaderActions({ containerApi, workspaceCwd }: RightHeaderActionsProps) {
   const [open, setOpen] = useState(false)
 
   const handleAddTerminal = () => {
@@ -38,7 +54,7 @@ function RightHeaderActions({ containerApi }: IDockviewHeaderActionsProps) {
       id: `terminal-${nanoid(8)}`,
       component: 'terminal',
       title: 'Terminal',
-      params: {},
+      params: { cwd: workspaceCwd },
     })
     setOpen(false)
   }
@@ -48,7 +64,7 @@ function RightHeaderActions({ containerApi }: IDockviewHeaderActionsProps) {
       id: `file-viewer-${nanoid(8)}`,
       component: 'file-viewer',
       title: 'File Viewer',
-      params: {},
+      params: { rootPath: workspaceCwd },
     })
     setOpen(false)
   }
@@ -107,10 +123,14 @@ export function ViewHolder({
   storageKey = 'default',
   className,
   onReady,
+  workspaceCwd,
+  isActive = true,
 }: ViewHolderProps) {
   const [api, setApi] = useState<DockviewApi | null>(null)
   const layoutChangeDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const fullStorageKey = `${STORAGE_KEY_PREFIX}${storageKey}`
+  const theme = useTheme()
+  const dockviewThemeClass = theme === 'dark' ? 'dockview-theme-dark' : 'dockview-theme-light'
 
   // Cleanup layout change subscription on unmount
   useEffect(() => {
@@ -122,7 +142,8 @@ export function ViewHolder({
   // Keyboard shortcuts: Cmd+T for terminal, Cmd+E for file viewer
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!api) return
+      // Only handle shortcuts for the active workspace
+      if (!api || !isActive) return
 
       // Cmd+T / Ctrl+T - New Terminal
       if ((e.metaKey || e.ctrlKey) && e.key === 't') {
@@ -131,7 +152,7 @@ export function ViewHolder({
           id: `terminal-${nanoid(8)}`,
           component: 'terminal',
           title: 'Terminal',
-          params: {},
+          params: { cwd: workspaceCwd },
         })
       }
 
@@ -142,14 +163,14 @@ export function ViewHolder({
           id: `file-viewer-${nanoid(8)}`,
           component: 'file-viewer',
           title: 'File Viewer',
-          params: {},
+          params: { rootPath: workspaceCwd },
         })
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [api])
+  }, [api, workspaceCwd, isActive])
 
   const handleReady = useCallback(
     (event: DockviewReadyEvent) => {
@@ -180,7 +201,7 @@ export function ViewHolder({
           id: 'terminal-1',
           component: 'terminal',
           title: 'Terminal',
-          params: {},
+          params: { cwd: workspaceCwd },
         })
       }
 
@@ -198,17 +219,27 @@ export function ViewHolder({
       // Call external onReady callback
       onReady?.(dockviewApi)
     },
-    [fullStorageKey, onReady]
+    [fullStorageKey, onReady, workspaceCwd]
+  )
+
+  // Wrap RightHeaderActions to pass workspaceCwd
+  const RightHeaderActionsWithCwd = useCallback(
+    (props: IDockviewHeaderActionsProps) => (
+      <RightHeaderActions {...props} workspaceCwd={workspaceCwd} />
+    ),
+    [workspaceCwd]
   )
 
   return (
-    <ViewHolderProvider api={api}>
-      <div className={cn('view-holder h-full w-full', className)}>
+    <ViewHolderProvider api={api} workspaceCwd={workspaceCwd}>
+      <div className={cn('view-holder h-full w-full', dockviewThemeClass, className)}>
         <DockviewReact
           components={components}
-          rightHeaderActionsComponent={RightHeaderActions}
+          tabComponents={tabComponents}
+          defaultTabComponent={ThemedTab}
+          rightHeaderActionsComponent={RightHeaderActionsWithCwd}
           onReady={handleReady}
-          className="dockview-theme-dark h-full"
+          className="h-full"
         />
       </div>
     </ViewHolderProvider>

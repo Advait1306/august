@@ -6,6 +6,20 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 interface UseTerminalOptions {
   cwd?: string
   env?: Record<string, string>
+  theme?: 'light' | 'dark'
+}
+
+const TERMINAL_THEMES = {
+  dark: {
+    background: '#1e1e1e',
+    foreground: '#d4d4d4',
+    cursor: '#d4d4d4',
+  },
+  light: {
+    background: '#ffffff',
+    foreground: '#1e1e1e',
+    cursor: '#1e1e1e',
+  },
 }
 
 interface UseTerminalReturn {
@@ -30,15 +44,12 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
 
     mountedRef.current = true
 
+    const terminalTheme = TERMINAL_THEMES[initialOptionsRef.current.theme || 'dark']
     const xterm = new Terminal({
       cursorBlink: true,
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
       fontSize: 14,
-      theme: {
-        background: '#1e1e1e',
-        foreground: '#d4d4d4',
-        cursor: '#d4d4d4'
-      }
+      theme: terminalTheme,
     })
 
     const fitAddon = new FitAddon()
@@ -137,6 +148,13 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
     // Terminal should only initialize once on mount - options are captured in initialOptionsRef
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Update terminal theme when it changes
+  useEffect(() => {
+    if (xtermRef.current && options.theme) {
+      xtermRef.current.options.theme = TERMINAL_THEMES[options.theme]
+    }
+  }, [options.theme])
 
   return {
     terminalRef,

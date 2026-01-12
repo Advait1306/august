@@ -98,7 +98,7 @@ export function FileExplorer({
   }
 
   return (
-    <div className={`h-full overflow-auto bg-[#1e1e1e] ${className || ''}`}>
+    <div className={`h-full overflow-auto bg-background ${className || ''}`}>
       <Tree
         ref={treeRef}
         data={treeData}

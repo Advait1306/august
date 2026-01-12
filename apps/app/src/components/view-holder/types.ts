@@ -49,6 +49,10 @@ export interface ViewHolderProps {
   className?: string
   /** Callback when Dockview is ready and API is available */
   onReady?: (api: DockviewApi) => void
+  /** Default working directory for terminals and file viewers in this workspace */
+  workspaceCwd?: string
+  /** Whether this workspace is currently active (for keyboard shortcuts) */
+  isActive?: boolean
 }
 
 /**
