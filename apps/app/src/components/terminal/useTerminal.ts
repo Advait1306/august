@@ -53,7 +53,9 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
     })
 
     const fitAddon = new FitAddon()
-    const webLinksAddon = new WebLinksAddon()
+    const webLinksAddon = new WebLinksAddon((_event, uri) => {
+      window.api.browser.openUrl(uri)
+    })
     xterm.loadAddon(fitAddon)
     xterm.loadAddon(webLinksAddon)
 
