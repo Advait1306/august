@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   DockviewReact,
   type DockviewReadyEvent,
@@ -91,13 +91,33 @@ function RightHeaderActions({ containerApi }: IDockviewHeaderActionsProps) {
  * Supports drag-and-drop rearrangement, resizable panes, tabbed groups,
  * and persistent layouts via localStorage.
  */
+/**
+ * Validates that a parsed layout object has the expected structure for Dockview
+ */
+function isValidLayout(layout: unknown): boolean {
+  return (
+    layout !== null &&
+    typeof layout === 'object' &&
+    'grid' in layout &&
+    typeof (layout as Record<string, unknown>).grid === 'object'
+  )
+}
+
 export function ViewHolder({
   storageKey = 'default',
   className,
   onReady,
 }: ViewHolderProps) {
   const [api, setApi] = useState<DockviewApi | null>(null)
+  const layoutChangeDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const fullStorageKey = `${STORAGE_KEY_PREFIX}${storageKey}`
+
+  // Cleanup layout change subscription on unmount
+  useEffect(() => {
+    return () => {
+      layoutChangeDisposableRef.current?.dispose()
+    }
+  }, [])
 
   // Keyboard shortcuts: Cmd+T for terminal, Cmd+E for file viewer
   useEffect(() => {
@@ -137,23 +157,25 @@ export function ViewHolder({
       setApi(dockviewApi)
 
       // Try to restore layout from localStorage
+      let layoutRestored = false
       try {
         const saved = localStorage.getItem(fullStorageKey)
         if (saved) {
           const layout = JSON.parse(saved)
-          dockviewApi.fromJSON(layout)
-        } else {
-          // Add default terminal panel
-          dockviewApi.addPanel({
-            id: 'terminal-1',
-            component: 'terminal',
-            title: 'Terminal',
-            params: {},
-          })
+          // Validate layout structure before using it
+          if (isValidLayout(layout)) {
+            dockviewApi.fromJSON(layout)
+            layoutRestored = true
+          } else {
+            console.warn('Invalid ViewHolder layout structure in localStorage, using default')
+          }
         }
       } catch (error) {
         console.error('Failed to restore ViewHolder layout:', error)
-        // Fallback: add default terminal panel
+      }
+
+      // Add default terminal panel if no layout was restored
+      if (!layoutRestored) {
         dockviewApi.addPanel({
           id: 'terminal-1',
           component: 'terminal',
@@ -163,7 +185,8 @@ export function ViewHolder({
       }
 
       // Subscribe to layout changes for persistence
-      const disposable = dockviewApi.onDidLayoutChange(() => {
+      // Store disposable in ref for cleanup on unmount
+      layoutChangeDisposableRef.current = dockviewApi.onDidLayoutChange(() => {
         try {
           const layout = dockviewApi.toJSON()
           localStorage.setItem(fullStorageKey, JSON.stringify(layout))
@@ -174,9 +197,6 @@ export function ViewHolder({
 
       // Call external onReady callback
       onReady?.(dockviewApi)
-
-      // Cleanup subscription on unmount handled by Dockview
-      return () => disposable.dispose()
     },
     [fullStorageKey, onReady]
   )

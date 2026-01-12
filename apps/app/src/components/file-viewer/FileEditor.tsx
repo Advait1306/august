@@ -58,8 +58,13 @@ const LANGUAGE_MAP: Record<string, string> = {
   gql: 'graphql',
 }
 
+function getFileNameFromPath(filePath: string): string {
+  // Handle both Unix (/) and Windows (\) path separators
+  return filePath.split(/[/\\]/).pop() || ''
+}
+
 function getLanguageFromPath(filePath: string): string {
-  const fileName = filePath.split('/').pop()?.toLowerCase() || ''
+  const fileName = getFileNameFromPath(filePath).toLowerCase()
 
   // Check for special filenames
   if (fileName === 'dockerfile') return 'dockerfile'
@@ -80,9 +85,23 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
     show: false,
     filePath: ''
   })
-  const isSavingRef = useRef(false)
+  const contentRef = useRef('')
+  const originalContentRef = useRef('')
+  const lastSavedContentRef = useRef('')
 
   const isDirty = content !== originalContent
+
+  // Keep refs in sync with state for use in file watcher callback
+  useEffect(() => {
+    contentRef.current = content
+  }, [content])
+
+  useEffect(() => {
+    originalContentRef.current = originalContent
+    // Clear the last saved content tracker when original content updates
+    // This happens after a successful save or reload
+    lastSavedContentRef.current = ''
+  }, [originalContent])
 
   const loadFile = useCallback(async (path: string) => {
     setIsLoading(true)
@@ -132,8 +151,11 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
       // Ignore changes to other files
       if (event.filePath !== filePath) return
 
-      // Ignore if we're the ones saving
-      if (isSavingRef.current) return
+      // Ignore if the change matches what we just saved
+      if (lastSavedContentRef.current !== '') {
+        // We recently saved - this is likely our own change
+        return
+      }
 
       // If file was renamed/deleted, show error
       if (event.eventType === 'rename') {
@@ -141,8 +163,8 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
         return
       }
 
-      // Check if editor has unsaved changes
-      const currentIsDirty = content !== originalContent
+      // Check if editor has unsaved changes using refs
+      const currentIsDirty = contentRef.current !== originalContentRef.current
       if (currentIsDirty) {
         // Show notification instead of auto-reloading
         setExternalChange({ show: true, filePath })
@@ -156,7 +178,7 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
       window.api.fileSystem.unwatchFile(filePath)
       unsubscribe()
     }
-  }, [filePath, content, originalContent, loadFile])
+  }, [filePath, loadFile])
 
   const handleReloadFile = useCallback(() => {
     if (filePath) {
@@ -173,21 +195,19 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
     if (!filePath || !isDirty) return
 
     try {
-      isSavingRef.current = true
+      // Track what we're saving to detect our own file change events
+      lastSavedContentRef.current = content
       const response = await window.api.fileSystem.writeFile(filePath, content)
       if (response.success) {
         setOriginalContent(content)
         setExternalChange({ show: false, filePath: '' })
       } else {
         console.error('Failed to save file:', response.error)
+        lastSavedContentRef.current = ''
       }
     } catch (err) {
       console.error('Failed to save file:', err)
-    } finally {
-      // Small delay to ignore any file change events triggered by our save
-      setTimeout(() => {
-        isSavingRef.current = false
-      }, 200)
+      lastSavedContentRef.current = ''
     }
   }, [filePath, content, isDirty])
 
@@ -238,7 +258,7 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
     <div className={`h-full flex flex-col bg-[#1e1e1e] ${className || ''}`}>
       {/* File header with dirty indicator */}
       <div className="flex items-center gap-2 px-3 py-1 border-b border-gray-700 text-sm">
-        <span className="text-gray-300 truncate">{filePath.split('/').pop()}</span>
+        <span className="text-gray-300 truncate">{getFileNameFromPath(filePath)}</span>
         {isDirty && <span className="text-yellow-500">*</span>}
       </div>
 

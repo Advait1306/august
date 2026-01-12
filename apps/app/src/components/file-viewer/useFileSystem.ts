@@ -1,5 +1,61 @@
 import { useState, useCallback, useEffect } from 'react'
 
+// Cross-platform path helper functions
+
+/**
+ * Gets the parent path from a full path, handling both Unix (/) and Windows (\) separators.
+ * Returns the root path if the file is at the root level.
+ */
+function getParentPath(filePath: string): string {
+  // Find the last occurrence of either separator
+  const lastForwardSlash = filePath.lastIndexOf('/')
+  const lastBackSlash = filePath.lastIndexOf('\\')
+  const lastSeparator = Math.max(lastForwardSlash, lastBackSlash)
+
+  if (lastSeparator <= 0) {
+    // Root level file: return root appropriately
+    // For Unix paths like "/file.txt", return "/"
+    // For Windows paths like "C:\file.txt", return "C:\"
+    if (filePath.startsWith('/')) {
+      return '/'
+    }
+    // Windows drive root (e.g., "C:\file.txt" where lastSeparator is 2)
+    const driveMatch = filePath.match(/^[a-zA-Z]:/)
+    if (driveMatch) {
+      return driveMatch[0] + '\\'
+    }
+    // Fallback: return the path itself if no separator found
+    return filePath
+  }
+
+  return filePath.substring(0, lastSeparator)
+}
+
+/**
+ * Joins a parent path with a child name using the appropriate separator.
+ * Detects the separator style from the parent path.
+ */
+function joinPath(parentPath: string, name: string): string {
+  // Detect separator from the parent path
+  const hasBackslash = parentPath.includes('\\')
+  const separator = hasBackslash ? '\\' : '/'
+
+  // Handle root paths that already end with a separator
+  if (parentPath.endsWith('/') || parentPath.endsWith('\\')) {
+    return parentPath + name
+  }
+
+  return parentPath + separator + name
+}
+
+/**
+ * Validates that a filename does not contain path separators.
+ * Returns true if the name is valid, false otherwise.
+ */
+function isValidFileName(name: string): boolean {
+  return !name.includes('/') && !name.includes('\\')
+}
+
 export interface FileNode {
   id: string
   name: string
@@ -123,7 +179,11 @@ export function useFileSystem(options: UseFileSystemOptions = {}): UseFileSystem
 
   const createFile = useCallback(
     async (parentPath: string, name: string): Promise<boolean> => {
-      const filePath = `${parentPath}/${name}`
+      if (!isValidFileName(name)) {
+        console.error('Invalid filename: name cannot contain path separators')
+        return false
+      }
+      const filePath = joinPath(parentPath, name)
       const response = await window.api.fileSystem.createFile(filePath)
       if (response.success) {
         await refresh()
@@ -135,7 +195,11 @@ export function useFileSystem(options: UseFileSystemOptions = {}): UseFileSystem
 
   const createFolder = useCallback(
     async (parentPath: string, name: string): Promise<boolean> => {
-      const folderPath = `${parentPath}/${name}`
+      if (!isValidFileName(name)) {
+        console.error('Invalid folder name: name cannot contain path separators')
+        return false
+      }
+      const folderPath = joinPath(parentPath, name)
       const response = await window.api.fileSystem.createFolder(folderPath)
       if (response.success) {
         await refresh()
@@ -147,8 +211,12 @@ export function useFileSystem(options: UseFileSystemOptions = {}): UseFileSystem
 
   const rename = useCallback(
     async (oldPath: string, newName: string): Promise<boolean> => {
-      const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/'))
-      const newPath = `${parentPath}/${newName}`
+      if (!isValidFileName(newName)) {
+        console.error('Invalid name: name cannot contain path separators')
+        return false
+      }
+      const parentPath = getParentPath(oldPath)
+      const newPath = joinPath(parentPath, newName)
       const response = await window.api.fileSystem.rename(oldPath, newPath)
       if (response.success) {
         await refresh()

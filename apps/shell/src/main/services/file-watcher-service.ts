@@ -1,6 +1,8 @@
 import { watch, FSWatcher } from 'fs'
 import { BrowserWindow } from 'electron'
 import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
+import * as path from 'path'
+import * as os from 'os'
 
 interface WatcherInstance {
   watcher: FSWatcher
@@ -13,6 +15,7 @@ export class FileWatcherService {
   private mainWindow: BrowserWindow | null = null
   private watchers: Map<string, WatcherInstance> = new Map()
   private readonly DEBOUNCE_MS = 100
+  private readonly MAX_WATCHERS = 50
 
   private constructor() {}
 
@@ -27,10 +30,32 @@ export class FileWatcherService {
     this.mainWindow = window
   }
 
+  private isPathWithinHomeDir(filePath: string): boolean {
+    const resolvedPath = path.resolve(filePath)
+    const homeDir = os.homedir()
+    return resolvedPath.startsWith(homeDir + path.sep) || resolvedPath === homeDir
+  }
+
   public watchFile(filePath: string): IPC.FileSystem.WatchResponse {
+    // Validate path is within home directory
+    if (!this.isPathWithinHomeDir(filePath)) {
+      return {
+        success: false,
+        error: 'Cannot watch files outside of home directory'
+      }
+    }
+
     // Already watching this file
     if (this.watchers.has(filePath)) {
       return { success: true }
+    }
+
+    // Check watcher limit
+    if (this.watchers.size >= this.MAX_WATCHERS) {
+      return {
+        success: false,
+        error: `Maximum number of watchers (${this.MAX_WATCHERS}) reached`
+      }
     }
 
     try {

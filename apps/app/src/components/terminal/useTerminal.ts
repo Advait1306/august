@@ -19,11 +19,16 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const terminalIdRef = useRef<string | null>(null)
+  const mountedRef = useRef(true)
+  // Store initial options in refs so they don't cause re-renders
+  const initialOptionsRef = useRef(options)
   const [isConnected, setIsConnected] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!terminalRef.current) return
+
+    mountedRef.current = true
 
     const xterm = new Terminal({
       cursorBlink: true,
@@ -53,9 +58,18 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
         const response = await window.api.terminal.create({
           cols,
           rows,
-          cwd: options.cwd,
-          env: options.env
+          cwd: initialOptionsRef.current.cwd,
+          env: initialOptionsRef.current.env
         })
+
+        // Check if component unmounted while we were waiting for the async call
+        if (!mountedRef.current) {
+          // Component unmounted during async operation - destroy the PTY to prevent leak
+          if (response.success && response.terminalId) {
+            window.api.terminal.destroy(response.terminalId)
+          }
+          return
+        }
 
         if (!response.success || !response.terminalId) {
           setError(response.error || 'Failed to create terminal')
@@ -104,6 +118,8 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
     }
 
     return () => {
+      mountedRef.current = false
+
       inputDisposable.dispose()
       unsubscribeData()
       unsubscribeExit()
@@ -118,7 +134,9 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
       xtermRef.current = null
       fitAddonRef.current = null
     }
-  }, [options.cwd, options.env])
+    // Terminal should only initialize once on mount - options are captured in initialOptionsRef
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return {
     terminalRef,

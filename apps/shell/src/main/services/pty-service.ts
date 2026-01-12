@@ -1,7 +1,12 @@
 import * as pty from 'node-pty'
 import { BrowserWindow } from 'electron'
 import { randomUUID } from 'crypto'
+import * as os from 'os'
+import * as path from 'path'
 import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
+
+// Blocklist of dangerous environment variables that could be used for injection attacks
+const BLOCKED_ENV_VARS = ['PATH', 'LD_PRELOAD', 'DYLD_INSERT_LIBRARIES', 'LD_LIBRARY_PATH']
 
 interface PtyInstance {
   pty: pty.IPty
@@ -14,6 +19,50 @@ export class PtyService {
   private terminals: Map<string, PtyInstance> = new Map()
 
   private constructor() {}
+
+  /**
+   * Validates that the given cwd is within the user's home directory.
+   * Returns the validated cwd or falls back to home directory if invalid.
+   */
+  private validateCwd(requestedCwd: string | undefined): string {
+    const homeDir = os.homedir()
+
+    if (!requestedCwd) {
+      return homeDir
+    }
+
+    try {
+      const resolvedCwd = path.resolve(requestedCwd)
+      const normalizedHome = path.resolve(homeDir)
+
+      // Check if resolved path starts with home directory
+      if (resolvedCwd.startsWith(normalizedHome + path.sep) || resolvedCwd === normalizedHome) {
+        return resolvedCwd
+      }
+
+      // Path is outside home directory, fall back to home
+      console.warn('[PtyService] Requested cwd outside home directory, falling back to home:', requestedCwd)
+      return homeDir
+    } catch {
+      return homeDir
+    }
+  }
+
+  /**
+   * Sanitizes environment variables by removing dangerous entries from user-provided env.
+   */
+  private sanitizeEnv(userEnv: Record<string, string> | undefined): Record<string, string> {
+    if (!userEnv) {
+      return { ...process.env } as Record<string, string>
+    }
+
+    const sanitizedUserEnv = { ...userEnv }
+    for (const blockedVar of BLOCKED_ENV_VARS) {
+      delete sanitizedUserEnv[blockedVar]
+    }
+
+    return { ...process.env, ...sanitizedUserEnv } as Record<string, string>
+  }
 
   public static getInstance(): PtyService {
     if (!PtyService.instance) {
@@ -35,7 +84,8 @@ export class PtyService {
           ? process.env.COMSPEC || 'cmd.exe'
           : process.env.SHELL || '/bin/zsh'
 
-      const cwd = request.cwd || process.env.HOME || process.cwd()
+      const cwd = this.validateCwd(request.cwd)
+      const env = this.sanitizeEnv(request.env)
       console.log('[PtyService] Creating terminal with cwd:', cwd, 'shell:', shell)
 
       const ptyProcess = pty.spawn(shell, [], {
@@ -43,7 +93,7 @@ export class PtyService {
         cols: request.cols,
         rows: request.rows,
         cwd,
-        env: { ...process.env, ...request.env } as Record<string, string>
+        env
       })
 
       ptyProcess.onData((data: string) => {
