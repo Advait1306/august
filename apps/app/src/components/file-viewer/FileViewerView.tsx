@@ -12,9 +12,9 @@ export function FileViewerView({ rootPath, showHidden, className }: FileViewerVi
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
 
   return (
-    <div className={`flex h-full bg-[#1e1e1e] ${className || ''}`}>
+    <div className={`flex h-full bg-background ${className || ''}`}>
       {/* File Explorer - 25% width */}
-      <div className="w-1/4 min-w-[200px] border-r border-gray-700 overflow-hidden">
+      <div className="w-1/4 min-w-[200px] border-r border-border overflow-hidden">
         <FileExplorer
           rootPath={rootPath}
           showHidden={showHidden}

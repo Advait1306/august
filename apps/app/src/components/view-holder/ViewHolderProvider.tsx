@@ -15,12 +15,13 @@ const ViewHolderContext = createContext<ViewHolderContextValue | null>(null)
 interface ViewHolderProviderProps {
   children: ReactNode
   api: DockviewApi | null
+  workspaceCwd?: string
 }
 
 /**
  * Context provider for ViewHolder API access
  */
-export function ViewHolderProvider({ children, api }: ViewHolderProviderProps) {
+export function ViewHolderProvider({ children, api, workspaceCwd }: ViewHolderProviderProps) {
   const addPanel = useCallback(
     (viewType: ViewType, params: Record<string, unknown> = {}) => {
       if (!api) return
@@ -32,14 +33,25 @@ export function ViewHolderProvider({ children, api }: ViewHolderProviderProps) {
       }
 
       const id = `${viewType}-${nanoid(8)}`
+
+      // Merge workspace cwd into params based on view type
+      const cwdParams: Record<string, unknown> = {}
+      if (workspaceCwd) {
+        if (viewType === 'terminal') {
+          cwdParams.cwd = workspaceCwd
+        } else if (viewType === 'file-viewer') {
+          cwdParams.rootPath = workspaceCwd
+        }
+      }
+
       api.addPanel({
         id,
         component: viewType,
         title: viewTypeInfo.displayName,
-        params: { ...viewTypeInfo.defaultParams, ...params },
+        params: { ...viewTypeInfo.defaultParams, ...cwdParams, ...params },
       })
     },
-    [api]
+    [api, workspaceCwd]
   )
 
   const value = useMemo<ViewHolderContextValue>(

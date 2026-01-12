@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Editor from '@monaco-editor/react'
+import { useTheme } from '@/src/components/theme'
 
 interface FileEditorProps {
   filePath: string | null
@@ -76,6 +77,7 @@ function getLanguageFromPath(filePath: string): string {
 }
 
 export function FileEditor({ filePath, className }: FileEditorProps) {
+  const theme = useTheme()
   const [content, setContent] = useState('')
   const [originalContent, setOriginalContent] = useState('')
   const [language, setLanguage] = useState('plaintext')
@@ -227,7 +229,7 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
   if (!filePath) {
     return (
       <div
-        className={`flex items-center justify-center h-full bg-[#1e1e1e] text-gray-500 text-sm ${className || ''}`}
+        className={`flex items-center justify-center h-full bg-background text-muted-foreground text-sm ${className || ''}`}
       >
         Select a file to view
       </div>
@@ -237,7 +239,7 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
   if (isLoading) {
     return (
       <div
-        className={`flex items-center justify-center h-full bg-[#1e1e1e] text-gray-400 text-sm ${className || ''}`}
+        className={`flex items-center justify-center h-full bg-background text-muted-foreground text-sm ${className || ''}`}
       >
         Loading...
       </div>
@@ -247,7 +249,7 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
   if (error) {
     return (
       <div
-        className={`flex items-center justify-center h-full bg-[#1e1e1e] text-red-400 text-sm p-4 ${className || ''}`}
+        className={`flex items-center justify-center h-full bg-background text-destructive text-sm p-4 ${className || ''}`}
       >
         {error}
       </div>
@@ -255,10 +257,10 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
   }
 
   return (
-    <div className={`h-full flex flex-col bg-[#1e1e1e] ${className || ''}`}>
+    <div className={`h-full flex flex-col bg-background ${className || ''}`}>
       {/* File header with dirty indicator */}
-      <div className="flex items-center gap-2 px-3 py-1 border-b border-gray-700 text-sm">
-        <span className="text-gray-300 truncate">{getFileNameFromPath(filePath)}</span>
+      <div className="flex items-center gap-2 px-3 py-1 border-b border-border text-sm">
+        <span className="text-foreground truncate">{getFileNameFromPath(filePath)}</span>
         {isDirty && <span className="text-yellow-500">*</span>}
       </div>
 
@@ -292,7 +294,7 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
           language={language}
           value={content}
           onChange={(value) => setContent(value ?? '')}
-          theme="vs-dark"
+          theme={theme === 'dark' ? 'vs-dark' : 'light'}
           options={{
             minimap: { enabled: false },
             fontSize: 14,

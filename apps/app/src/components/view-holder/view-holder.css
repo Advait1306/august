@@ -1,29 +1,91 @@
 /**
  * ViewHolder theme overrides for Dockview
- * Matches the app's design system using CSS variables
+ * Uses direct selectors for reliable theming across light/dark modes
  */
 
-.view-holder {
-  --dv-background-color: var(--background);
-  --dv-paneview-header-border-color: var(--border);
-  --dv-tabs-and-actions-container-background-color: var(--muted);
-  --dv-activegroup-visiblepanel-tab-background-color: var(--background);
-  --dv-activegroup-hiddenpanel-tab-background-color: var(--muted);
-  --dv-inactivegroup-visiblepanel-tab-background-color: var(--muted);
-  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--muted);
-  --dv-tab-divider-color: var(--border);
-  --dv-separator-border: var(--border);
-  --dv-tabs-and-actions-container-font-size: 13px;
-  --dv-active-sash-color: var(--primary);
-  --dv-group-view-background-color: var(--background);
-  --dv-tabs-container-scrollbar-color: var(--muted-foreground);
-  --dv-icon-hover-background-color: var(--accent);
-  --dv-floating-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+/* Tab container bar - using Tailwind color variables via oklch */
+.view-holder .dv-tabs-and-actions-container {
+  background-color: oklch(0.9702 0 0); /* muted light */
+  border-bottom: 1px solid oklch(0.87 0 0); /* border light */
+  height: 36px;
 }
 
-/* Dark mode specific overrides */
-.dark .view-holder {
-  --dv-floating-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+.dark .view-holder .dv-tabs-and-actions-container {
+  background-color: oklch(0.2178 0 0); /* muted dark */
+  border-bottom: 1px solid oklch(0.371 0 0); /* border dark */
+}
+
+/* Remove default tab wrapper padding/margins */
+.view-holder .dv-tabs-container {
+  padding: 0;
+  gap: 0;
+}
+
+/* Make tab wrappers fill height */
+.view-holder .dv-tab {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+/* Remove tab dividers and outlines */
+.view-holder .dv-tab::before,
+.view-holder .dv-tab::after {
+  display: none;
+}
+
+/* Active tab styling - remove default focus/active outlines */
+.view-holder .dv-tab.dv-active-tab,
+.view-holder .dv-tab:focus,
+.view-holder .dv-tab:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border: none;
+}
+
+/* Panel content background */
+.view-holder .dv-groupview {
+  background-color: oklch(0.97 0 0); /* background light */
+}
+
+.dark .view-holder .dv-groupview {
+  background-color: oklch(0.269 0 0); /* background dark */
+}
+
+/* Main dockview container background (shows when no panels) */
+.view-holder .dv-dockview {
+  background-color: oklch(0.97 0 0); /* background light */
+}
+
+.dark .view-holder .dv-dockview {
+  background-color: oklch(0.269 0 0); /* background dark */
+}
+
+/* Watermark/empty state background */
+.view-holder .dv-watermark {
+  background-color: oklch(0.97 0 0); /* background light */
+  color: oklch(0.551 0.0234 264.36); /* muted-foreground light */
+}
+
+.dark .view-holder .dv-watermark {
+  background-color: oklch(0.269 0 0); /* background dark */
+  color: oklch(0.7058 0 0); /* muted-foreground dark */
+}
+
+/* Separator styling */
+.view-holder .dv-resize-container > .dv-sash {
+  background: transparent;
+}
+
+.view-holder .dv-resize-container > .dv-sash:hover {
+  background: oklch(0.955 0 0); /* accent light */
+}
+
+.dark .view-holder .dv-resize-container > .dv-sash:hover {
+  background: oklch(0.37 0 0); /* accent dark */
 }
 
 /* Tab styling */
