@@ -65,6 +65,11 @@ declare global {
           path: string,
           content: string
         ) => Promise<IPC.FileSystem.OperationResponse>;
+        watchFile: (path: string) => Promise<IPC.FileSystem.WatchResponse>;
+        unwatchFile: (path: string) => Promise<IPC.FileSystem.WatchResponse>;
+        onFileChanged: (
+          callback: (event: IPC.FileSystem.FileChangedEvent) => void
+        ) => () => void;
       };
     };
   }

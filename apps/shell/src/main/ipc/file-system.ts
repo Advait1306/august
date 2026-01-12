@@ -3,6 +3,7 @@ import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
 import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
+import { fileWatcherService } from '../services/file-watcher-service'
 
 export function registerFileSystemIpcHandlers(): void {
   ipcMain.handle(
@@ -126,6 +127,20 @@ export function registerFileSystemIpcHandlers(): void {
           error: error instanceof Error ? error.message : 'Failed to write file',
         }
       }
+    }
+  )
+
+  ipcMain.handle(
+    IPC_CHANNELS.FILE_SYSTEM.WATCH_FILE,
+    (_event, filePath: string): IPC.FileSystem.WatchResponse => {
+      return fileWatcherService.watchFile(filePath)
+    }
+  )
+
+  ipcMain.handle(
+    IPC_CHANNELS.FILE_SYSTEM.UNWATCH_FILE,
+    (_event, filePath: string): IPC.FileSystem.WatchResponse => {
+      return fileWatcherService.unwatchFile(filePath)
     }
   )
 }

@@ -180,5 +180,15 @@ export namespace IPC {
       success: boolean;
       error?: string;
     }
+
+    export interface FileChangedEvent {
+      filePath: string;
+      eventType: 'change' | 'rename';
+    }
+
+    export interface WatchResponse {
+      success: boolean;
+      error?: string;
+    }
   }
 }

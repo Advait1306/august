@@ -73,7 +73,16 @@ const api = {
     readFile: (path: string): Promise<IPC.FileSystem.ReadFileResponse> =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.READ_FILE, path),
     writeFile: (path: string, content: string): Promise<IPC.FileSystem.OperationResponse> =>
-      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.WRITE_FILE, path, content)
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.WRITE_FILE, path, content),
+    watchFile: (path: string): Promise<IPC.FileSystem.WatchResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.WATCH_FILE, path),
+    unwatchFile: (path: string): Promise<IPC.FileSystem.WatchResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.UNWATCH_FILE, path),
+    onFileChanged: (callback: (event: IPC.FileSystem.FileChangedEvent) => void) => {
+      const handler = (_: unknown, event: IPC.FileSystem.FileChangedEvent) => callback(event)
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
+      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
+    }
   }
 }
 

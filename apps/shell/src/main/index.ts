@@ -6,6 +6,7 @@ import icon from '../../resources/icon.png?asset'
 import { setMainWindow, handleAuthToken } from './ipc/auth'
 import { autoUpdaterService } from './services/auto-updater-service'
 import { ptyService } from './services/pty-service'
+import { fileWatcherService } from './services/file-watcher-service'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -33,6 +34,9 @@ function createWindow(): void {
 
   // Set the main window reference for PTY service
   ptyService.setMainWindow(mainWindow)
+
+  // Set the main window reference for file watcher service
+  fileWatcherService.setMainWindow(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
@@ -168,6 +172,9 @@ app.on('before-quit', () => {
 
   // Clean up PTY service
   ptyService.destroyAll()
+
+  // Clean up file watcher service
+  fileWatcherService.destroyAll()
 })
 
 // In this file you can include the rest of your app's specific main process

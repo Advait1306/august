@@ -44,5 +44,8 @@ export const IPC_CHANNELS = {
     GET_HOME_DIR: 'fs:getHomeDir',
     READ_FILE: 'fs:readFile',
     WRITE_FILE: 'fs:writeFile',
+    WATCH_FILE: 'fs:watchFile',
+    UNWATCH_FILE: 'fs:unwatchFile',
+    FILE_CHANGED: 'fs:fileChanged',
   },
 } as const;
