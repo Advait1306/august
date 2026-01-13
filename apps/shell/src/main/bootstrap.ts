@@ -10,4 +10,4 @@ if (!app.isPackaged) {
 }
 
 // Dynamic import ensures all other modules load AFTER userData path is set
-import('./index')
+await import('./index')
