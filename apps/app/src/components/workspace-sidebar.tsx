@@ -21,6 +21,7 @@ import { Plus, Folder, MoreHorizontal, Trash2, Edit2 } from "lucide-react";
 import { useWorkspaceStore } from "@/src/stores/workspace-store";
 import { AddWorkspaceDialog } from "./add-workspace-dialog";
 import { Input } from "@/components/ui/input";
+import { UserButton } from "@clerk/clerk-react";
 
 export function WorkspaceSidebar() {
   const {
@@ -131,8 +132,19 @@ export function WorkspaceSidebar() {
         </SidebarContent>
 
         <SidebarFooter>
-          <div className="px-2 py-1 text-xs text-muted-foreground truncate group-data-[collapsible=icon]:hidden">
-            {workspaces.find((w) => w.id === activeWorkspaceId)?.cwd}
+          <div className="flex items-center gap-2 px-2 py-2 border-t border-neutral-300 dark:border-neutral-700">
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "h-7 w-7",
+                },
+              }}
+            />
+            <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+              <div className="text-xs text-muted-foreground truncate">
+                {workspaces.find((w) => w.id === activeWorkspaceId)?.cwd}
+              </div>
+            </div>
           </div>
         </SidebarFooter>
       </Sidebar>
