@@ -13,6 +13,7 @@ export function FileViewerPanel({
     <FileViewerView
       rootPath={params.rootPath}
       showHidden={params.showHidden}
+      initialFilePath={params.initialFilePath}
       className="h-full w-full"
     />
   )

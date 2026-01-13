@@ -190,5 +190,23 @@ export namespace IPC {
       success: boolean;
       error?: string;
     }
+
+    export interface SearchFilesRequest {
+      path: string;
+      query: string;
+      excludePatterns: string[];
+      maxResults?: number;
+      includeHidden?: boolean;
+    }
+
+    export interface SearchFilesResponse {
+      success: boolean;
+      files?: Array<{
+        path: string;
+        name: string;
+        extension: string;
+      }>;
+      error?: string;
+    }
   }
 }

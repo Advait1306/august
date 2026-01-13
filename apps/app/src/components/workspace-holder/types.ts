@@ -19,6 +19,7 @@ export interface TerminalPanelParams {
 export interface FileViewerPanelParams {
   rootPath?: string
   showHidden?: boolean
+  initialFilePath?: string
 }
 
 /**

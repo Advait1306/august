@@ -5,11 +5,12 @@ import { FileEditor } from './FileEditor'
 interface FileViewerViewProps {
   rootPath?: string
   showHidden?: boolean
+  initialFilePath?: string
   className?: string
 }
 
-export function FileViewerView({ rootPath, showHidden, className }: FileViewerViewProps) {
-  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null)
+export function FileViewerView({ rootPath, showHidden, initialFilePath, className }: FileViewerViewProps) {
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(initialFilePath ?? null)
 
   return (
     <div className={`flex h-full bg-background ${className || ''}`}>
