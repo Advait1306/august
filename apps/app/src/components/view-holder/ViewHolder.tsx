@@ -145,7 +145,6 @@ export function ViewHolder({
 
   // Get workspace and closed tabs stores for keyboard shortcuts
   const {
-    workspaces,
     activeWorkspaceId,
     setAddDialogOpen,
     selectWorkspaceAtIndex,
