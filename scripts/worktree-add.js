@@ -92,7 +92,27 @@ function main() {
     }
   }
 
-  console.log(`\nDone! Copied ${copied} .env file(s) to ${worktreePath}`)
+  console.log(`\nCopied ${copied} .env file(s) to ${worktreePath}`)
+
+  // Install dependencies
+  console.log('\nInstalling dependencies...')
+  try {
+    execSync('npm install', { cwd: absoluteWorktreePath, stdio: 'inherit' })
+  } catch (error) {
+    console.error('Failed to install dependencies')
+    process.exit(1)
+  }
+
+  // Rebuild native modules for Electron
+  console.log('\nRebuilding native modules for Electron...')
+  try {
+    execSync('npx electron-rebuild -m apps/shell -w node-pty', { cwd: absoluteWorktreePath, stdio: 'inherit' })
+  } catch (error) {
+    console.error('Failed to rebuild native modules')
+    process.exit(1)
+  }
+
+  console.log(`\nDone! Worktree ${worktreePath} is ready.`)
 }
 
 main()
