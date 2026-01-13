@@ -10,7 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { useActiveWorkspaceApiStore } from '@/src/stores/active-workspace-api-store'
+import { useWorkspaceStore } from '@/src/stores/workspace-store'
 
 const EXCLUDE_PATTERNS = [
   'node_modules',
@@ -38,8 +38,9 @@ export function FileOpener({ open, onOpenChange }: FileOpenerProps) {
   const [query, setQuery] = useState('')
   const [files, setFiles] = useState<FileResult[]>([])
 
-  const api = useActiveWorkspaceApiStore((state) => state.api)
-  const workspaceCwd = useActiveWorkspaceApiStore((state) => state.workspaceCwd)
+  const api = useWorkspaceStore((state) => state.activeWorkspaceApi)
+  const activeWorkspace = useWorkspaceStore((state) => state.getActiveWorkspace())
+  const workspaceCwd = activeWorkspace?.cwd ?? null
 
   const searchFiles = useCallback(
     async (searchQuery: string) => {

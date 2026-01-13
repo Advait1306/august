@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { nanoid } from 'nanoid'
+import type { DockviewApi } from 'dockview-react'
 import type { Workspace } from '@/src/types/workspace'
 
 const STORAGE_KEY = 'august-workspaces'
@@ -9,6 +10,7 @@ const WORKSPACE_HOLDER_STORAGE_PREFIX = 'august-workspace-holder-workspace-'
 interface WorkspaceStore {
   workspaces: Workspace[]
   activeWorkspaceId: string | null
+  activeWorkspaceApi: DockviewApi | null
   isInitialized: boolean
   isAddDialogOpen: boolean
 
@@ -18,6 +20,7 @@ interface WorkspaceStore {
   deleteWorkspace: (id: string) => void
   updateWorkspace: (id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>) => void
   setActiveWorkspace: (id: string) => void
+  setActiveWorkspaceApi: (api: DockviewApi | null) => void
   getActiveWorkspace: () => Workspace | undefined
   setAddDialogOpen: (open: boolean) => void
 
@@ -32,6 +35,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
     (set, get) => ({
       workspaces: [],
       activeWorkspaceId: null,
+      activeWorkspaceApi: null,
       isInitialized: false,
       isAddDialogOpen: false,
 
@@ -107,6 +111,10 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         if (workspaces.some((w) => w.id === id)) {
           set({ activeWorkspaceId: id })
         }
+      },
+
+      setActiveWorkspaceApi: (api: DockviewApi | null) => {
+        set({ activeWorkspaceApi: api })
       },
 
       getActiveWorkspace: () => {

@@ -17,7 +17,6 @@ import { ThemedTab } from './ThemedTab'
 import type { WorkspaceHolderProps, ViewType } from './types'
 import { useWorkspaceStore } from '@/src/stores/workspace-store'
 import { useClosedTabsStore } from '@/src/stores/closed-tabs-store'
-import { useActiveWorkspaceApiStore } from '@/src/stores/active-workspace-api-store'
 
 import 'dockview-react/dist/styles/dockview.css'
 import './workspace-holder.css'
@@ -153,14 +152,14 @@ export function WorkspaceHolder({
     selectPreviousWorkspace,
   } = useWorkspaceStore()
   const { pushClosedTab, popClosedTab } = useClosedTabsStore()
-  const setActiveApi = useActiveWorkspaceApiStore((state) => state.setApi)
+  const setActiveWorkspaceApi = useWorkspaceStore((state) => state.setActiveWorkspaceApi)
 
   // Register this workspace's API when it becomes active
   useEffect(() => {
     if (isActive && api) {
-      setActiveApi(api, workspaceCwd ?? null)
+      setActiveWorkspaceApi(api)
     }
-  }, [isActive, api, workspaceCwd, setActiveApi])
+  }, [isActive, api, setActiveWorkspaceApi])
 
   // Keyboard shortcuts for tab and workspace navigation
   useEffect(() => {
