@@ -90,7 +90,7 @@ describe("Auth IPC Handlers", () => {
 
       setMainWindow(mockWindow as unknown as Electron.BrowserWindow);
 
-      const token = { ticket: "test-token-123" };
+      const token = "test-token-123";
       handleAuthToken(token);
 
       expect(mockSend).toHaveBeenCalledWith("auth:ticket-received", token);
@@ -109,7 +109,7 @@ describe("Auth IPC Handlers", () => {
 
       setMainWindow(mockWindow as unknown as Electron.BrowserWindow);
 
-      const token = { ticket: "test-token-123" };
+      const token = "test-token-123";
       handleAuthToken(token);
 
       expect(mockSend).not.toHaveBeenCalled();
@@ -121,7 +121,7 @@ describe("Auth IPC Handlers", () => {
 
       const { handleAuthToken } = await import("../../ipc/auth");
 
-      const token = { ticket: "test-token-123" };
+      const token = "test-token-123";
 
       // Should not throw
       expect(() => handleAuthToken(token)).not.toThrow();
