@@ -38,7 +38,7 @@ export function FileOpener({ open, onOpenChange }: FileOpenerProps) {
   const [query, setQuery] = useState('')
   const [files, setFiles] = useState<FileResult[]>([])
 
-  const api = useWorkspaceStore((state) => state.activeWorkspaceApi)
+  const api = useWorkspaceStore((state) => state.getActiveWorkspaceApi())
   const activeWorkspace = useWorkspaceStore((state) => state.getActiveWorkspace())
   const workspaceCwd = activeWorkspace?.cwd ?? null
 

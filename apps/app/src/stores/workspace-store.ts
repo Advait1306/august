@@ -10,7 +10,7 @@ const WORKSPACE_HOLDER_STORAGE_PREFIX = 'august-workspace-holder-workspace-'
 interface WorkspaceStore {
   workspaces: Workspace[]
   activeWorkspaceId: string | null
-  activeWorkspaceApi: DockviewApi | null
+  workspaceApis: Map<string, DockviewApi>
   isInitialized: boolean
   isAddDialogOpen: boolean
 
@@ -20,8 +20,10 @@ interface WorkspaceStore {
   deleteWorkspace: (id: string) => void
   updateWorkspace: (id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>) => void
   setActiveWorkspace: (id: string) => void
-  setActiveWorkspaceApi: (api: DockviewApi | null) => void
+  registerWorkspaceApi: (id: string, api: DockviewApi) => void
+  unregisterWorkspaceApi: (id: string) => void
   getActiveWorkspace: () => Workspace | undefined
+  getActiveWorkspaceApi: () => DockviewApi | null
   setAddDialogOpen: (open: boolean) => void
 
   // Navigation helpers for keyboard shortcuts
@@ -35,7 +37,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
     (set, get) => ({
       workspaces: [],
       activeWorkspaceId: null,
-      activeWorkspaceApi: null,
+      workspaceApis: new Map(),
       isInitialized: false,
       isAddDialogOpen: false,
 
@@ -113,13 +115,29 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         }
       },
 
-      setActiveWorkspaceApi: (api: DockviewApi | null) => {
-        set({ activeWorkspaceApi: api })
+      registerWorkspaceApi: (id: string, api: DockviewApi) => {
+        const { workspaceApis } = get()
+        const newApis = new Map(workspaceApis)
+        newApis.set(id, api)
+        set({ workspaceApis: newApis })
+      },
+
+      unregisterWorkspaceApi: (id: string) => {
+        const { workspaceApis } = get()
+        const newApis = new Map(workspaceApis)
+        newApis.delete(id)
+        set({ workspaceApis: newApis })
       },
 
       getActiveWorkspace: () => {
         const { workspaces, activeWorkspaceId } = get()
         return workspaces.find((w) => w.id === activeWorkspaceId)
+      },
+
+      getActiveWorkspaceApi: () => {
+        const { workspaceApis, activeWorkspaceId } = get()
+        if (!activeWorkspaceId) return null
+        return workspaceApis.get(activeWorkspaceId) ?? null
       },
 
       setAddDialogOpen: (open: boolean) => {

@@ -65,6 +65,7 @@ export function AgentRunner() {
                     aria-hidden={!isActive}
                   >
                     <WorkspaceHolder
+                      workspaceId={workspace.id}
                       storageKey={`workspace-${workspace.id}`}
                       workspaceCwd={workspace.cwd}
                       isActive={isActive}

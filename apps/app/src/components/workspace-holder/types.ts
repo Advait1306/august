@@ -44,6 +44,8 @@ export interface ViewTypeRegistration<T extends ViewType = ViewType> {
  * Props for the WorkspaceHolder component
  */
 export interface WorkspaceHolderProps {
+  /** Unique workspace identifier */
+  workspaceId: string
   /** Storage key suffix for localStorage persistence */
   storageKey?: string
   /** Additional CSS classes */
