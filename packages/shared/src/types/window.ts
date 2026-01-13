@@ -70,6 +70,9 @@ declare global {
         onFileChanged: (
           callback: (event: IPC.FileSystem.FileChangedEvent) => void
         ) => () => void;
+        searchFiles: (
+          request: IPC.FileSystem.SearchFilesRequest
+        ) => Promise<IPC.FileSystem.SearchFilesResponse>;
       };
     };
   }
