@@ -81,13 +81,12 @@ export function FileOpener({ open, onOpenChange }: FileOpenerProps) {
     }
   }, [query, open, debouncedSearch])
 
-  // Initial search when opening
+  // Reset query when opening (debounced effect handles the search)
   useEffect(() => {
     if (open) {
       setQuery('')
-      searchFiles('')
     }
-  }, [open, searchFiles])
+  }, [open])
 
   const handleSelect = useCallback(
     (filePath: string, fileName: string) => {
