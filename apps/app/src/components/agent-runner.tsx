@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
-import { ViewHolder } from './view-holder'
+import { WorkspaceHolder } from './workspace-holder'
 import { WorkspaceSidebar } from './workspace-sidebar'
 import { useWorkspaceStore } from '@/src/stores/workspace-store'
 
@@ -64,7 +64,7 @@ export function AgentRunner() {
                   }}
                   aria-hidden={!isActive}
                 >
-                  <ViewHolder
+                  <WorkspaceHolder
                     storageKey={`workspace-${workspace.id}`}
                     workspaceCwd={workspace.cwd}
                     isActive={isActive}

@@ -40,9 +40,9 @@ export interface ViewTypeRegistration<T extends ViewType = ViewType> {
 }
 
 /**
- * Props for the ViewHolder component
+ * Props for the WorkspaceHolder component
  */
-export interface ViewHolderProps {
+export interface WorkspaceHolderProps {
   /** Storage key suffix for localStorage persistence */
   storageKey?: string
   /** Additional CSS classes */
@@ -56,10 +56,31 @@ export interface ViewHolderProps {
 }
 
 /**
+ * Information about a closed tab for reopen functionality
+ */
+export interface ClosedTabInfo {
+  viewType: ViewType
+  params: Record<string, unknown>
+  title: string
+}
+
+/**
  * Context value providing access to Dockview API
  */
-export interface ViewHolderContextValue {
+export interface WorkspaceHolderContextValue {
   api: DockviewApi | null
   /** Add a new panel with the specified view type */
   addPanel: (viewType: ViewType, params?: Record<string, unknown>) => void
+  /** Close the currently active panel */
+  closeActivePanel: () => ClosedTabInfo | null
+  /** Activate panel at the specified index (0-based) */
+  activatePanelAtIndex: (index: number) => void
+  /** Activate the next panel */
+  activateNextPanel: () => void
+  /** Activate the previous panel */
+  activatePreviousPanel: () => void
+  /** Get the total number of panels */
+  getPanelCount: () => number
+  /** Reopen a closed tab */
+  reopenTab: (tabInfo: ClosedTabInfo) => void
 }

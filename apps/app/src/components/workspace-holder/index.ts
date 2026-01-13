@@ -1,5 +1,5 @@
-export { ViewHolder } from './ViewHolder'
-export { ViewHolderProvider, useViewHolder } from './ViewHolderProvider'
+export { WorkspaceHolder } from './WorkspaceHolder'
+export { WorkspaceHolderProvider, useWorkspaceHolder } from './WorkspaceHolderProvider'
 export {
   registerViewType,
   getViewType,
@@ -9,8 +9,8 @@ export {
 export type {
   ViewType,
   ViewTypeRegistration,
-  ViewHolderProps,
-  ViewHolderContextValue,
+  WorkspaceHolderProps,
+  WorkspaceHolderContextValue,
   TerminalPanelParams,
   ViewParamsMap,
 } from './types'
