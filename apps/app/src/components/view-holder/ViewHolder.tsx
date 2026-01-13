@@ -14,7 +14,9 @@ import { ViewHolderProvider } from './ViewHolderProvider'
 import { TerminalPanel } from './panels/TerminalPanel'
 import { FileViewerPanel } from './panels/FileViewerPanel'
 import { ThemedTab } from './ThemedTab'
-import type { ViewHolderProps } from './types'
+import type { ViewHolderProps, ViewType } from './types'
+import { useWorkspaceStore } from '@/src/stores/workspace-store'
+import { useClosedTabsStore } from '@/src/stores/closed-tabs-store'
 
 import 'dockview-react/dist/styles/dockview.css'
 import './view-holder.css'
@@ -141,14 +143,64 @@ export function ViewHolder({
     }
   }, [])
 
-  // Keyboard shortcuts: Cmd+T for terminal, Cmd+E for file viewer
+  // Get workspace and closed tabs stores for keyboard shortcuts
+  const {
+    workspaces,
+    activeWorkspaceId,
+    setAddDialogOpen,
+    selectWorkspaceAtIndex,
+    selectNextWorkspace,
+    selectPreviousWorkspace,
+  } = useWorkspaceStore()
+  const { pushClosedTab, popClosedTab } = useClosedTabsStore()
+
+  // Keyboard shortcuts for tab and workspace navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle shortcuts for the active workspace
+      const isMeta = e.metaKey
+      const isCtrl = e.ctrlKey
+      const isShift = e.shiftKey
+      const isAlt = e.altKey
+
+      // === WORKSPACE SHORTCUTS (global, not tied to active workspace) ===
+
+      // Cmd+N: Open new workspace dialog
+      if (isMeta && !isShift && !isAlt && e.key === 'n') {
+        e.preventDefault()
+        setAddDialogOpen(true)
+        return
+      }
+
+      // Cmd+Option+1-9: Jump to workspace 1-9
+      // Use e.code for number keys since Option can modify e.key on macOS
+      if (isMeta && isAlt && !isShift && e.code >= 'Digit1' && e.code <= 'Digit9') {
+        e.preventDefault()
+        const index = parseInt(e.code.replace('Digit', ''), 10) - 1
+        selectWorkspaceAtIndex(index)
+        return
+      }
+
+      // Cmd+Option+[: Previous workspace
+      // Use e.code because Option+[ produces special characters on macOS
+      if (isMeta && isAlt && !isShift && e.code === 'BracketLeft') {
+        e.preventDefault()
+        selectPreviousWorkspace()
+        return
+      }
+
+      // Cmd+Option+]: Next workspace
+      // Use e.code because Option+] produces special characters on macOS
+      if (isMeta && isAlt && !isShift && e.code === 'BracketRight') {
+        e.preventDefault()
+        selectNextWorkspace()
+        return
+      }
+
+      // === TAB SHORTCUTS (only for active workspace) ===
       if (!api || !isActive) return
 
-      // Cmd+T / Ctrl+T - New Terminal
-      if ((e.metaKey || e.ctrlKey) && e.key === 't') {
+      // Cmd+T: New Terminal
+      if (isMeta && !isShift && !isAlt && e.key === 't') {
         e.preventDefault()
         api.addPanel({
           id: `terminal-${nanoid(8)}`,
@@ -156,10 +208,11 @@ export function ViewHolder({
           title: 'Terminal',
           params: { cwd: workspaceCwd },
         })
+        return
       }
 
-      // Cmd+E / Ctrl+E - New File Viewer
-      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+      // Cmd+E: New File Viewer
+      if (isMeta && !isShift && !isAlt && e.key === 'e') {
         e.preventDefault()
         api.addPanel({
           id: `file-viewer-${nanoid(8)}`,
@@ -167,12 +220,119 @@ export function ViewHolder({
           title: 'File Viewer',
           params: { rootPath: workspaceCwd },
         })
+        return
+      }
+
+      // Cmd+W: Close current tab
+      if (isMeta && !isShift && !isAlt && e.key === 'w') {
+        e.preventDefault()
+        const activePanel = api.activePanel
+        if (activePanel && activeWorkspaceId) {
+          // Save tab info for reopen
+          const viewType = activePanel.api.component as ViewType
+          const params = (activePanel.params ?? {}) as Record<string, unknown>
+          const title = activePanel.api.title ?? ''
+          pushClosedTab(activeWorkspaceId, { viewType, params, title })
+          activePanel.api.close()
+        }
+        return
+      }
+
+      // Cmd+Shift+T: Reopen last closed tab
+      if (isMeta && isShift && !isAlt && (e.key === 't' || e.key === 'T')) {
+        e.preventDefault()
+        if (activeWorkspaceId) {
+          const tabInfo = popClosedTab(activeWorkspaceId)
+          if (tabInfo) {
+            api.addPanel({
+              id: `${tabInfo.viewType}-${nanoid(8)}`,
+              component: tabInfo.viewType,
+              title: tabInfo.title,
+              params: tabInfo.params,
+            })
+          }
+        }
+        return
+      }
+
+      // Cmd+1-9: Jump to tab 1-9
+      if (isMeta && !isShift && !isAlt && e.key >= '1' && e.key <= '9') {
+        e.preventDefault()
+        const index = parseInt(e.key, 10) - 1
+        const panels = api.panels
+        if (index >= 0 && index < panels.length) {
+          panels[index].api.setActive()
+        }
+        return
+      }
+
+      // Cmd+Shift+[: Previous tab
+      if (isMeta && isShift && !isAlt && e.key === '[') {
+        e.preventDefault()
+        const panels = api.panels
+        if (panels.length > 0) {
+          const activePanel = api.activePanel
+          const currentIndex = activePanel ? panels.indexOf(activePanel) : 0
+          const prevIndex = currentIndex <= 0 ? panels.length - 1 : currentIndex - 1
+          panels[prevIndex].api.setActive()
+        }
+        return
+      }
+
+      // Cmd+Shift+]: Next tab
+      if (isMeta && isShift && !isAlt && e.key === ']') {
+        e.preventDefault()
+        const panels = api.panels
+        if (panels.length > 0) {
+          const activePanel = api.activePanel
+          const currentIndex = activePanel ? panels.indexOf(activePanel) : -1
+          const nextIndex = (currentIndex + 1) % panels.length
+          panels[nextIndex].api.setActive()
+        }
+        return
+      }
+
+      // Ctrl+Tab: Next tab
+      if (isCtrl && !isShift && !isAlt && !isMeta && e.key === 'Tab') {
+        e.preventDefault()
+        const panels = api.panels
+        if (panels.length > 0) {
+          const activePanel = api.activePanel
+          const currentIndex = activePanel ? panels.indexOf(activePanel) : -1
+          const nextIndex = (currentIndex + 1) % panels.length
+          panels[nextIndex].api.setActive()
+        }
+        return
+      }
+
+      // Ctrl+Shift+Tab: Previous tab
+      if (isCtrl && isShift && !isAlt && !isMeta && e.key === 'Tab') {
+        e.preventDefault()
+        const panels = api.panels
+        if (panels.length > 0) {
+          const activePanel = api.activePanel
+          const currentIndex = activePanel ? panels.indexOf(activePanel) : 0
+          const prevIndex = currentIndex <= 0 ? panels.length - 1 : currentIndex - 1
+          panels[prevIndex].api.setActive()
+        }
+        return
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [api, workspaceCwd, isActive])
+  }, [
+    api,
+    workspaceCwd,
+    isActive,
+    activeWorkspaceId,
+    setAddDialogOpen,
+    selectWorkspaceAtIndex,
+    selectNextWorkspace,
+    selectPreviousWorkspace,
+    pushClosedTab,
+    popClosedTab,
+  ])
 
   const handleReady = useCallback(
     (event: DockviewReadyEvent) => {

@@ -29,8 +29,9 @@ export function WorkspaceSidebar() {
     setActiveWorkspace,
     deleteWorkspace,
     updateWorkspace,
+    isAddDialogOpen,
+    setAddDialogOpen,
   } = useWorkspaceStore();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
@@ -65,7 +66,7 @@ export function WorkspaceSidebar() {
               <span className="text-xs font-medium text-sidebar-foreground/70">Workspaces</span>
               <button
                 title="Add Workspace"
-                onClick={() => setIsAddDialogOpen(true)}
+                onClick={() => setAddDialogOpen(true)}
                 className="flex h-6 w-6 items-center justify-center rounded hover:bg-sidebar-accent transition-colors"
               >
                 <Plus className="h-4 w-4" />
@@ -138,7 +139,7 @@ export function WorkspaceSidebar() {
 
       <AddWorkspaceDialog
         open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
+        onOpenChange={setAddDialogOpen}
       />
     </>
   );

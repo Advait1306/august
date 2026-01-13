@@ -10,6 +10,7 @@ interface WorkspaceStore {
   workspaces: Workspace[]
   activeWorkspaceId: string | null
   isInitialized: boolean
+  isAddDialogOpen: boolean
 
   // Actions
   initializeDefaultWorkspace: (homeDir: string) => void
@@ -18,6 +19,12 @@ interface WorkspaceStore {
   updateWorkspace: (id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>) => void
   setActiveWorkspace: (id: string) => void
   getActiveWorkspace: () => Workspace | undefined
+  setAddDialogOpen: (open: boolean) => void
+
+  // Navigation helpers for keyboard shortcuts
+  selectWorkspaceAtIndex: (index: number) => void
+  selectNextWorkspace: () => void
+  selectPreviousWorkspace: () => void
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>()(
@@ -26,6 +33,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       workspaces: [],
       activeWorkspaceId: null,
       isInitialized: false,
+      isAddDialogOpen: false,
 
       initializeDefaultWorkspace: (homeDir: string) => {
         const { workspaces, isInitialized } = get()
@@ -104,6 +112,31 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       getActiveWorkspace: () => {
         const { workspaces, activeWorkspaceId } = get()
         return workspaces.find((w) => w.id === activeWorkspaceId)
+      },
+
+      setAddDialogOpen: (open: boolean) => {
+        set({ isAddDialogOpen: open })
+      },
+
+      selectWorkspaceAtIndex: (index: number) => {
+        const { workspaces } = get()
+        if (index >= 0 && index < workspaces.length) {
+          set({ activeWorkspaceId: workspaces[index].id })
+        }
+      },
+
+      selectNextWorkspace: () => {
+        const { workspaces, activeWorkspaceId } = get()
+        const currentIndex = workspaces.findIndex((w) => w.id === activeWorkspaceId)
+        const nextIndex = (currentIndex + 1) % workspaces.length
+        set({ activeWorkspaceId: workspaces[nextIndex].id })
+      },
+
+      selectPreviousWorkspace: () => {
+        const { workspaces, activeWorkspaceId } = get()
+        const currentIndex = workspaces.findIndex((w) => w.id === activeWorkspaceId)
+        const prevIndex = currentIndex <= 0 ? workspaces.length - 1 : currentIndex - 1
+        set({ activeWorkspaceId: workspaces[prevIndex].id })
       },
     }),
     {

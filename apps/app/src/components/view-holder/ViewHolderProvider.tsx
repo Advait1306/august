@@ -7,7 +7,7 @@ import {
 } from 'react'
 import type { DockviewApi } from 'dockview-react'
 import { nanoid } from 'nanoid'
-import type { ViewType, ViewHolderContextValue } from './types'
+import type { ViewType, ViewHolderContextValue, ClosedTabInfo } from './types'
 import { getViewType } from './registry'
 
 const ViewHolderContext = createContext<ViewHolderContextValue | null>(null)
@@ -54,12 +54,81 @@ export function ViewHolderProvider({ children, api, workspaceCwd }: ViewHolderPr
     [api, workspaceCwd]
   )
 
+  const closeActivePanel = useCallback((): ClosedTabInfo | null => {
+    if (!api) return null
+
+    const activePanel = api.activePanel
+    if (!activePanel) return null
+
+    // Extract info before closing
+    const viewType = activePanel.api.component as ViewType
+    const params = (activePanel.params ?? {}) as Record<string, unknown>
+    const title = activePanel.api.title ?? ''
+
+    activePanel.api.close()
+
+    return { viewType, params, title }
+  }, [api])
+
+  const activatePanelAtIndex = useCallback(
+    (index: number) => {
+      if (!api) return
+
+      const panels = api.panels
+      if (index >= 0 && index < panels.length) {
+        panels[index].api.setActive()
+      }
+    },
+    [api]
+  )
+
+  const activateNextPanel = useCallback(() => {
+    if (!api) return
+
+    const panels = api.panels
+    if (panels.length === 0) return
+
+    const activePanel = api.activePanel
+    const currentIndex = activePanel ? panels.indexOf(activePanel) : -1
+    const nextIndex = (currentIndex + 1) % panels.length
+    panels[nextIndex].api.setActive()
+  }, [api])
+
+  const activatePreviousPanel = useCallback(() => {
+    if (!api) return
+
+    const panels = api.panels
+    if (panels.length === 0) return
+
+    const activePanel = api.activePanel
+    const currentIndex = activePanel ? panels.indexOf(activePanel) : 0
+    const prevIndex = currentIndex <= 0 ? panels.length - 1 : currentIndex - 1
+    panels[prevIndex].api.setActive()
+  }, [api])
+
+  const getPanelCount = useCallback(() => {
+    return api?.panels.length ?? 0
+  }, [api])
+
+  const reopenTab = useCallback(
+    (tabInfo: ClosedTabInfo) => {
+      addPanel(tabInfo.viewType, tabInfo.params)
+    },
+    [addPanel]
+  )
+
   const value = useMemo<ViewHolderContextValue>(
     () => ({
       api,
       addPanel,
+      closeActivePanel,
+      activatePanelAtIndex,
+      activateNextPanel,
+      activatePreviousPanel,
+      getPanelCount,
+      reopenTab,
     }),
-    [api, addPanel]
+    [api, addPanel, closeActivePanel, activatePanelAtIndex, activateNextPanel, activatePreviousPanel, getPanelCount, reopenTab]
   )
 
   return (
