@@ -2,14 +2,10 @@ import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import path from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-
-// Differentiate storage paths for dev vs prod to prevent collisions
-// This must happen before any code that accesses userData
-if (!app.isPackaged) {
-  const userDataPath = app.getPath('userData')
-  app.setPath('userData', `${userDataPath}-dev`)
-}
 import icon from '../../resources/icon.png?asset'
+
+// Note: userData path differentiation for dev/prod is handled in bootstrap.ts
+// which dynamically imports this file after setting the path
 import { setMainWindow, handleAuthToken } from './ipc/auth'
 import { autoUpdaterService } from './services/auto-updater-service'
 import { ptyService } from './services/pty-service'

@@ -2,7 +2,7 @@
   "name": "shell",
   "version": "0.0.19",
   "description": "An app to manage agents that help you work",
-  "main": "./out/main/index.js",
+  "main": "./out/main/bootstrap.js",
   "author": "sixhuman.com",
   "homepage": "https://august.tech",
   "scripts": {
