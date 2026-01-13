@@ -3,9 +3,6 @@ import { join } from 'path'
 import path from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-
-// Note: userData path differentiation for dev/prod is handled in bootstrap.ts
-// which dynamically imports this file after setting the path
 import { setMainWindow, handleAuthToken } from './ipc/auth'
 import { autoUpdaterService } from './services/auto-updater-service'
 import { ptyService } from './services/pty-service'
