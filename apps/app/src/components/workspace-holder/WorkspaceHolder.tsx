@@ -10,18 +10,18 @@ import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { useTheme } from '@/src/components/theme'
-import { ViewHolderProvider } from './ViewHolderProvider'
+import { WorkspaceHolderProvider } from './WorkspaceHolderProvider'
 import { TerminalPanel } from './panels/TerminalPanel'
 import { FileViewerPanel } from './panels/FileViewerPanel'
 import { ThemedTab } from './ThemedTab'
-import type { ViewHolderProps, ViewType } from './types'
+import type { WorkspaceHolderProps, ViewType } from './types'
 import { useWorkspaceStore } from '@/src/stores/workspace-store'
 import { useClosedTabsStore } from '@/src/stores/closed-tabs-store'
 
 import 'dockview-react/dist/styles/dockview.css'
-import './view-holder.css'
+import './workspace-holder.css'
 
-const STORAGE_KEY_PREFIX = 'august-view-holder-'
+const STORAGE_KEY_PREFIX = 'august-workspace-holder-'
 
 /**
  * Panel components registered with Dockview
@@ -106,7 +106,7 @@ function RightHeaderActions({ containerApi, workspaceCwd }: RightHeaderActionsPr
 }
 
 /**
- * ViewHolder component - A flexible tiling window manager for views
+ * WorkspaceHolder component - A flexible tiling window manager for views
  *
  * Supports drag-and-drop rearrangement, resizable panes, tabbed groups,
  * and persistent layouts via localStorage.
@@ -123,13 +123,13 @@ function isValidLayout(layout: unknown): boolean {
   )
 }
 
-export function ViewHolder({
+export function WorkspaceHolder({
   storageKey = 'default',
   className,
   onReady,
   workspaceCwd,
   isActive = true,
-}: ViewHolderProps) {
+}: WorkspaceHolderProps) {
   const [api, setApi] = useState<DockviewApi | null>(null)
   const layoutChangeDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const fullStorageKey = `${STORAGE_KEY_PREFIX}${storageKey}`
@@ -349,11 +349,11 @@ export function ViewHolder({
             dockviewApi.fromJSON(layout)
             layoutRestored = true
           } else {
-            console.warn('Invalid ViewHolder layout structure in localStorage, using default')
+            console.warn('Invalid WorkspaceHolder layout structure in localStorage, using default')
           }
         }
       } catch (error) {
-        console.error('Failed to restore ViewHolder layout:', error)
+        console.error('Failed to restore WorkspaceHolder layout:', error)
       }
 
       // Add default terminal panel if no layout was restored
@@ -373,7 +373,7 @@ export function ViewHolder({
           const layout = dockviewApi.toJSON()
           localStorage.setItem(fullStorageKey, JSON.stringify(layout))
         } catch (error) {
-          console.error('Failed to save ViewHolder layout:', error)
+          console.error('Failed to save WorkspaceHolder layout:', error)
         }
       })
 
@@ -392,8 +392,8 @@ export function ViewHolder({
   )
 
   return (
-    <ViewHolderProvider api={api} workspaceCwd={workspaceCwd}>
-      <div className={cn('view-holder h-full w-full', dockviewThemeClass, className)}>
+    <WorkspaceHolderProvider api={api} workspaceCwd={workspaceCwd}>
+      <div className={cn('workspace-holder h-full w-full', dockviewThemeClass, className)}>
         <DockviewReact
           components={components}
           tabComponents={tabComponents}
@@ -403,8 +403,8 @@ export function ViewHolder({
           className="h-full"
         />
       </div>
-    </ViewHolderProvider>
+    </WorkspaceHolderProvider>
   )
 }
 
-export default ViewHolder
+export default WorkspaceHolder

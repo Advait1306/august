@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid'
 import type { Workspace } from '@/src/types/workspace'
 
 const STORAGE_KEY = 'august-workspaces'
-const VIEW_HOLDER_STORAGE_PREFIX = 'august-view-holder-workspace-'
+const WORKSPACE_HOLDER_STORAGE_PREFIX = 'august-workspace-holder-workspace-'
 
 interface WorkspaceStore {
   workspaces: Workspace[]
@@ -82,7 +82,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
         // Clean up localStorage layout data for deleted workspace
         try {
-          localStorage.removeItem(`${VIEW_HOLDER_STORAGE_PREFIX}${id}`)
+          localStorage.removeItem(`${WORKSPACE_HOLDER_STORAGE_PREFIX}${id}`)
         } catch (error) {
           console.error('Failed to clean up workspace layout data:', error)
         }

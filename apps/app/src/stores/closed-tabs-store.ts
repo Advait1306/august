@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ClosedTabInfo } from '@/src/components/view-holder/types'
+import type { ClosedTabInfo } from '@/src/components/workspace-holder/types'
 
 const MAX_CLOSED_TABS = 20
 

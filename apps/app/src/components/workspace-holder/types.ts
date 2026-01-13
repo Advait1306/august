@@ -40,9 +40,9 @@ export interface ViewTypeRegistration<T extends ViewType = ViewType> {
 }
 
 /**
- * Props for the ViewHolder component
+ * Props for the WorkspaceHolder component
  */
-export interface ViewHolderProps {
+export interface WorkspaceHolderProps {
   /** Storage key suffix for localStorage persistence */
   storageKey?: string
   /** Additional CSS classes */
@@ -67,7 +67,7 @@ export interface ClosedTabInfo {
 /**
  * Context value providing access to Dockview API
  */
-export interface ViewHolderContextValue {
+export interface WorkspaceHolderContextValue {
   api: DockviewApi | null
   /** Add a new panel with the specified view type */
   addPanel: (viewType: ViewType, params?: Record<string, unknown>) => void

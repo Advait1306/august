@@ -7,21 +7,21 @@ import {
 } from 'react'
 import type { DockviewApi } from 'dockview-react'
 import { nanoid } from 'nanoid'
-import type { ViewType, ViewHolderContextValue, ClosedTabInfo } from './types'
+import type { ViewType, WorkspaceHolderContextValue, ClosedTabInfo } from './types'
 import { getViewType } from './registry'
 
-const ViewHolderContext = createContext<ViewHolderContextValue | null>(null)
+const WorkspaceHolderContext = createContext<WorkspaceHolderContextValue | null>(null)
 
-interface ViewHolderProviderProps {
+interface WorkspaceHolderProviderProps {
   children: ReactNode
   api: DockviewApi | null
   workspaceCwd?: string
 }
 
 /**
- * Context provider for ViewHolder API access
+ * Context provider for WorkspaceHolder API access
  */
-export function ViewHolderProvider({ children, api, workspaceCwd }: ViewHolderProviderProps) {
+export function WorkspaceHolderProvider({ children, api, workspaceCwd }: WorkspaceHolderProviderProps) {
   const addPanel = useCallback(
     (viewType: ViewType, params: Record<string, unknown> = {}) => {
       if (!api) return
@@ -117,7 +117,7 @@ export function ViewHolderProvider({ children, api, workspaceCwd }: ViewHolderPr
     [addPanel]
   )
 
-  const value = useMemo<ViewHolderContextValue>(
+  const value = useMemo<WorkspaceHolderContextValue>(
     () => ({
       api,
       addPanel,
@@ -132,19 +132,19 @@ export function ViewHolderProvider({ children, api, workspaceCwd }: ViewHolderPr
   )
 
   return (
-    <ViewHolderContext.Provider value={value}>
+    <WorkspaceHolderContext.Provider value={value}>
       {children}
-    </ViewHolderContext.Provider>
+    </WorkspaceHolderContext.Provider>
   )
 }
 
 /**
- * Hook to access ViewHolder API
+ * Hook to access WorkspaceHolder API
  */
-export function useViewHolder(): ViewHolderContextValue {
-  const context = useContext(ViewHolderContext)
+export function useWorkspaceHolder(): WorkspaceHolderContextValue {
+  const context = useContext(WorkspaceHolderContext)
   if (!context) {
-    throw new Error('useViewHolder must be used within a ViewHolderProvider')
+    throw new Error('useWorkspaceHolder must be used within a WorkspaceHolderProvider')
   }
   return context
 }
