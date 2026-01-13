@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/command";
 import { Kbd, KbdKey } from "@/components/ui/kibo-ui/kbd";
 import { useNavigate, useLocation } from "@tanstack/react-router";
+import { FileOpener } from "@/components/file-opener";
 
 type CommandMenuItem = {
   id: string;
@@ -84,6 +85,7 @@ export function CommandMenuProvider({ children }: CommandMenuProviderProps) {
     null
   );
   const [open, setOpen] = useState(false);
+  const [fileOpenerOpen, setFileOpenerOpen] = useState(false);
   const [resetRequired, setResetRequired] = useState(false);
 
   useEffect(() => {
@@ -127,7 +129,9 @@ export function CommandMenuProvider({ children }: CommandMenuProviderProps) {
         open={open}
         setOpen={setOpen}
         setIsResetRequired={setResetRequired}
+        setFileOpenerOpen={setFileOpenerOpen}
       />
+      <FileOpener open={fileOpenerOpen} onOpenChange={setFileOpenerOpen} />
     </CommandMenuContext.Provider>
   );
 }
@@ -137,11 +141,13 @@ function CommandMenuDialog({
   open,
   setOpen,
   setIsResetRequired,
+  setFileOpenerOpen,
 }: {
   contextItem: CommandMenuContextItem | null;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setIsResetRequired: React.Dispatch<React.SetStateAction<boolean>>;
+  setFileOpenerOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -349,6 +355,13 @@ function CommandMenuDialog({
         return;
       }
 
+      // Handle file opener (Cmd+P)
+      if (e.key === "p" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setFileOpenerOpen(true);
+        return;
+      }
+
       // Skip hotkey handling if typing in input fields or interacting with certain elements
       const target = e.target as HTMLElement | null;
       if (target) {
@@ -421,7 +434,7 @@ function CommandMenuDialog({
         clearTimeout(keySequenceTimeoutRef.current);
       }
     };
-  }, [open, commands, keySequence, runCommand, setOpen]);
+  }, [open, commands, keySequence, runCommand, setOpen, setFileOpenerOpen]);
 
   return (
     <CommandDialog

@@ -32,13 +32,16 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@jupiter/shared": "*",
+    "@types/picomatch": "^4.0.2",
     "ai": "^5.0.60",
     "better-sqlite3": "12.4.1",
     "dodopayments": "^2.2.1",
     "drizzle-orm": "^0.44.5",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.3.9",
+    "fdir": "^6.5.0",
     "node-pty": "^1.1.0",
+    "picomatch": "^4.0.3",
     "shell-env": "^4.0.1"
   },
   "devDependencies": {

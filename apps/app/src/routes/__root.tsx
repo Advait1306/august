@@ -12,6 +12,7 @@ import { UpdateToast } from "@/components/update-toast";
 import { SyncEngine } from "../components/sync_engine";
 import { Analytics } from "@/src/components/analytics";
 import { AgentRunner } from "../components/agent-runner";
+import { CommandMenuProvider } from "@/components/command-menu";
 
 function WindowDragRegion() {
   return (
@@ -68,7 +69,9 @@ const RootLayout = () => {
                 <Analytics>
                   <SyncEngine>
                     <SignedIn>
-                      <AgentRunner />
+                      <CommandMenuProvider>
+                        <AgentRunner />
+                      </CommandMenuProvider>
                     </SignedIn>
                     <SignedOut>
                       <Guard />

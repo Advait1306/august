@@ -124,6 +124,7 @@ function isValidLayout(layout: unknown): boolean {
 }
 
 export function WorkspaceHolder({
+  workspaceId,
   storageKey = 'default',
   className,
   onReady,
@@ -135,6 +136,19 @@ export function WorkspaceHolder({
   const fullStorageKey = `${STORAGE_KEY_PREFIX}${storageKey}`
   const theme = useTheme()
   const dockviewThemeClass = theme === 'dark' ? 'dockview-theme-dark' : 'dockview-theme-light'
+
+  const registerWorkspaceApi = useWorkspaceStore((state) => state.registerWorkspaceApi)
+  const unregisterWorkspaceApi = useWorkspaceStore((state) => state.unregisterWorkspaceApi)
+
+  // Register API when ready, unregister on unmount
+  useEffect(() => {
+    if (api) {
+      registerWorkspaceApi(workspaceId, api)
+    }
+    return () => {
+      unregisterWorkspaceApi(workspaceId)
+    }
+  }, [api, workspaceId, registerWorkspaceApi, unregisterWorkspaceApi])
 
   // Cleanup layout change subscription on unmount
   useEffect(() => {

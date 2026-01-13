@@ -2,6 +2,8 @@ import { ipcMain } from 'electron'
 import fs from 'fs/promises'
 import os from 'os'
 import path from 'path'
+import { fdir } from 'fdir'
+import picomatch from 'picomatch'
 import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
 import { fileWatcherService } from '../services/file-watcher-service'
 
@@ -188,6 +190,61 @@ export function registerFileSystemIpcHandlers(): void {
     IPC_CHANNELS.FILE_SYSTEM.UNWATCH_FILE,
     (_event, filePath: string): IPC.FileSystem.WatchResponse => {
       return fileWatcherService.unwatchFile(filePath)
+    }
+  )
+
+  ipcMain.handle(
+    IPC_CHANNELS.FILE_SYSTEM.SEARCH_FILES,
+    async (
+      _event,
+      request: IPC.FileSystem.SearchFilesRequest
+    ): Promise<IPC.FileSystem.SearchFilesResponse> => {
+      const { query, excludePatterns, maxResults = 50, includeHidden = false } = request
+      const searchPath = request.path
+
+      const pathCheck = validatePath(searchPath)
+      if (!pathCheck.valid) {
+        return { success: false, error: pathCheck.error }
+      }
+
+      try {
+        // Convert search query to glob pattern: "test" -> "**/*test*"
+        // Replace spaces with wildcards so "agent runner" matches "agent-runner.tsx"
+        const sanitizedQuery = query.trim().replace(/\s+/g, '*')
+        const globPattern = sanitizedQuery ? `**/*${sanitizedQuery}*` : '**/*'
+
+        // Create case-insensitive glob matcher
+        const caseInsensitiveMatcher = (pattern: string) => picomatch(pattern, { nocase: true })
+
+        const crawler = new fdir()
+          .withRelativePaths()
+          .withGlobFunction(caseInsensitiveMatcher)
+          .glob(globPattern)
+          .exclude((dirName) => {
+            // excludePatterns uses exact directory name matching (e.g., "node_modules", "dist")
+            if (excludePatterns.includes(dirName)) return true
+            if (!includeHidden && dirName.startsWith('.')) return true
+            return false
+          })
+          .crawl(pathCheck.resolved)
+
+        const allMatches = await crawler.withPromise()
+        const limitedFiles = allMatches.slice(0, maxResults)
+
+        return {
+          success: true,
+          files: limitedFiles.map((filePath) => {
+            const name = path.basename(filePath)
+            const ext = path.extname(name).slice(1)
+            return { path: filePath, name, extension: ext }
+          })
+        }
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to search files'
+        }
+      }
     }
   )
 }

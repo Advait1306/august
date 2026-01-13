@@ -47,5 +47,6 @@ export const IPC_CHANNELS = {
     WATCH_FILE: 'fs:watchFile',
     UNWATCH_FILE: 'fs:unwatchFile',
     FILE_CHANGED: 'fs:fileChanged',
+    SEARCH_FILES: 'fs:searchFiles',
   },
 } as const;

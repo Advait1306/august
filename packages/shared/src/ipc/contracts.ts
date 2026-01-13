@@ -190,5 +190,24 @@ export namespace IPC {
       success: boolean;
       error?: string;
     }
+
+    export interface SearchFilesRequest {
+      path: string;
+      query: string;
+      /** Exact directory names to exclude (e.g., "node_modules", "dist") */
+      excludePatterns: string[];
+      maxResults?: number;
+      includeHidden?: boolean;
+    }
+
+    export interface SearchFilesResponse {
+      success: boolean;
+      files?: Array<{
+        path: string;
+        name: string;
+        extension: string;
+      }>;
+      error?: string;
+    }
   }
 }
