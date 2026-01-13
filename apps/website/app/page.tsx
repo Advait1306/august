@@ -18,7 +18,15 @@ export default function Home() {
           alt="August"
           className="rounded"
         />
-        <DownloadButton />
+        <div className="flex items-center gap-4">
+          <a
+            href="/waitlist"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Join Waitlist
+          </a>
+          <DownloadButton />
+        </div>
       </header>
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start w-full max-w-[1500px]">
         <div className="flex flex-col gap-2">
