@@ -5,6 +5,8 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setMainWindow, handleAuthToken } from './ipc/auth'
 import { autoUpdaterService } from './services/auto-updater-service'
+import { ptyService } from './services/pty-service'
+import { fileWatcherService } from './services/file-watcher-service'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -29,6 +31,12 @@ function createWindow(): void {
 
   // Set the main window reference for auto-updater service
   autoUpdaterService.setMainWindow(mainWindow)
+
+  // Set the main window reference for PTY service
+  ptyService.setMainWindow(mainWindow)
+
+  // Set the main window reference for file watcher service
+  fileWatcherService.setMainWindow(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
@@ -97,12 +105,16 @@ app.whenReady().then(async () => {
     const { registerAutoUpdaterIpcHandlers } = await import('./ipc/auto-updater')
     const { registerBrowserIpcHandlers } = await import('./ipc/browser')
     const { registerShellToolsIpcHandlers } = await import('./ipc/shell-tools')
+    const { registerTerminalIpcHandlers } = await import('./ipc/terminal')
+    const { registerFileSystemIpcHandlers } = await import('./ipc/file-system')
 
     registerProjectIpcHandlers()
     registerAuthIpcHandlers()
     registerAutoUpdaterIpcHandlers()
     registerBrowserIpcHandlers()
     registerShellToolsIpcHandlers()
+    registerTerminalIpcHandlers()
+    registerFileSystemIpcHandlers()
 
     // Initialize auto-updater and start checking for updates
     await autoUpdaterService.checkForUpdates()
@@ -157,6 +169,12 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   // Clean up auto-updater service
   autoUpdaterService.destroy()
+
+  // Clean up PTY service
+  ptyService.destroyAll()
+
+  // Clean up file watcher service
+  fileWatcherService.destroyAll()
 })
 
 // In this file you can include the rest of your app's specific main process

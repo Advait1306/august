@@ -32,6 +32,57 @@ const api = {
       input: IPC.ShellTools.ToolInputMap[T]
     ): Promise<IPC.ShellTools.ToolOutputMap[T]> =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.SHELL_TOOLS.EXECUTE, { name, input })
+  },
+  terminal: {
+    create: (options: IPC.Terminal.CreateRequest): Promise<IPC.Terminal.CreateResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.CREATE, options),
+    write: (terminalId: string, data: string): Promise<IPC.Terminal.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.WRITE, { terminalId, data }),
+    resize: (
+      terminalId: string,
+      cols: number,
+      rows: number
+    ): Promise<IPC.Terminal.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.RESIZE, { terminalId, cols, rows }),
+    destroy: (terminalId: string): Promise<IPC.Terminal.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.DESTROY, { terminalId }),
+    onData: (callback: (event: IPC.Terminal.DataEvent) => void) => {
+      const handler = (_: unknown, event: IPC.Terminal.DataEvent) => callback(event)
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.TERMINAL.DATA, handler)
+      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.DATA, handler)
+    },
+    onExit: (callback: (event: IPC.Terminal.ExitEvent) => void) => {
+      const handler = (_: unknown, event: IPC.Terminal.ExitEvent) => callback(event)
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.TERMINAL.EXIT, handler)
+      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.EXIT, handler)
+    }
+  },
+  fileSystem: {
+    readDir: (path: string): Promise<IPC.FileSystem.ReadDirResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.READ_DIR, path),
+    createFile: (path: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.CREATE_FILE, path),
+    createFolder: (path: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.CREATE_FOLDER, path),
+    rename: (oldPath: string, newPath: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.RENAME, oldPath, newPath),
+    delete: (path: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.DELETE, path),
+    getHomeDir: (): Promise<string> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.GET_HOME_DIR),
+    readFile: (path: string): Promise<IPC.FileSystem.ReadFileResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.READ_FILE, path),
+    writeFile: (path: string, content: string): Promise<IPC.FileSystem.OperationResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.WRITE_FILE, path, content),
+    watchFile: (path: string): Promise<IPC.FileSystem.WatchResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.WATCH_FILE, path),
+    unwatchFile: (path: string): Promise<IPC.FileSystem.WatchResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.UNWATCH_FILE, path),
+    onFileChanged: (callback: (event: IPC.FileSystem.FileChangedEvent) => void) => {
+      const handler = (_: unknown, event: IPC.FileSystem.FileChangedEvent) => callback(event)
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
+      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
+    }
   }
 }
 

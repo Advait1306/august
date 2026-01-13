@@ -5,7 +5,15 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
-    envDir: resolve(__dirname, '.')
+    envDir: resolve(__dirname, '.'),
+    build: {
+      rollupOptions: {
+        input: resolve(__dirname, 'src/main/bootstrap.ts'),
+        output: {
+          inlineDynamicImports: true
+        }
+      }
+    }
   },
   preload: {
     plugins: [externalizeDepsPlugin()]

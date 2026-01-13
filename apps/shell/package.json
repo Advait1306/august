@@ -1,8 +1,8 @@
 {
   "name": "shell",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "An app to manage agents that help you work",
-  "main": "./out/main/index.js",
+  "main": "./out/main/bootstrap.js",
   "author": "sixhuman.com",
   "homepage": "https://august.tech",
   "scripts": {
@@ -38,6 +38,7 @@
     "drizzle-orm": "^0.44.5",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.3.9",
+    "node-pty": "^1.1.0",
     "shell-env": "^4.0.1"
   },
   "devDependencies": {

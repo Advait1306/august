@@ -40,3 +40,6 @@ yarn-error.log*
 # MCP credentials and server configs (contains OAuth tokens)
 auth-credentials.json
 mcp-servers.json
+
+# Worktrees
+.worktree

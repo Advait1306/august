@@ -1,0 +1,141 @@
+/**
+ * WorkspaceHolder theme overrides for Dockview
+ * Uses direct selectors for reliable theming across light/dark modes
+ */
+
+/* Tab container bar - using sidebar color */
+.workspace-holder .dv-tabs-and-actions-container {
+  background-color: #e5e5e5;
+  border-bottom: 1px solid oklch(0.9219 0 0);
+  height: 36px;
+}
+
+.dark .workspace-holder .dv-tabs-and-actions-container {
+  background-color: #171717;
+  border-bottom: 1px solid #232323;
+}
+
+/* Remove default tab wrapper padding/margins */
+.workspace-holder .dv-tabs-container {
+  padding: 0;
+  gap: 0;
+}
+
+/* Make tab wrappers fill height */
+.workspace-holder .dv-tab {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+/* Remove tab dividers and outlines */
+.workspace-holder .dv-tab::before,
+.workspace-holder .dv-tab::after {
+  display: none;
+}
+
+/* Active tab styling - remove default focus/active outlines */
+.workspace-holder .dv-tab.dv-active-tab,
+.workspace-holder .dv-tab:focus,
+.workspace-holder .dv-tab:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border: none;
+}
+
+/* Panel content background */
+.workspace-holder .dv-groupview {
+  background-color: oklch(0.97 0 0); /* background light */
+}
+
+.dark .workspace-holder .dv-groupview {
+  background-color: oklch(0.269 0 0); /* background dark */
+}
+
+/* Main dockview container background (shows when no panels) */
+.workspace-holder .dv-dockview {
+  background-color: oklch(0.97 0 0); /* background light */
+}
+
+.dark .workspace-holder .dv-dockview {
+  background-color: oklch(0.269 0 0); /* background dark */
+}
+
+/* Watermark/empty state background */
+.workspace-holder .dv-watermark {
+  background-color: oklch(0.97 0 0); /* background light */
+  color: oklch(0.551 0.0234 264.36); /* muted-foreground light */
+}
+
+.dark .workspace-holder .dv-watermark {
+  background-color: oklch(0.269 0 0); /* background dark */
+  color: oklch(0.7058 0 0); /* muted-foreground dark */
+}
+
+/* Separator styling */
+.workspace-holder .dv-resize-container > .dv-sash {
+  background: transparent;
+}
+
+.workspace-holder .dv-resize-container > .dv-sash:hover {
+  background: oklch(0.955 0 0); /* accent light */
+}
+
+.dark .workspace-holder .dv-resize-container > .dv-sash:hover {
+  background: oklch(0.37 0 0); /* accent dark */
+}
+
+/* Tab styling */
+.workspace-holder .tab {
+  border-radius: 4px 4px 0 0;
+  font-family: var(--font-sans);
+}
+
+/* Panel content area */
+.workspace-holder .dv-default-tab-content {
+  padding: 0 8px;
+}
+
+/* Ensure panel content fills available space */
+.workspace-holder .dv-view-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-holder .dv-view-content > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Separator/sash styling */
+.workspace-holder .sash {
+  background: transparent;
+  transition: background 150ms ease;
+}
+
+.workspace-holder .sash:hover {
+  background: var(--accent);
+}
+
+.workspace-holder .sash.active {
+  background: var(--primary);
+}
+
+/* Tab close button */
+.workspace-holder .dv-default-tab-action {
+  opacity: 0.6;
+  transition: opacity 150ms ease;
+}
+
+.workspace-holder .dv-default-tab-action:hover {
+  opacity: 1;
+}
+
+/* Empty state styling */
+.workspace-holder .dv-watermark {
+  color: var(--muted-foreground);
+  font-family: var(--font-sans);
+}
