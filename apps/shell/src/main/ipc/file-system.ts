@@ -213,11 +213,15 @@ export function registerFileSystemIpcHandlers(): void {
         const sanitizedQuery = query.trim().replace(/\s+/g, '*')
         const globPattern = sanitizedQuery ? `**/*${sanitizedQuery}*` : '**/*'
 
+        // Create case-insensitive glob matcher
+        const caseInsensitiveMatcher = (pattern: string) => picomatch(pattern, { nocase: true })
+
         const crawler = new fdir()
           .withRelativePaths()
-          .withGlobFunction(picomatch)
+          .withGlobFunction(caseInsensitiveMatcher)
           .glob(globPattern)
           .exclude((dirName) => {
+            // excludePatterns uses exact directory name matching (e.g., "node_modules", "dist")
             if (excludePatterns.includes(dirName)) return true
             if (!includeHidden && dirName.startsWith('.')) return true
             return false
