@@ -17,11 +17,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Folder, MoreHorizontal, Trash2, Edit2 } from "lucide-react";
+import { Plus, MoreHorizontal, Trash2, Edit2 } from "lucide-react";
 import { useWorkspaceStore } from "@/src/stores/workspace-store";
 import { AddWorkspaceDialog } from "./add-workspace-dialog";
 import { Input } from "@/components/ui/input";
-import { UserButton } from "@clerk/clerk-react";
+import { UserButton, OrganizationSwitcher } from "@clerk/clerk-react";
 
 export function WorkspaceSidebar() {
   const {
@@ -63,7 +63,7 @@ export function WorkspaceSidebar() {
       <Sidebar collapsible="icon" variant="sidebar">
         <SidebarContent>
           <SidebarGroup className="p-0">
-            <div className="flex h-[36px] items-center justify-between px-3 border-b border-neutral-300 dark:border-neutral-700">
+            <div className="flex h-[36px] items-center justify-between px-3">
               <span className="text-xs font-medium text-sidebar-foreground/70">Workspaces</span>
               <button
                 title="Add Workspace"
@@ -93,7 +93,6 @@ export function WorkspaceSidebar() {
                           onClick={() => setActiveWorkspace(workspace.id)}
                           tooltip={workspace.cwd}
                         >
-                          <Folder className="h-4 w-4" />
                           <span>{workspace.name}</span>
                         </SidebarMenuButton>
                         <DropdownMenu>
@@ -132,7 +131,19 @@ export function WorkspaceSidebar() {
         </SidebarContent>
 
         <SidebarFooter>
-          <div className="flex items-center gap-2 px-2 py-2 border-t border-neutral-300 dark:border-neutral-700">
+          <div className="flex items-center gap-2 px-2 py-2">
+            <div className="flex-1 min-w-0 flex items-center group-data-[collapsible=icon]:hidden">
+              <OrganizationSwitcher
+                hidePersonal
+                appearance={{
+                  elements: {
+                    rootBox: "w-full",
+                    organizationSwitcherTrigger:
+                      "w-full justify-between px-2 py-1 rounded hover:bg-sidebar-accent",
+                  },
+                }}
+              />
+            </div>
             <UserButton
               appearance={{
                 elements: {
@@ -140,11 +151,6 @@ export function WorkspaceSidebar() {
                 },
               }}
             />
-            <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-              <div className="text-xs text-muted-foreground truncate">
-                {workspaces.find((w) => w.id === activeWorkspaceId)?.cwd}
-              </div>
-            </div>
           </div>
         </SidebarFooter>
       </Sidebar>
