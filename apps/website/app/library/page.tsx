@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "August's Library",
+  description:
+    "A collection of experiments and improvements in software development by August and other companies.",
+};
 
 const articles = [
   {
@@ -45,9 +52,9 @@ export default function Library() {
                 className="flex flex-col gap-2 p-4 -mx-4 rounded-lg hover:bg-muted transition-colors"
               >
                 <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
-                  <span className="text-foreground font-medium inline-flex items-center gap-2">
+                  <span className="text-foreground font-medium flex items-start justify-between sm:justify-start gap-2 w-full sm:w-auto">
                     <span>{article.title}</span>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
                   </span>
                   <span className="text-sm text-muted-foreground shrink-0">
                     {article.date}

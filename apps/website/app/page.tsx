@@ -83,10 +83,11 @@ export default function Home() {
                 Agent orchestration
               </span>{" "}
               using your{" "}
-              <span
+              <motion.span
                 className="relative inline-block underline underline-offset-4 decoration-muted-foreground/50 cursor-pointer"
                 onMouseEnter={() => setShowProviders(true)}
                 onMouseLeave={() => setShowProviders(false)}
+                onTap={() => setShowProviders((prev) => !prev)}
               >
                 preferred provider
                 <AnimatePresence>
@@ -122,7 +123,7 @@ export default function Home() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </span>
+              </motion.span>
             </li>
             <li>
               <span className="font-medium text-foreground">Skills</span> reflecting your organisation&apos;s taste
@@ -132,10 +133,11 @@ export default function Home() {
               learns how you build
             </li>
             <li>
-              <span
+              <motion.span
                 className="relative inline-block font-medium text-foreground underline underline-offset-4 decoration-muted-foreground/50 cursor-pointer"
                 onMouseEnter={() => setShowEnvironments(true)}
                 onMouseLeave={() => setShowEnvironments(false)}
+                onTap={() => setShowEnvironments((prev) => !prev)}
               >
                 Environments
                 <AnimatePresence>
@@ -171,7 +173,7 @@ export default function Home() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </span>{" "}
+              </motion.span>{" "}
               that are sandboxed, reproducible & verifiable
             </li>
           </ul>

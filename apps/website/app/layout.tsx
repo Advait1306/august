@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "August",
-  description: "Artificial helpers for your team",
+  description: "Infrastructure for agent native software development",
 };
 
 export default function RootLayout({
