@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
@@ -26,6 +26,7 @@ interface UseTerminalReturn {
   terminalRef: React.RefObject<HTMLDivElement | null>
   isConnected: boolean
   error: string | null
+  focus: () => void
 }
 
 export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn {
@@ -158,9 +159,14 @@ export function useTerminal(options: UseTerminalOptions = {}): UseTerminalReturn
     }
   }, [options.theme])
 
+  const focus = useCallback(() => {
+    xtermRef.current?.focus()
+  }, [])
+
   return {
     terminalRef,
     isConnected,
-    error
+    error,
+    focus
   }
 }

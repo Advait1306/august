@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTerminal } from './useTerminal'
 import { useTheme } from '@/src/components/theme'
 import '@xterm/xterm/css/xterm.css'
@@ -6,11 +7,19 @@ interface TerminalViewProps {
   cwd?: string
   env?: Record<string, string>
   className?: string
+  isActive?: boolean
 }
 
-export function TerminalView({ cwd, env, className }: TerminalViewProps) {
+export function TerminalView({ cwd, env, className, isActive }: TerminalViewProps) {
   const theme = useTheme()
-  const { terminalRef, isConnected, error } = useTerminal({ cwd, env, theme })
+  const { terminalRef, isConnected, error, focus } = useTerminal({ cwd, env, theme })
+
+  // Focus terminal when it becomes active
+  useEffect(() => {
+    if (isActive && isConnected) {
+      focus()
+    }
+  }, [isActive, isConnected, focus])
 
   if (error) {
     return (
