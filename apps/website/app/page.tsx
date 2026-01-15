@@ -52,7 +52,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col">
-      <section className="w-full max-w-[800px] mx-auto px-10 sm:px-8 lg:px-12 py-16 sm:py-24">
+      <section className="w-full max-w-[840px] mx-auto px-10 sm:px-8 lg:px-12 py-16 sm:py-24">
         <div className="flex flex-col gap-12">
           {/* Narrative */}
           <div className="flex flex-col gap-6 text-base sm:text-lg leading-relaxed text-muted-foreground">
