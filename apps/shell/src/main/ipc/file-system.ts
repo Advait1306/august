@@ -247,4 +247,59 @@ export function registerFileSystemIpcHandlers(): void {
       }
     }
   )
+
+  ipcMain.handle(
+    IPC_CHANNELS.FILE_SYSTEM.VALIDATE_DIRECTORY,
+    async (_event, inputPath: string): Promise<IPC.FileSystem.ValidateDirectoryResponse> => {
+      try {
+        // Expand ~ to home directory
+        const homeDir = os.homedir()
+        let expandedPath = inputPath
+        if (inputPath.startsWith('~')) {
+          expandedPath = inputPath.replace(/^~/, homeDir)
+        }
+
+        // Resolve to absolute path
+        const resolvedPath = path.resolve(expandedPath)
+
+        // Security check: must be within home directory
+        if (!resolvedPath.startsWith(homeDir + path.sep) && resolvedPath !== homeDir) {
+          return {
+            valid: false,
+            resolvedPath,
+            name: '',
+            error: 'Path must be within your home directory'
+          }
+        }
+
+        // Check if path exists
+        const stats = await fs.stat(resolvedPath)
+
+        // Check if it's a directory
+        if (!stats.isDirectory()) {
+          return {
+            valid: false,
+            resolvedPath,
+            name: '',
+            error: 'Path is not a directory'
+          }
+        }
+
+        return {
+          valid: true,
+          resolvedPath,
+          name: path.basename(resolvedPath)
+        }
+      } catch (error) {
+        return {
+          valid: false,
+          resolvedPath: inputPath,
+          name: '',
+          error: error instanceof Error && error.message.includes('ENOENT')
+            ? 'Directory does not exist'
+            : error instanceof Error ? error.message : 'Failed to validate directory'
+        }
+      }
+    }
+  )
 }
