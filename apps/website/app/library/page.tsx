@@ -30,7 +30,7 @@ const articles = [
 export default function Library() {
   return (
     <div className="flex flex-col">
-      <section className="w-full max-w-[800px] mx-auto px-10 sm:px-8 lg:px-12 py-16 sm:py-24">
+      <section className="w-full max-w-[840px] mx-auto px-10 sm:px-8 lg:px-12 py-16 sm:py-24">
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-3">
             <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-foreground">
