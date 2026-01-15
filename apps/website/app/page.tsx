@@ -42,7 +42,7 @@ export default function Home() {
     setWaitlistState({ status: "loading" });
     try {
       await clerk.joinWaitlist({ emailAddress: email });
-      document.cookie = `waitlist_email=${encodeURIComponent(email)}; max-age=${60 * 60 * 24 * 365}; path=/`;
+      document.cookie = `waitlist_email=${encodeURIComponent(email)}; max-age=${60 * 60 * 24 * 365}; path=/; Secure; SameSite=Strict`;
       setWaitlistState({ status: "entered", email });
       setEmail("");
     } catch {
