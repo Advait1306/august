@@ -304,6 +304,7 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
             automaticLayout: true,
             tabSize: 2,
             renderWhitespace: 'selection',
+            renderValidationDecorations: 'off',
           }}
         />
       </div>
