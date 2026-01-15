@@ -9,6 +9,13 @@ import { Plus, TerminalSquare, FolderOpen } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { cn } from '@/lib/utils'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandGroup,
+  CommandItem,
+} from '@/components/ui/command'
 import { useTheme } from '@/src/components/theme'
 import { WorkspaceHolderProvider } from './WorkspaceHolderProvider'
 import { TerminalPanel } from './panels/TerminalPanel'
@@ -89,15 +96,13 @@ function RightHeaderActions({ containerApi, workspaceCwd }: RightHeaderActionsPr
         >
           <TerminalSquare className="h-4 w-4 text-gray-400" />
           <span>Terminal</span>
-          <span className="ml-auto text-xs text-gray-500">⌘T</span>
         </button>
         <button
           onClick={handleAddFileViewer}
           className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-gray-700/50 transition-colors"
         >
           <FolderOpen className="h-4 w-4 text-gray-400" />
-          <span>File Viewer</span>
-          <span className="ml-auto text-xs text-gray-500">⌘E</span>
+          <span>File Explorer</span>
         </button>
       </PopoverContent>
     </Popover>
@@ -132,6 +137,7 @@ export function WorkspaceHolder({
   isActive = true,
 }: WorkspaceHolderProps) {
   const [api, setApi] = useState<DockviewApi | null>(null)
+  const [newTabMenuOpen, setNewTabMenuOpen] = useState(false)
   const layoutChangeDisposableRef = useRef<{ dispose: () => void } | null>(null)
   const fullStorageKey = `${STORAGE_KEY_PREFIX}${storageKey}`
   const theme = useTheme()
@@ -160,7 +166,6 @@ export function WorkspaceHolder({
   // Get workspace and closed tabs stores for keyboard shortcuts
   const {
     activeWorkspaceId,
-    setAddDialogOpen,
     selectWorkspaceAtIndex,
     selectNextWorkspace,
     selectPreviousWorkspace,
@@ -176,13 +181,6 @@ export function WorkspaceHolder({
       const isAlt = e.altKey
 
       // === WORKSPACE SHORTCUTS (global, not tied to active workspace) ===
-
-      // Cmd+N: Open new workspace dialog
-      if (isMeta && !isShift && !isAlt && e.key === 'n') {
-        e.preventDefault()
-        setAddDialogOpen(true)
-        return
-      }
 
       // Cmd+Option+1-9: Jump to workspace 1-9
       // Use e.code for number keys since Option can modify e.key on macOS
@@ -212,27 +210,10 @@ export function WorkspaceHolder({
       // === TAB SHORTCUTS (only for active workspace) ===
       if (!api || !isActive) return
 
-      // Cmd+T: New Terminal
-      if (isMeta && !isShift && !isAlt && e.key === 't') {
+      // Cmd+N: Open new tab menu
+      if (isMeta && !isShift && !isAlt && e.key === 'n') {
         e.preventDefault()
-        api.addPanel({
-          id: `terminal-${nanoid(8)}`,
-          component: 'terminal',
-          title: 'Terminal',
-          params: { cwd: workspaceCwd },
-        })
-        return
-      }
-
-      // Cmd+E: New File Viewer
-      if (isMeta && !isShift && !isAlt && e.key === 'e') {
-        e.preventDefault()
-        api.addPanel({
-          id: `file-viewer-${nanoid(8)}`,
-          component: 'file-viewer',
-          title: 'File Viewer',
-          params: { rootPath: workspaceCwd },
-        })
+        setNewTabMenuOpen(true)
         return
       }
 
@@ -339,7 +320,7 @@ export function WorkspaceHolder({
     workspaceCwd,
     isActive,
     activeWorkspaceId,
-    setAddDialogOpen,
+    setNewTabMenuOpen,
     selectWorkspaceAtIndex,
     selectNextWorkspace,
     selectPreviousWorkspace,
@@ -405,6 +386,31 @@ export function WorkspaceHolder({
     [workspaceCwd]
   )
 
+  // Handlers for new tab menu
+  const handleAddTerminalFromMenu = useCallback(() => {
+    if (api) {
+      api.addPanel({
+        id: `terminal-${nanoid(8)}`,
+        component: 'terminal',
+        title: 'Terminal',
+        params: { cwd: workspaceCwd },
+      })
+    }
+    setNewTabMenuOpen(false)
+  }, [api, workspaceCwd])
+
+  const handleAddFileViewerFromMenu = useCallback(() => {
+    if (api) {
+      api.addPanel({
+        id: `file-viewer-${nanoid(8)}`,
+        component: 'file-viewer',
+        title: 'File Viewer',
+        params: { rootPath: workspaceCwd },
+      })
+    }
+    setNewTabMenuOpen(false)
+  }, [api, workspaceCwd])
+
   return (
     <WorkspaceHolderProvider api={api} workspaceCwd={workspaceCwd}>
       <div className={cn('workspace-holder h-full w-full', dockviewThemeClass, className)}>
@@ -417,6 +423,29 @@ export function WorkspaceHolder({
           className="h-full"
         />
       </div>
+
+      {/* New Tab Command Menu */}
+      <CommandDialog
+        open={newTabMenuOpen}
+        onOpenChange={setNewTabMenuOpen}
+        title="New Tab"
+        description="Select a tab type to open"
+        showCloseButton={false}
+      >
+        <CommandInput placeholder="Select a tab type..." />
+        <CommandList>
+          <CommandGroup heading="New Tab">
+            <CommandItem onSelect={handleAddTerminalFromMenu}>
+              <TerminalSquare className="h-4 w-4" />
+              <span>Terminal</span>
+            </CommandItem>
+            <CommandItem onSelect={handleAddFileViewerFromMenu}>
+              <FolderOpen className="h-4 w-4" />
+              <span>File Explorer</span>
+            </CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </WorkspaceHolderProvider>
   )
 }
