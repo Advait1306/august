@@ -1,6 +1,3 @@
-import Image from "next/image";
-import Link from "next/link";
-
 export const metadata = {
   title: "Privacy Policy - August",
   description: "Privacy policy for August",
@@ -8,27 +5,8 @@ export const metadata = {
 
 export default function PrivacyPolicy() {
   return (
-    <div className="font-sans min-h-screen p-8 pb-20 sm:p-20">
-      <div className="max-w-4xl mx-auto">
-        <header className="w-full flex flex-row items-center justify-between mb-12">
-          <Link href="/">
-            <Image
-              src="/icon.svg"
-              width={32}
-              height={32}
-              alt="August"
-              className="rounded"
-            />
-          </Link>
-          <Link
-            href="/"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Back to Home
-          </Link>
-        </header>
-
-        <main className="prose prose-neutral dark:prose-invert max-w-none">
+    <div className="w-full max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12 py-16 sm:py-24">
+      <div className="max-w-[700px] mx-auto prose prose-neutral dark:prose-invert max-w-none">
           <h1 className="text-4xl font-bold mb-4">Privacy Policy</h1>
           <p className="text-muted-foreground">
             Last updated: November 14, 2025
@@ -522,7 +500,6 @@ export default function PrivacyPolicy() {
             us:
           </p>
           <p>By email: tech@sixhuman.com</p>
-        </main>
       </div>
     </div>
   );
