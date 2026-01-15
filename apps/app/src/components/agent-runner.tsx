@@ -43,10 +43,10 @@ export function AgentRunner() {
   return (
     <SidebarProvider
       defaultOpen={true}
-      style={{ "--header-height": "40px" } as React.CSSProperties}
+      style={{ "--header-height": "36px" } as React.CSSProperties}
     >
       <div className="h-screen w-full flex flex-col">
-        <header className="h-(--header-height) shrink-0 border-b border-neutral-300 dark:border-neutral-700 bg-background" />
+        <header className="h-(--header-height) shrink-0 border-b border-neutral-300 dark:border-neutral-700 bg-neutral-200 dark:bg-[#111111]" />
         <div className="flex flex-1 overflow-hidden">
           <WorkspaceSidebar />
           <SidebarInset className="pr-0 pb-0">

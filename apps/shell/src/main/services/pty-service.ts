@@ -4,9 +4,26 @@ import { randomUUID } from 'crypto'
 import * as os from 'os'
 import * as path from 'path'
 import { IPC_CHANNELS, IPC } from '@jupiter/shared/ipc'
+import { shellEnvSync } from 'shell-env'
 
 // Blocklist of dangerous environment variables that could be used for injection attacks
-const BLOCKED_ENV_VARS = ['PATH', 'LD_PRELOAD', 'DYLD_INSERT_LIBRARIES', 'LD_LIBRARY_PATH']
+// Note: PATH is intentionally NOT blocked - it's needed for tools like docker, git, etc.
+const BLOCKED_ENV_VARS = ['LD_PRELOAD', 'DYLD_INSERT_LIBRARIES', 'LD_LIBRARY_PATH']
+
+// Cache the shell environment to avoid repeated shell spawns
+let cachedShellEnv: Record<string, string> | null = null
+
+function getShellEnv(): Record<string, string> {
+  if (!cachedShellEnv) {
+    try {
+      cachedShellEnv = shellEnvSync()
+    } catch {
+      // Fallback to process.env if shell-env fails
+      cachedShellEnv = process.env as Record<string, string>
+    }
+  }
+  return cachedShellEnv
+}
 
 interface PtyInstance {
   pty: pty.IPty
@@ -50,10 +67,13 @@ export class PtyService {
 
   /**
    * Sanitizes environment variables by removing dangerous entries from user-provided env.
+   * Uses shell-env to get the full shell environment (including proper PATH).
    */
   private sanitizeEnv(userEnv: Record<string, string> | undefined): Record<string, string> {
+    const shellEnv = getShellEnv()
+
     if (!userEnv) {
-      return { ...process.env } as Record<string, string>
+      return { ...shellEnv }
     }
 
     const sanitizedUserEnv = { ...userEnv }
@@ -61,7 +81,7 @@ export class PtyService {
       delete sanitizedUserEnv[blockedVar]
     }
 
-    return { ...process.env, ...sanitizedUserEnv } as Record<string, string>
+    return { ...shellEnv, ...sanitizedUserEnv }
   }
 
   public static getInstance(): PtyService {
