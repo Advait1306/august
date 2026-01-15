@@ -45,7 +45,7 @@ export default function RootLayout({
                 />
 
                 {/* Header - constrained width */}
-                <div className="relative w-full max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12 pt-8 sm:pt-12">
+                <div className="relative w-full max-w-[800px] mx-auto px-10 sm:px-8 lg:px-12 pt-8 sm:pt-12">
                   <Header />
                 </div>
 
@@ -53,7 +53,7 @@ export default function RootLayout({
                 <main className="flex-1">{children}</main>
 
                 {/* Footer - constrained width */}
-                <div className="relative w-full max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12 pb-8 sm:pb-12">
+                <div className="relative w-full max-w-[800px] mx-auto px-10 sm:px-8 lg:px-12 pb-8 sm:pb-12">
                   <Footer />
                 </div>
               </div>

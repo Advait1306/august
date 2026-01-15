@@ -1,184 +1,220 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "motion/react";
 import Image from "next/image";
-import { visitedPages } from "@/lib/visited-pages";
+import { motion, AnimatePresence } from "motion/react";
+import { useState, useEffect } from "react";
+import { useClerk } from "@clerk/nextjs";
+import { Loader2 } from "lucide-react";
+
+const providers = [
+  { name: "OpenAI", logo: "/logos/openai.svg" },
+  { name: "Anthropic", logo: "/logos/anthropic.svg" },
+  { name: "Google", logo: "/logos/google.svg" },
+];
+
+const environments = [
+  { name: "macOS", logo: "/logos/macos.svg", size: 20 },
+  { name: "Linux", logo: "/logos/linux.svg", size: 20 },
+  { name: "Windows", logo: "/logos/windows.svg", size: 16 },
+];
 
 export default function Home() {
-  const isFirstVisit = !visitedPages.has("/");
-  const [shouldAnimate] = useState(isFirstVisit);
+  const [showProviders, setShowProviders] = useState(false);
+  const [showEnvironments, setShowEnvironments] = useState(false);
+  const [email, setEmail] = useState("");
+  const [waitlistState, setWaitlistState] = useState<{ status: null } | { status: "waitlist" } | { status: "entered"; email: string } | { status: "loading" } | { status: "error" }>({ status: null });
+  const clerk = useClerk();
 
   useEffect(() => {
-    visitedPages.add("/");
+    const cookies = document.cookie.split("; ");
+    const waitlistCookie = cookies.find((c) => c.startsWith("waitlist_email="));
+    if (waitlistCookie) {
+      setWaitlistState({ status: "entered", email: decodeURIComponent(waitlistCookie.split("=")[1]) });
+    } else {
+      setWaitlistState({ status: "waitlist" });
+    }
   }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setWaitlistState({ status: "loading" });
+    try {
+      await clerk.joinWaitlist({ emailAddress: email });
+      document.cookie = `waitlist_email=${encodeURIComponent(email)}; max-age=${60 * 60 * 24 * 365}; path=/`;
+      setWaitlistState({ status: "entered", email });
+      setEmail("");
+    } catch {
+      setWaitlistState({ status: "error" });
+    }
+  };
 
   return (
     <div className="flex flex-col">
-      {/* Hero Section - constrained width, full height on mobile */}
-      <section className="w-full max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12 py-16 sm:py-24 min-h-dvh sm:min-h-0 flex flex-col justify-center">
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-5 max-w-2xl">
-            <motion.h1
-              initial={{ opacity: shouldAnimate ? 0 : 1 }}
-              animate={{ opacity: 1 }}
-              transition={{
-                duration: 0.6,
-                delay: shouldAnimate ? 0 : 0,
-                ease: [0.25, 0.4, 0.25, 1],
-              }}
-              className="text-4xl sm:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.1] text-foreground"
-            >
-              Artificial helpers
-              <br />
-              <span className="text-muted-foreground/80">for your team</span>
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: shouldAnimate ? 0 : 1 }}
-              animate={{ opacity: 1 }}
-              transition={{
-                duration: 0.6,
-                delay: shouldAnimate ? 0.7 : 0,
-                ease: [0.25, 0.4, 0.25, 1],
-              }}
-              className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl"
-            >
-              Create, manage, and deploy agents for your company. Focus on
-              decision-making while your agents handle execution.
-            </motion.p>
+      <section className="w-full max-w-[800px] mx-auto px-10 sm:px-8 lg:px-12 py-16 sm:py-24">
+        <div className="flex flex-col gap-12">
+          {/* Narrative */}
+          <div className="flex flex-col gap-6 text-base sm:text-lg leading-relaxed text-muted-foreground">
+            <p>
+              You started with an AI IDE and realized it could navigate and
+              extend your codebase. Impressive, but familiar.
+            </p>
+            <p>
+              Then you tried Claude Code. You were skeptical, an autonomous agent
+              running in your terminal felt like a leap. But you gave it a shot,
+              and it clicked in a way you didn&apos;t expect.
+            </p>
+            <p>
+              Now you&apos;re running multiple instances, upgrading plans to keep
+              up, spinning up worktrees to parallelize the work. What started as
+              an experiment has become your default.
+            </p>
+            <p>
+              Soon, you&apos;ll need new infrastructure to match your speed of
+              working, August is bringing it all together.
+            </p>
           </div>
 
-          {/* Hero Image */}
-          <motion.div
-            initial={{ opacity: shouldAnimate ? 0 : 1 }}
-            animate={{ opacity: 1 }}
-            transition={{
-              duration: 0.7,
-              delay: shouldAnimate ? 0.9 : 0,
-              ease: [0.25, 0.4, 0.25, 1],
-            }}
-            className="relative"
-          >
-            <div className="absolute -inset-4 bg-gradient-to-b from-primary/5 to-transparent rounded-3xl blur-2xl dark:from-primary/10" />
-            <div className="relative">
-              <Image
-                src="/hero_dark.png"
-                priority
-                width={1600}
-                height={1000}
-                alt="August dashboard showing AI agents managing tasks"
-                className="shadow-lg border border-border/50 rounded-lg sm:rounded-xl hidden dark:block"
-              />
-              <Image
-                src="/hero_light.png"
-                priority
-                width={1600}
-                height={1000}
-                alt="August dashboard showing AI agents managing tasks"
-                className="shadow-lg border border-border/50 rounded-lg sm:rounded-xl dark:hidden"
-              />
-            </div>
-          </motion.div>
-        </div>
-      </section>
+          {/* Features list */}
+          <ul className="flex flex-col gap-5 text-base sm:text-lg leading-relaxed text-muted-foreground list-disc">
+            <li>
+              <span className="font-medium text-foreground">
+                Agent orchestration
+              </span>{" "}
+              using your{" "}
+              <span
+                className="relative inline-block underline underline-offset-4 decoration-muted-foreground/50 cursor-pointer"
+                onMouseEnter={() => setShowProviders(true)}
+                onMouseLeave={() => setShowProviders(false)}
+              >
+                preferred provider
+                <AnimatePresence>
+                  {showProviders && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute bottom-full left-0 mb-2 flex items-center gap-2"
+                    >
+                      {providers.map((provider, index) => (
+                        <motion.div
+                          key={provider.name}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{
+                            duration: 0.3,
+                            delay: index * 0.05,
+                            ease: [0.25, 0.4, 0.25, 1],
+                          }}
+                          className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center"
+                        >
+                          <Image
+                            src={provider.logo}
+                            alt={provider.name}
+                            width={20}
+                            height={20}
+                            className="dark:invert"
+                          />
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </span>
+            </li>
+            <li>
+              <span className="font-medium text-foreground">Skills</span> reflecting your organisation&apos;s taste
+            </li>
+            <li>
+              <span className="font-medium text-foreground">Memory</span> that
+              learns how you build
+            </li>
+            <li>
+              <span
+                className="relative inline-block font-medium text-foreground underline underline-offset-4 decoration-muted-foreground/50 cursor-pointer"
+                onMouseEnter={() => setShowEnvironments(true)}
+                onMouseLeave={() => setShowEnvironments(false)}
+              >
+                Environments
+                <AnimatePresence>
+                  {showEnvironments && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute bottom-full left-0 mb-2 flex items-center gap-2"
+                    >
+                      {environments.map((env, index) => (
+                        <motion.div
+                          key={env.name}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{
+                            duration: 0.3,
+                            delay: index * 0.05,
+                            ease: [0.25, 0.4, 0.25, 1],
+                          }}
+                          className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center"
+                        >
+                          <Image
+                            src={env.logo}
+                            alt={env.name}
+                            width={env.size}
+                            height={env.size}
+                            className="dark:invert"
+                          />
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </span>{" "}
+              that are sandboxed, reproducible & verifiable
+            </li>
+          </ul>
 
-      {/* Feature 1: Share skills across your team - Full bleed */}
-      <section id="features" className="relative w-full py-24 sm:py-32 bg-[linear-gradient(to_bottom,rgb(229,229,229)_0%,transparent_40%)] dark:bg-[linear-gradient(to_bottom,rgb(38,38,38)_0%,transparent_40%)]">
-        <div className="w-full max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="flex flex-col gap-10">
-            <div className="flex flex-col gap-4 max-w-xl">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-foreground leading-[1.1]">
-                Share skills across your team
-              </h2>
-              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-                Your AI agents improve faster when they learn from everyone.
-                Share prompts, workflows, and knowledge across your entire
-                organization.
-              </p>
-            </div>
-            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 dark:from-primary/10 dark:via-primary/15 dark:to-primary/10">
-              <Image
-                src="/features/share-skills.png"
-                alt="Share skills across your team"
-                fill
-                className="object-cover"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature 2: Connect to your applications - Full bleed */}
-      <section className="relative w-full py-24 sm:py-32 bg-[linear-gradient(to_bottom,rgb(229,229,229)_0%,transparent_40%)] dark:bg-[linear-gradient(to_bottom,rgb(38,38,38)_0%,transparent_40%)]">
-        <div className="w-full max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="flex flex-col gap-10">
-            <div className="flex flex-col gap-4 max-w-xl">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-foreground leading-[1.1]">
-                Connect to your applications
-              </h2>
-              <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-                Integrate with the tools your team already uses. Your agents
-                work where you work.
-              </p>
-            </div>
-            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 dark:from-primary/10 dark:via-primary/15 dark:to-primary/10">
-              <Image
-                src="/features/connect-apps.png"
-                alt="Connect to your applications"
-                fill
-                className="object-cover"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature 3 & 4: 1x2 Grid - Full bleed */}
-      <section className="relative w-full py-24 sm:py-32 bg-[linear-gradient(to_bottom,rgb(229,229,229)_0%,transparent_40%)] dark:bg-[linear-gradient(to_bottom,rgb(38,38,38)_0%,transparent_40%)]">
-        <div className="w-full max-w-[1200px] mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-            {/* Best agent-building practices */}
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-3">
-                <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
-                  Best agent-building practices
-                </h3>
-                <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-                  Access proven skills, workflows, and memory patterns. We stay
-                  up to date with AI research so you don&apos;t have to.
+          {/* Waitlist form */}
+          {waitlistState.status !== null && (
+            <div className="flex flex-col gap-4 pt-8 border-t border-border">
+              {waitlistState.status === "entered" ? (
+                <p className="text-muted-foreground">
+                  You&apos;re on the waitlist with{" "}
+                  <span className="text-foreground">{waitlistState.email}</span>
                 </p>
-              </div>
-              <div className="relative flex-1 min-h-[240px] sm:min-h-[320px] overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 dark:from-primary/10 dark:via-primary/15 dark:to-primary/10">
-                <Image
-                  src="/features/best-practices.png"
-                  alt="Best agent-building practices"
-                  fill
-                  className="object-cover"
-                />
-              </div>
+              ) : (
+                <>
+                  <p className="text-muted-foreground">
+                    Join the waitlist for early access.
+                  </p>
+                  <form onSubmit={handleSubmit} className="flex gap-3">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="woz@apple.com"
+                      required
+                      className="flex-1 px-4 py-2 text-sm bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                    />
+                    <button
+                      type="submit"
+                      disabled={waitlistState.status === "loading"}
+                      className="w-16 py-2 text-sm font-medium bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center"
+                    >
+                      {waitlistState.status === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join"}
+                    </button>
+                  </form>
+                  {waitlistState.status === "error" && (
+                    <p className="text-sm text-red-500">
+                      Something went wrong. Please try again.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
-
-            {/* Direct support from founders */}
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-3">
-                <h3 className="text-2xl sm:text-3xl font-medium tracking-tight text-foreground">
-                  Direct support from founders
-                </h3>
-                <p className="text-muted-foreground text-base sm:text-lg leading-relaxed">
-                  Get help when you need it. Our founders are directly available
-                  to help you get the most out of August.
-                </p>
-              </div>
-              <div className="relative flex-1 min-h-[240px] sm:min-h-[320px] overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 dark:from-primary/10 dark:via-primary/15 dark:to-primary/10">
-                <Image
-                  src="/features/founder-support.png"
-                  alt="Direct support from founders"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </section>
     </div>

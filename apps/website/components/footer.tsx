@@ -16,7 +16,7 @@ export function Footer() {
     >
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-8 items-start sm:items-center">
         <span className="text-xs text-muted-foreground/70 tracking-wide">
-          {new Date().getFullYear()} Sixhuman Technologies
+          © {new Date().getFullYear()} Sixhuman Technologies Private Limited
         </span>
         <div className="flex gap-6 text-xs">
           <a
