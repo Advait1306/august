@@ -29,7 +29,7 @@ export default function Home() {
     const cookies = document.cookie.split("; ");
     const waitlistCookie = cookies.find((c) => c.startsWith("waitlist_email="));
     if (waitlistCookie) {
-      setWaitlistState({ status: "entered", email: decodeURIComponent(waitlistCookie.split("=")[1]) });
+      setWaitlistState({ status: "entered", email: decodeURIComponent(waitlistCookie.substring("waitlist_email=".length)) });
     } else {
       setWaitlistState({ status: "waitlist" });
     }
