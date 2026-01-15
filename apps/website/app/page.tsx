@@ -72,7 +72,7 @@ export default function Home() {
             </p>
             <p>
               Soon, you&apos;ll need new infrastructure to match your speed of
-              working, August is bringing it all together.
+              working. August is bringing it all together.
             </p>
           </div>
 
@@ -126,7 +126,7 @@ export default function Home() {
               </motion.span>
             </li>
             <li>
-              <span className="font-medium text-foreground">Skills</span> reflecting your organisation&apos;s taste
+              <span className="font-medium text-foreground">Skills</span> reflecting your organization&apos;s taste
             </li>
             <li>
               <span className="font-medium text-foreground">Memory</span> that
