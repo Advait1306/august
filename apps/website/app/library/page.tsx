@@ -23,7 +23,7 @@ const articles = [
 export default function Library() {
   return (
     <div className="flex flex-col">
-      <section className="w-full max-w-[800px] mx-auto px-6 sm:px-8 lg:px-12 py-16 sm:py-24">
+      <section className="w-full max-w-[800px] mx-auto px-10 sm:px-8 lg:px-12 py-16 sm:py-24">
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-3">
             <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-foreground">
@@ -44,12 +44,12 @@ export default function Library() {
                 rel="noopener noreferrer"
                 className="flex flex-col gap-2 p-4 -mx-4 rounded-lg hover:bg-muted transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-medium flex items-center gap-2">
-                    {article.title}
-                    <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
+                  <span className="text-foreground font-medium inline-flex items-center gap-2">
+                    <span>{article.title}</span>
+                    <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   </span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-muted-foreground shrink-0">
                     {article.date}
                   </span>
                 </div>
