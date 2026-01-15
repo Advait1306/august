@@ -200,13 +200,27 @@ export namespace IPC {
       includeHidden?: boolean;
     }
 
+    export type SearchMatchType = 'name' | 'path' | 'content';
+
+    export interface SearchFileResult {
+      path: string;
+      name: string;
+      extension: string;
+      /** Fuzzy match score (higher = better match) */
+      score: number;
+      /** What was matched: filename, path, or file contents */
+      matchType: SearchMatchType;
+      /** Character ranges that matched [start, end] for highlighting */
+      highlights?: Array<[number, number]>;
+      /** Preview of the matching line for content matches */
+      contentPreview?: string;
+      /** Line number for content matches */
+      contentLine?: number;
+    }
+
     export interface SearchFilesResponse {
       success: boolean;
-      files?: Array<{
-        path: string;
-        name: string;
-        extension: string;
-      }>;
+      files?: SearchFileResult[];
       error?: string;
     }
   }
