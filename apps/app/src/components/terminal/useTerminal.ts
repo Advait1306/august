@@ -69,12 +69,10 @@ export function useTerminal(
     xterm.open(terminalRef.current);
     fitAddon.fit();
 
-    // Enable Shift+Enter to insert a newline using bracketed paste
+    // Enable Shift+Enter to insert a newline
     xterm.attachCustomKeyEventHandler((event) => {
       if (event.key === "Enter" && event.shiftKey) {
         if (event.type === "keydown" && terminalIdRef.current) {
-          console.log("Shift + Enter triggered");
-          // xterm.input('\x1b[200~\x00\x1b[201~', true)
           xterm.input("\u001b\r", false);
         }
         return false;
