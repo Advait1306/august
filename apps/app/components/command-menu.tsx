@@ -13,15 +13,15 @@ import {
 
 import {
   Bot,
-  CheckSquare,
-  Settings,
-  User,
   Sun,
   Moon,
   Monitor,
   Play,
   Archive,
   Trash2,
+  TerminalSquare,
+  FolderOpen,
+  Plus,
 } from "lucide-react";
 import { useNestedSetting } from "@/src/contexts/settings-context";
 
@@ -35,8 +35,10 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Kbd, KbdKey } from "@/components/ui/kibo-ui/kbd";
-import { useNavigate, useLocation } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { FileOpener } from "@/components/file-opener";
+import { useWorkspaceStore } from "@/src/stores/workspace-store";
+import { nanoid } from "nanoid";
 
 type CommandMenuItem = {
   id: string;
@@ -150,8 +152,8 @@ function CommandMenuDialog({
   setFileOpenerOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const navigate = useNavigate();
-  const location = useLocation();
   const [, setTheme] = useNestedSetting("appearance", "theme");
+  const { getActiveWorkspaceApi, getActiveWorkspace, setAddDialogOpen } = useWorkspaceStore();
   const [keySequence, setKeySequence] = useState<string[]>([]);
   const keySequenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastKeyTimeRef = useRef<number>(0);
@@ -161,44 +163,52 @@ function CommandMenuDialog({
   >(() => {
     const baseCommands: Array<{ group: string; items: CommandMenuItem[] }> = [
       {
-        group: "Navigation",
+        group: "Tabs",
         items: [
           {
-            id: "tasks",
-            title: "Tasks",
-            icon: CheckSquare,
+            id: "new-terminal",
+            title: "New Terminal",
+            icon: TerminalSquare,
             action: () => {
-              navigate({
-                to: "/tasks",
-                search: {
-                  project: undefined,
-                  agent: undefined,
-                },
-              });
+              const api = getActiveWorkspaceApi();
+              const workspace = getActiveWorkspace();
+              if (api) {
+                api.addPanel({
+                  id: `terminal-${nanoid(8)}`,
+                  component: "terminal",
+                  title: "Terminal",
+                  params: { cwd: workspace?.cwd },
+                });
+              }
             },
-            shortcut: ["G", "T"],
+          },
+          {
+            id: "new-file-explorer",
+            title: "New File Explorer",
+            icon: FolderOpen,
+            action: () => {
+              const api = getActiveWorkspaceApi();
+              const workspace = getActiveWorkspace();
+              if (api) {
+                api.addPanel({
+                  id: `file-viewer-${nanoid(8)}`,
+                  component: "file-viewer",
+                  title: "File Viewer",
+                  params: { rootPath: workspace?.cwd },
+                });
+              }
+            },
           },
         ],
       },
       {
-        group: "Settings",
+        group: "Workspaces",
         items: [
           {
-            id: "settings",
-            title: "Settings",
-            icon: Settings,
-            action: () => {
-              navigate({
-                to: "/settings/appearance",
-                search: { from: location.pathname },
-              });
-            },
-          },
-          {
-            id: "profile",
-            title: "Profile",
-            icon: User,
-            action: () => console.log("Profile clicked"),
+            id: "new-workspace",
+            title: "New Workspace",
+            icon: Plus,
+            action: () => setAddDialogOpen(true),
           },
         ],
       },
@@ -209,21 +219,18 @@ function CommandMenuDialog({
             id: "theme-light",
             title: "Light",
             icon: Sun,
-
             action: () => setTheme("light"),
           },
           {
             id: "theme-dark",
             title: "Dark",
             icon: Moon,
-
             action: () => setTheme("dark"),
           },
           {
             id: "theme-system",
             title: "System",
             icon: Monitor,
-
             action: () => setTheme("system"),
           },
         ],
@@ -297,7 +304,7 @@ function CommandMenuDialog({
     }
 
     return baseCommands;
-  }, [setTheme, contextItem]);
+  }, [setTheme, contextItem, getActiveWorkspaceApi, getActiveWorkspace, setAddDialogOpen]);
 
   const runCommand = useCallback(
     (command: CommandMenuItem) => {
@@ -337,17 +344,6 @@ function CommandMenuDialog({
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      // Handle settings shortcut (Cmd+,)
-      if (e.key === "," && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        const currentPath = window.location.pathname;
-        navigate({
-          to: "/settings/appearance",
-          search: { from: currentPath },
-        });
-        return;
-      }
-
       // Handle command menu toggle
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
@@ -358,7 +354,7 @@ function CommandMenuDialog({
       // Handle file opener (Cmd+P)
       if (e.key === "p" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setFileOpenerOpen(true);
+        setFileOpenerOpen((prev) => !prev);
         return;
       }
 

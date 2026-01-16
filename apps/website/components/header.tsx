@@ -13,12 +13,20 @@ export function Header() {
           className="rounded transition-transform duration-300 group-hover:scale-105"
         />
       </Link>
-      <Link
-        href="/library"
-        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        Library
-      </Link>
+      <nav className="flex items-center gap-6">
+        <Link
+          href="/library"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Library
+        </Link>
+        <Link
+          href="/download"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Download
+        </Link>
+      </nav>
     </header>
   );
 }
