@@ -58,8 +58,8 @@ export function AddWorkspaceDialog({ open, onOpenChange }: AddWorkspaceDialogPro
   const handleCreate = async () => {
     if (!name.trim()) return
 
-    // If user entered a custom path, validate it
-    if (cwd && window.api?.fileSystem?.validateDirectory) {
+    // If user entered a path, validate it
+    if (cwd) {
       const result = await window.api.fileSystem.validateDirectory(cwd)
       if (!result.valid) {
         setPathError(result.error || 'Invalid directory')

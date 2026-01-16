@@ -252,10 +252,10 @@ export function registerFileSystemIpcHandlers(): void {
     IPC_CHANNELS.FILE_SYSTEM.VALIDATE_DIRECTORY,
     async (_event, inputPath: string): Promise<IPC.FileSystem.ValidateDirectoryResponse> => {
       try {
-        // Expand ~ to home directory
+        // Expand ~ to home directory (only ~/path or ~, not ~username)
         const homeDir = os.homedir()
         let expandedPath = inputPath
-        if (inputPath.startsWith('~')) {
+        if (inputPath.startsWith('~/') || inputPath === '~') {
           expandedPath = inputPath.replace(/^~/, homeDir)
         }
 
