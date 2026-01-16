@@ -5,7 +5,30 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { useIsMac } from "@/hooks/useIsMac";
 import mixpanel from "mixpanel-browser";
 
-const YOUTUBE_VIDEO_ID = "YOUR_VIDEO_ID_HERE"; // Replace with actual video ID
+const YOUTUBE_VIDEO_ID = "cJ4--pZs3Aw";
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="inline-flex items-center justify-center min-w-[1.75rem] h-7 px-2 text-sm font-medium text-foreground bg-muted border border-border rounded">
+      {children}
+    </kbd>
+  );
+}
+
+function Shortcut({ keys, description }: { keys: string[]; description: string }) {
+  return (
+    <tr className="border-b border-border last:border-b-0">
+      <td className="px-4 py-2.5 text-foreground">{description}</td>
+      <td className="px-4 py-2.5 text-right">
+        <span className="inline-flex items-center gap-1">
+          {keys.map((key, i) => (
+            <Kbd key={i}>{key}</Kbd>
+          ))}
+        </span>
+      </td>
+    </tr>
+  );
+}
 
 export default function DownloadPage() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -85,6 +108,52 @@ export default function DownloadPage() {
                 allowFullScreen
                 className="absolute inset-0 w-full h-full"
               />
+            </div>
+          </div>
+
+          {/* Keyboard shortcuts section */}
+          <div className="flex flex-col gap-6">
+            <h2 className="text-xl sm:text-2xl font-medium text-foreground">
+              Keyboard Shortcuts
+            </h2>
+
+            <div className="border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-border">
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
+                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">Shortcut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-border">
+                    <td colSpan={2} className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide bg-muted/30">
+                      Tabs
+                    </td>
+                  </tr>
+                  <Shortcut keys={["⌘", "N"]} description="New tab" />
+                  <Shortcut keys={["⌘", "W"]} description="Close tab" />
+                  <Shortcut keys={["⌘", "⇧", "T"]} description="Reopen closed tab" />
+                  <Shortcut keys={["⌘", "1-9"]} description="Jump to tab" />
+                  <Shortcut keys={["⌘", "⇧", "["]} description="Previous tab" />
+                  <Shortcut keys={["⌘", "⇧", "]"]} description="Next tab" />
+                  <tr className="border-b border-border">
+                    <td colSpan={2} className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide bg-muted/30">
+                      Workspaces
+                    </td>
+                  </tr>
+                  <Shortcut keys={["⌘", "⌥", "1-9"]} description="Jump to workspace" />
+                  <Shortcut keys={["⌘", "⌥", "["]} description="Previous workspace" />
+                  <Shortcut keys={["⌘", "⌥", "]"]} description="Next workspace" />
+                  <tr className="border-b border-border">
+                    <td colSpan={2} className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide bg-muted/30">
+                      General
+                    </td>
+                  </tr>
+                  <Shortcut keys={["⌘", "K"]} description="Open command menu (theme)" />
+                  <Shortcut keys={["⌘", "P"]} description="Open file finder" />
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

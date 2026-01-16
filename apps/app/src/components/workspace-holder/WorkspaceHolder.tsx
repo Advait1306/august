@@ -210,10 +210,10 @@ export function WorkspaceHolder({
       // === TAB SHORTCUTS (only for active workspace) ===
       if (!api || !isActive) return
 
-      // Cmd+N: Open new tab menu
+      // Cmd+N: Toggle new tab menu
       if (isMeta && !isShift && !isAlt && e.key === 'n') {
         e.preventDefault()
-        setNewTabMenuOpen(true)
+        setNewTabMenuOpen((prev) => !prev)
         return
       }
 
