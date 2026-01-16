@@ -10,7 +10,6 @@ const YOUTUBE_VIDEO_ID = "YOUR_VIDEO_ID_HERE"; // Replace with actual video ID
 export default function DownloadPage() {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [downloadStarted, setDownloadStarted] = useState(false);
   const mobile = useIsMobile();
   const mac = useIsMac();
 
@@ -37,7 +36,6 @@ export default function DownloadPage() {
   const startDownload = useCallback(() => {
     if (downloadUrl) {
       mixpanel.track("download_started");
-      setDownloadStarted(true);
       window.location.href = downloadUrl;
     }
   }, [downloadUrl]);
@@ -64,13 +62,6 @@ export default function DownloadPage() {
                 <span className="text-sm text-red-500">{error}</span>
               ) : !downloadUrl ? (
                 <span className="text-sm text-muted-foreground">Loading...</span>
-              ) : downloadStarted ? (
-                <a
-                  href={downloadUrl}
-                  className="text-sm text-foreground underline underline-offset-4 hover:opacity-80"
-                >
-                  Download again
-                </a>
               ) : (
                 <button
                   onClick={startDownload}
