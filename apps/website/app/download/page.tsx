@@ -18,6 +18,9 @@ export default function DownloadPage() {
       const response = await fetch(
         "https://api.github.com/repos/sixhuman/august-shell-release/releases/latest"
       );
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
       const release = await response.json();
       const dmgAsset = release.assets?.find(
         (asset: { name: string }) => asset.name.endsWith(".dmg")
