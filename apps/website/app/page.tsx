@@ -2,9 +2,7 @@
 
 import Image from "next/image";
 import { motion, AnimatePresence } from "motion/react";
-import { useState, useEffect } from "react";
-import { useClerk } from "@clerk/nextjs";
-import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 const providers = [
   { name: "OpenAI", logo: "/logos/openai.svg" },
@@ -21,34 +19,6 @@ const environments = [
 export default function Home() {
   const [showProviders, setShowProviders] = useState(false);
   const [showEnvironments, setShowEnvironments] = useState(false);
-  const [email, setEmail] = useState("");
-  const [waitlistState, setWaitlistState] = useState<{ status: null } | { status: "waitlist" } | { status: "entered"; email: string } | { status: "loading" } | { status: "error" }>({ status: null });
-  const clerk = useClerk();
-
-  useEffect(() => {
-    const cookies = document.cookie.split("; ");
-    const waitlistCookie = cookies.find((c) => c.startsWith("waitlist_email="));
-    if (waitlistCookie) {
-      setWaitlistState({ status: "entered", email: decodeURIComponent(waitlistCookie.substring("waitlist_email=".length)) });
-    } else {
-      setWaitlistState({ status: "waitlist" });
-    }
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-
-    setWaitlistState({ status: "loading" });
-    try {
-      await clerk.joinWaitlist({ emailAddress: email });
-      document.cookie = `waitlist_email=${encodeURIComponent(email)}; max-age=${60 * 60 * 24 * 365}; path=/; Secure; SameSite=Strict`;
-      setWaitlistState({ status: "entered", email });
-      setEmail("");
-    } catch {
-      setWaitlistState({ status: "error" });
-    }
-  };
 
   return (
     <div className="flex flex-col">
@@ -177,46 +147,6 @@ export default function Home() {
               that are sandboxed, reproducible & verifiable
             </li>
           </ul>
-
-          {/* Waitlist form */}
-          {waitlistState.status !== null && (
-            <div className="flex flex-col gap-4 pt-8 border-t border-border">
-              {waitlistState.status === "entered" ? (
-                <p className="text-muted-foreground">
-                  You&apos;re on the waitlist with{" "}
-                  <span className="text-foreground">{waitlistState.email}</span>
-                </p>
-              ) : (
-                <>
-                  <p className="text-muted-foreground">
-                    Join the waitlist for early access.
-                  </p>
-                  <form onSubmit={handleSubmit} className="flex gap-3">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="woz@apple.com"
-                      required
-                      className="flex-1 px-4 py-2 text-sm bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-foreground/20"
-                    />
-                    <button
-                      type="submit"
-                      disabled={waitlistState.status === "loading"}
-                      className="w-16 py-2 text-sm font-medium bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center"
-                    >
-                      {waitlistState.status === "loading" ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join"}
-                    </button>
-                  </form>
-                  {waitlistState.status === "error" && (
-                    <p className="text-sm text-red-500">
-                      Something went wrong. Please try again.
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
-          )}
         </div>
       </section>
     </div>
