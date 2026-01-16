@@ -58,7 +58,6 @@ export function AddWorkspaceDialog({ open, onOpenChange }: AddWorkspaceDialogPro
   const handleCreate = async () => {
     if (!name.trim()) return
 
-    // If user entered a path, validate it
     if (cwd) {
       const result = await window.api.fileSystem.validateDirectory(cwd)
       if (!result.valid) {
@@ -68,8 +67,8 @@ export function AddWorkspaceDialog({ open, onOpenChange }: AddWorkspaceDialogPro
       // Use the resolved path (with ~ expanded)
       createWorkspace(name.trim(), result.resolvedPath)
     } else {
-      // Use selected cwd or default to home directory
-      const workspaceCwd = cwd || homeDir
+      // Default to home directory
+      const workspaceCwd = homeDir
       createWorkspace(name.trim(), workspaceCwd)
     }
 
