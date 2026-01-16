@@ -73,6 +73,9 @@ declare global {
         searchFiles: (
           request: IPC.FileSystem.SearchFilesRequest
         ) => Promise<IPC.FileSystem.SearchFilesResponse>;
+        validateDirectory: (
+          path: string
+        ) => Promise<IPC.FileSystem.ValidateDirectoryResponse>;
       };
     };
   }

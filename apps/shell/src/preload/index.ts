@@ -84,7 +84,9 @@ const api = {
       return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
     },
     searchFiles: (request: IPC.FileSystem.SearchFilesRequest): Promise<IPC.FileSystem.SearchFilesResponse> =>
-      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.SEARCH_FILES, request)
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.SEARCH_FILES, request),
+    validateDirectory: (path: string): Promise<IPC.FileSystem.ValidateDirectoryResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.VALIDATE_DIRECTORY, path)
   }
 }
 
