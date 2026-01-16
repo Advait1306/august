@@ -22,6 +22,7 @@ export function AddWorkspaceDialog({ open, onOpenChange }: AddWorkspaceDialogPro
   const [name, setName] = useState('')
   const [cwd, setCwd] = useState('')
   const [homeDir, setHomeDir] = useState('')
+  const [pathError, setPathError] = useState<string | null>(null)
   const { createWorkspace } = useWorkspaceStore()
 
   // Fetch home directory on mount
@@ -36,6 +37,7 @@ export function AddWorkspaceDialog({ open, onOpenChange }: AddWorkspaceDialogPro
     if (open) {
       setName('')
       setCwd('')
+      setPathError(null)
     }
   }, [open])
 
@@ -44,6 +46,7 @@ export function AddWorkspaceDialog({ open, onOpenChange }: AddWorkspaceDialogPro
       const result = await window.api.projects.selectFolder()
       if (result?.path) {
         setCwd(result.path)
+        setPathError(null)
         // Auto-fill name from directory if empty
         if (!name && result.name) {
           setName(result.name)
@@ -52,20 +55,32 @@ export function AddWorkspaceDialog({ open, onOpenChange }: AddWorkspaceDialogPro
     }
   }
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!name.trim()) return
 
-    // Use selected cwd or default to home directory
-    const workspaceCwd = cwd || homeDir
-    createWorkspace(name.trim(), workspaceCwd)
+    if (cwd) {
+      const result = await window.api.fileSystem.validateDirectory(cwd)
+      if (!result.valid) {
+        setPathError(result.error || 'Invalid directory')
+        return
+      }
+      // Use the resolved path (with ~ expanded)
+      createWorkspace(name.trim(), result.resolvedPath)
+    } else {
+      // Default to home directory
+      const workspaceCwd = homeDir
+      createWorkspace(name.trim(), workspaceCwd)
+    }
+
     setName('')
     setCwd('')
+    setPathError(null)
     onOpenChange(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && name.trim()) {
-      handleCreate()
+      void handleCreate()
     }
   }
 
@@ -99,7 +114,10 @@ export function AddWorkspaceDialog({ open, onOpenChange }: AddWorkspaceDialogPro
                 id="cwd"
                 placeholder={homeDir || '/path/to/directory'}
                 value={cwd}
-                onChange={(e) => setCwd(e.target.value)}
+                onChange={(e) => {
+                  setCwd(e.target.value)
+                  setPathError(null)
+                }}
                 className="flex-1"
               />
               <Button
@@ -111,10 +129,14 @@ export function AddWorkspaceDialog({ open, onOpenChange }: AddWorkspaceDialogPro
                 <FolderOpen className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Terminals and file viewers will start from this directory.
-              {!cwd && homeDir && ` Defaults to ${homeDir}`}
-            </p>
+            {pathError ? (
+              <p className="text-sm text-destructive">{pathError}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Terminals and file viewers will start from this directory.
+                {!cwd && homeDir && ` Defaults to ${homeDir}`}
+              </p>
+            )}
           </div>
         </div>
 

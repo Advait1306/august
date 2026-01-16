@@ -209,5 +209,12 @@ export namespace IPC {
       }>;
       error?: string;
     }
+
+    export interface ValidateDirectoryResponse {
+      valid: boolean;
+      resolvedPath: string;
+      name: string;
+      error?: string;
+    }
   }
 }
