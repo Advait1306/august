@@ -109,6 +109,7 @@ export class PtyService {
       console.log('[PtyService] Creating terminal with cwd:', cwd, 'shell:', shell)
 
       const ptyProcess = pty.spawn(shell, [], {
+        name: 'xterm-256color',
         cols: request.cols,
         rows: request.rows,
         cwd,
