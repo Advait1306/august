@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { toast } from "sonner";
+import { useWorkspaceStore } from "@/src/stores/workspace-store";
 
 interface UseTerminalOptions {
   cwd?: string;
@@ -48,6 +49,7 @@ export function useTerminal(
   const initialOptionsRef = useRef(options);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const setActiveWorkspace = useWorkspaceStore((state) => state.setActiveWorkspace);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -130,10 +132,16 @@ export function useTerminal(
 
     // Listen for bell events and show toast notification
     const bellDisposable = xterm.onBell(() => {
-      const { workspaceName } = initialOptionsRef.current;
+      const { workspaceName, workspaceId } = initialOptionsRef.current;
       const name = workspaceName || "Terminal";
       toast.info(`Bell in ${name}`, {
         duration: 3000,
+        action: workspaceId
+          ? {
+              label: "Go to workspace",
+              onClick: () => setActiveWorkspace(workspaceId),
+            }
+          : undefined,
       });
     });
 
@@ -146,11 +154,17 @@ export function useTerminal(
         const osc9Match = event.data.match(OSC_9_NOTIFY);
         if (osc9Match) {
           const message = osc9Match[1];
-          const { workspaceName } = initialOptionsRef.current;
-          const title = workspaceName || "Terminal";
+          const { workspaceName, workspaceId } = initialOptionsRef.current;
+          const name = workspaceName || "Terminal";
           toast.info(message, {
-            description: title,
+            description: name,
             duration: 5000,
+            action: workspaceId
+              ? {
+                  label: "Go to workspace",
+                  onClick: () => setActiveWorkspace(workspaceId),
+                }
+              : undefined,
           });
         }
       }
