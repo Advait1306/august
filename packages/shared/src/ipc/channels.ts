@@ -23,6 +23,9 @@ export const IPC_CHANNELS = {
   BROWSER: {
     OPEN_URL: 'browser:open-url',
   },
+  SOUND: {
+    PLAY: 'sound:play',
+  },
   SHELL_TOOLS: {
     GET_MANIFEST: 'shell-tools:get-manifest',
     EXECUTE: 'shell-tools:execute',

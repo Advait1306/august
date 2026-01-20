@@ -24,6 +24,10 @@ const api = {
   browser: {
     openUrl: (url: string) => electronAPI.ipcRenderer.invoke(IPC_CHANNELS.BROWSER.OPEN_URL, url)
   },
+  sound: {
+    play: (soundName: string): Promise<{ success: boolean; error?: string }> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.SOUND.PLAY, soundName)
+  },
   shellTools: {
     getManifest: (): Promise<IPC.ShellTools.GetManifestResponse> =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.SHELL_TOOLS.GET_MANIFEST),

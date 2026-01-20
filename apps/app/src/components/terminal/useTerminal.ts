@@ -134,6 +134,8 @@ export function useTerminal(
     const bellDisposable = xterm.onBell(() => {
       const { workspaceName, workspaceId } = initialOptionsRef.current;
       const name = workspaceName || "Terminal";
+      // Play notification sound
+      window.api.sound.play("Ping");
       toast.info(`Bell in ${name}`, {
         duration: 3000,
         action: workspaceId
@@ -156,6 +158,8 @@ export function useTerminal(
           const message = osc9Match[1];
           const { workspaceName, workspaceId } = initialOptionsRef.current;
           const name = workspaceName || "Terminal";
+          // Play notification sound
+          window.api.sound.play("Ping");
           toast.info(message, {
             description: name,
             duration: 5000,
