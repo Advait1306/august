@@ -1,65 +1,45 @@
 import { create } from 'zustand'
-import { IPC } from '@jupiter/shared/ipc'
 
 interface GitStore {
-  // State
-  isDiffPanelOpen: boolean
-  diffWorkspaceCwd: string | null
-  gitStatus: IPC.Git.StatusResponse | null
-  isLoadingStatus: boolean
+  // State - track which workspaces have diff panels open
+  openDiffPanels: Set<string> // Set of workspace IDs
 
   // Actions
-  openDiffPanel: (workspaceCwd: string) => void
-  closeDiffPanel: () => void
-  toggleDiffPanel: (workspaceCwd: string) => void
-  setGitStatus: (status: IPC.Git.StatusResponse | null) => void
-  setIsLoadingStatus: (isLoading: boolean) => void
+  openDiffPanel: (workspaceId: string) => void
+  closeDiffPanel: (workspaceId: string) => void
+  toggleDiffPanel: (workspaceId: string) => void
+  isDiffPanelOpen: (workspaceId: string) => boolean
 }
 
 export const useGitStore = create<GitStore>()((set, get) => ({
-  isDiffPanelOpen: false,
-  diffWorkspaceCwd: null,
-  gitStatus: null,
-  isLoadingStatus: false,
+  openDiffPanels: new Set(),
 
-  openDiffPanel: (workspaceCwd: string) => {
-    set({
-      isDiffPanelOpen: true,
-      diffWorkspaceCwd: workspaceCwd,
-    })
+  openDiffPanel: (workspaceId: string) => {
+    const { openDiffPanels } = get()
+    const newSet = new Set(openDiffPanels)
+    newSet.add(workspaceId)
+    set({ openDiffPanels: newSet })
   },
 
-  closeDiffPanel: () => {
-    set({
-      isDiffPanelOpen: false,
-      gitStatus: null,
-    })
+  closeDiffPanel: (workspaceId: string) => {
+    const { openDiffPanels } = get()
+    const newSet = new Set(openDiffPanels)
+    newSet.delete(workspaceId)
+    set({ openDiffPanels: newSet })
   },
 
-  toggleDiffPanel: (workspaceCwd: string) => {
-    const { isDiffPanelOpen, diffWorkspaceCwd } = get()
-
-    // If panel is open for the same workspace, close it
-    if (isDiffPanelOpen && diffWorkspaceCwd === workspaceCwd) {
-      set({
-        isDiffPanelOpen: false,
-        gitStatus: null,
-      })
+  toggleDiffPanel: (workspaceId: string) => {
+    const { openDiffPanels } = get()
+    const newSet = new Set(openDiffPanels)
+    if (newSet.has(workspaceId)) {
+      newSet.delete(workspaceId)
     } else {
-      // Open panel for this workspace
-      set({
-        isDiffPanelOpen: true,
-        diffWorkspaceCwd: workspaceCwd,
-        gitStatus: null,
-      })
+      newSet.add(workspaceId)
     }
+    set({ openDiffPanels: newSet })
   },
 
-  setGitStatus: (status: IPC.Git.StatusResponse | null) => {
-    set({ gitStatus: status })
-  },
-
-  setIsLoadingStatus: (isLoading: boolean) => {
-    set({ isLoadingStatus: isLoading })
+  isDiffPanelOpen: (workspaceId: string) => {
+    return get().openDiffPanels.has(workspaceId)
   },
 }))

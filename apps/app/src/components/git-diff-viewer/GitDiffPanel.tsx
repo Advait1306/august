@@ -1,18 +1,14 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { GitDiffList } from './GitDiffList'
-import { useGitStore } from '@/src/stores/git-store'
+import { IPC } from '@jupiter/shared/ipc'
 
 interface GitDiffPanelProps {
   workspaceCwd: string
 }
 
 export function GitDiffPanel({ workspaceCwd }: GitDiffPanelProps) {
-  const {
-    gitStatus,
-    setGitStatus,
-    isLoadingStatus,
-    setIsLoadingStatus,
-  } = useGitStore()
+  const [gitStatus, setGitStatus] = useState<IPC.Git.StatusResponse | null>(null)
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false)
 
   const fetchStatus = useCallback(async (showLoading = false) => {
     if (showLoading) {
@@ -30,7 +26,7 @@ export function GitDiffPanel({ workspaceCwd }: GitDiffPanelProps) {
         setIsLoadingStatus(false)
       }
     }
-  }, [workspaceCwd, setGitStatus, setIsLoadingStatus])
+  }, [workspaceCwd])
 
   // Initial fetch and set up file watcher
   useEffect(() => {

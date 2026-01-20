@@ -3,7 +3,6 @@ import { GitBranch } from "lucide-react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { WorkspaceHolder } from "./workspace-holder";
 import { WorkspaceSidebar } from "./workspace-sidebar";
-import { GitDiffPanel } from "./git-diff-viewer";
 import { useWorkspaceStore } from "@/src/stores/workspace-store";
 import { useGitStore } from "@/src/stores/git-store";
 import { useGitStatus } from "@/src/hooks/useGitStatus";
@@ -16,7 +15,7 @@ export function AgentRunner() {
     initializeDefaultWorkspace,
     isInitialized,
   } = useWorkspaceStore();
-  const { isDiffPanelOpen, diffWorkspaceCwd, toggleDiffPanel } = useGitStore();
+  const { openDiffPanels, toggleDiffPanel } = useGitStore();
   const [isReady, setIsReady] = useState(false);
 
   // Get active workspace cwd for git status check
@@ -41,20 +40,6 @@ export function AgentRunner() {
     initialize();
   }, [initializeDefaultWorkspace, isInitialized]);
 
-  // Cmd+D: Toggle git diff panel
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey && !e.shiftKey && !e.altKey && e.key === 'd') {
-        e.preventDefault();
-        if (isGitRepo && activeWorkspace?.cwd) {
-          toggleDiffPanel(activeWorkspace.cwd);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isGitRepo, activeWorkspace?.cwd, toggleDiffPanel]);
-
   // Don't render until initialized
   if (!isReady || workspaces.length === 0) {
     return (
@@ -64,12 +49,11 @@ export function AgentRunner() {
     );
   }
 
-  const showDiffPanel = isDiffPanelOpen && diffWorkspaceCwd === activeWorkspace?.cwd;
-  const isCurrentPanelOpen = isDiffPanelOpen && diffWorkspaceCwd === activeWorkspace?.cwd;
+  const isCurrentPanelOpen = activeWorkspaceId ? openDiffPanels.has(activeWorkspaceId) : false;
 
   const handleToggleDiff = () => {
-    if (activeWorkspace?.cwd) {
-      toggleDiffPanel(activeWorkspace.cwd);
+    if (activeWorkspaceId) {
+      toggleDiffPanel(activeWorkspaceId);
     }
   };
 
@@ -99,44 +83,29 @@ export function AgentRunner() {
         <div className="flex flex-1 overflow-hidden">
           <WorkspaceSidebar />
           <SidebarInset className="pr-0 pb-0">
-            <div className="flex h-full w-full overflow-hidden">
-              {/* Workspace area */}
-              <div
-                className="relative overflow-hidden"
-                style={{ flex: showDiffPanel ? 3 : 1 }}
-              >
-                {workspaces.map((workspace) => {
-                  const isActive = workspace.id === activeWorkspaceId;
-                  return (
-                    <div
-                      key={workspace.id}
-                      className="absolute inset-0 h-full w-full"
-                      style={{
-                        visibility: isActive ? "visible" : "hidden",
-                        pointerEvents: isActive ? "auto" : "none",
-                        zIndex: isActive ? 1 : 0,
-                      }}
-                      aria-hidden={!isActive}
-                    >
-                      <WorkspaceHolder
-                        workspaceId={workspace.id}
-                        storageKey={`workspace-${workspace.id}`}
-                        workspaceCwd={workspace.cwd}
-                        isActive={isActive}
-                        className="h-full w-full"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Git Diff Panel */}
-              {showDiffPanel && diffWorkspaceCwd && (
-                <div style={{ flex: 2 }}>
-                  <GitDiffPanel workspaceCwd={diffWorkspaceCwd} />
+            {workspaces.map((workspace) => {
+              const isActive = workspace.id === activeWorkspaceId;
+              return (
+                <div
+                  key={workspace.id}
+                  className="absolute inset-0 h-full w-full"
+                  style={{
+                    visibility: isActive ? "visible" : "hidden",
+                    pointerEvents: isActive ? "auto" : "none",
+                    zIndex: isActive ? 1 : 0,
+                  }}
+                  aria-hidden={!isActive}
+                >
+                  <WorkspaceHolder
+                    workspaceId={workspace.id}
+                    storageKey={`workspace-${workspace.id}`}
+                    workspaceCwd={workspace.cwd}
+                    isActive={isActive}
+                    className="h-full w-full"
+                  />
                 </div>
-              )}
-            </div>
+              );
+            })}
           </SidebarInset>
         </div>
       </div>

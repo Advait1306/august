@@ -24,6 +24,9 @@ import { ThemedTab } from './ThemedTab'
 import type { WorkspaceHolderProps, ViewType } from './types'
 import { useWorkspaceStore } from '@/src/stores/workspace-store'
 import { useClosedTabsStore } from '@/src/stores/closed-tabs-store'
+import { useGitStore } from '@/src/stores/git-store'
+import { useGitStatus } from '@/src/hooks/useGitStatus'
+import { GitDiffPanel } from '@/src/components/git-diff-viewer'
 
 import 'dockview-react/dist/styles/dockview.css'
 import './workspace-holder.css'
@@ -171,6 +174,9 @@ export function WorkspaceHolder({
     selectPreviousWorkspace,
   } = useWorkspaceStore()
   const { pushClosedTab, popClosedTab } = useClosedTabsStore()
+  const { toggleDiffPanel, openDiffPanels } = useGitStore()
+  const { isGitRepo } = useGitStatus(workspaceCwd)
+  const showDiffPanel = openDiffPanels.has(workspaceId) && isGitRepo
 
   // Keyboard shortcuts for tab and workspace navigation
   useEffect(() => {
@@ -209,6 +215,15 @@ export function WorkspaceHolder({
 
       // === TAB SHORTCUTS (only for active workspace) ===
       if (!api || !isActive) return
+
+      // Cmd+D: Toggle git diff panel
+      if (isMeta && !isShift && !isAlt && e.key === 'd') {
+        e.preventDefault()
+        if (isGitRepo) {
+          toggleDiffPanel(workspaceId)
+        }
+        return
+      }
 
       // Cmd+N: Toggle new tab menu
       if (isMeta && !isShift && !isAlt && e.key === 'n') {
@@ -317,6 +332,7 @@ export function WorkspaceHolder({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
     api,
+    workspaceId,
     workspaceCwd,
     isActive,
     activeWorkspaceId,
@@ -326,6 +342,8 @@ export function WorkspaceHolder({
     selectPreviousWorkspace,
     pushClosedTab,
     popClosedTab,
+    toggleDiffPanel,
+    isGitRepo,
   ])
 
   const handleReady = useCallback(
@@ -413,15 +431,22 @@ export function WorkspaceHolder({
 
   return (
     <WorkspaceHolderProvider api={api} workspaceCwd={workspaceCwd}>
-      <div className={cn('workspace-holder h-full w-full', dockviewThemeClass, className)}>
-        <DockviewReact
-          components={components}
-          tabComponents={tabComponents}
-          defaultTabComponent={ThemedTab}
-          rightHeaderActionsComponent={RightHeaderActionsWithCwd}
-          onReady={handleReady}
-          className="h-full"
-        />
+      <div className={cn('workspace-holder h-full w-full flex', dockviewThemeClass, className)}>
+        <div className="flex-1 min-w-0" style={{ flex: showDiffPanel ? 3 : 1 }}>
+          <DockviewReact
+            components={components}
+            tabComponents={tabComponents}
+            defaultTabComponent={ThemedTab}
+            rightHeaderActionsComponent={RightHeaderActionsWithCwd}
+            onReady={handleReady}
+            className="h-full"
+          />
+        </div>
+        {showDiffPanel && workspaceCwd && (
+          <div style={{ flex: 2 }} className="min-w-0">
+            <GitDiffPanel workspaceCwd={workspaceCwd} />
+          </div>
+        )}
       </div>
 
       {/* New Tab Command Menu */}
