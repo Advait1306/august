@@ -61,7 +61,7 @@ export function GitDiffPanel({ workspaceCwd }: GitDiffPanelProps) {
     <div className="h-full flex flex-col bg-background border-l border-border">
       {/* Header */}
       <div className="flex items-center px-3 py-2 border-b border-border shrink-0">
-        <span className="font-medium text-sm">Git Changes</span>
+        <span className="font-medium text-sm">Changes</span>
         <span className="ml-2 text-xs text-muted-foreground">({allFiles.length})</span>
       </div>
 

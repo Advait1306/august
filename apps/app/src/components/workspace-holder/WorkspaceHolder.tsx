@@ -20,13 +20,13 @@ import { useTheme } from '@/src/components/theme'
 import { WorkspaceHolderProvider } from './WorkspaceHolderProvider'
 import { TerminalPanel } from './panels/TerminalPanel'
 import { FileViewerPanel } from './panels/FileViewerPanel'
+import { GitDiffPanelWrapper } from './panels/GitDiffPanelWrapper'
 import { ThemedTab } from './ThemedTab'
 import type { WorkspaceHolderProps, ViewType } from './types'
 import { useWorkspaceStore } from '@/src/stores/workspace-store'
 import { useClosedTabsStore } from '@/src/stores/closed-tabs-store'
 import { useGitStore } from '@/src/stores/git-store'
 import { useGitStatus } from '@/src/hooks/useGitStatus'
-import { GitDiffPanel } from '@/src/components/git-diff-viewer'
 
 import 'dockview-react/dist/styles/dockview.css'
 import './workspace-holder.css'
@@ -39,7 +39,10 @@ const STORAGE_KEY_PREFIX = 'august-workspace-holder-'
 const components = {
   terminal: TerminalPanel,
   'file-viewer': FileViewerPanel,
+  'git-diff': GitDiffPanelWrapper,
 }
+
+const GIT_DIFF_PANEL_ID = 'git-diff-panel'
 
 /**
  * Custom tab components for proper theming
@@ -177,6 +180,53 @@ export function WorkspaceHolder({
   const { toggleDiffPanel, openDiffPanels } = useGitStore()
   const { isGitRepo } = useGitStatus(workspaceCwd)
   const showDiffPanel = openDiffPanels.has(workspaceId) && isGitRepo
+
+  // Manage git diff panel in dockview
+  useEffect(() => {
+    if (!api || !workspaceCwd) return
+
+    const existingPanel = api.getPanel(GIT_DIFF_PANEL_ID)
+
+    if (showDiffPanel && !existingPanel) {
+      // Add the git diff panel to the right
+      api.addPanel({
+        id: GIT_DIFF_PANEL_ID,
+        component: 'git-diff',
+        title: 'Changes',
+        params: { workspaceCwd },
+        position: { direction: 'right' },
+        initialWidth: 800,
+      })
+
+      // Lock the panel's group to prevent movement
+      const panel = api.getPanel(GIT_DIFF_PANEL_ID)
+      if (panel) {
+        const group = panel.group
+        if (group) {
+          group.locked = true
+          group.header.hidden = true
+          group.api.setConstraints({ minimumWidth: 300, maximumWidth: 1200 })
+        }
+      }
+    } else if (!showDiffPanel && existingPanel) {
+      // Remove the git diff panel
+      existingPanel.api.close()
+    }
+  }, [api, showDiffPanel, workspaceCwd])
+
+  // Sync git store when diff panel is closed via tab X button
+  useEffect(() => {
+    if (!api) return
+
+    const disposable = api.onDidRemovePanel((event) => {
+      if (event.id === GIT_DIFF_PANEL_ID && openDiffPanels.has(workspaceId)) {
+        // Panel was closed externally (e.g., via X button), update store
+        toggleDiffPanel(workspaceId)
+      }
+    })
+
+    return () => disposable.dispose()
+  }, [api, workspaceId, openDiffPanels, toggleDiffPanel])
 
   // Keyboard shortcuts for tab and workspace navigation
   useEffect(() => {
@@ -379,6 +429,17 @@ export function WorkspaceHolder({
         })
       }
 
+      // Re-apply lock settings to restored git-diff panel if it exists
+      const restoredGitDiffPanel = dockviewApi.getPanel(GIT_DIFF_PANEL_ID)
+      if (restoredGitDiffPanel) {
+        const group = restoredGitDiffPanel.group
+        if (group) {
+          group.locked = true
+          group.header.hidden = true
+          group.api.setConstraints({ minimumWidth: 300, maximumWidth: 1200 })
+        }
+      }
+
       // Subscribe to layout changes for persistence
       // Store disposable in ref for cleanup on unmount
       layoutChangeDisposableRef.current = dockviewApi.onDidLayoutChange(() => {
@@ -431,22 +492,15 @@ export function WorkspaceHolder({
 
   return (
     <WorkspaceHolderProvider api={api} workspaceCwd={workspaceCwd}>
-      <div className={cn('workspace-holder h-full w-full flex', dockviewThemeClass, className)}>
-        <div className="flex-1 min-w-0" style={{ flex: showDiffPanel ? 3 : 1 }}>
-          <DockviewReact
-            components={components}
-            tabComponents={tabComponents}
-            defaultTabComponent={ThemedTab}
-            rightHeaderActionsComponent={RightHeaderActionsWithCwd}
-            onReady={handleReady}
-            className="h-full"
-          />
-        </div>
-        {showDiffPanel && workspaceCwd && (
-          <div style={{ flex: 2 }} className="min-w-0">
-            <GitDiffPanel workspaceCwd={workspaceCwd} />
-          </div>
-        )}
+      <div className={cn('workspace-holder h-full w-full', dockviewThemeClass, className)}>
+        <DockviewReact
+          components={components}
+          tabComponents={tabComponents}
+          defaultTabComponent={ThemedTab}
+          rightHeaderActionsComponent={RightHeaderActionsWithCwd}
+          onReady={handleReady}
+          className="h-full"
+        />
       </div>
 
       {/* New Tab Command Menu */}
