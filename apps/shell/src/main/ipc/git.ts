@@ -9,6 +9,34 @@ import { gitWatcherService } from '../services/git-watcher-service'
 const execAsync = promisify(exec)
 
 /**
+ * Recursively list all files in a directory
+ */
+async function listFilesRecursively(dirPath: string, relativeTo: string): Promise<string[]> {
+  const files: string[] = []
+
+  async function walk(currentPath: string) {
+    try {
+      const entries = await fs.readdir(currentPath, { withFileTypes: true })
+      for (const entry of entries) {
+        const fullPath = path.join(currentPath, entry.name)
+        if (entry.isDirectory()) {
+          await walk(fullPath)
+        } else if (entry.isFile()) {
+          // Get path relative to the workspace root
+          const relativePath = path.relative(relativeTo, fullPath)
+          files.push(relativePath)
+        }
+      }
+    } catch {
+      // Ignore errors (permission issues, etc.)
+    }
+  }
+
+  await walk(dirPath)
+  return files
+}
+
+/**
  * Parse git status --porcelain=v1 output
  * Format: XY PATH or XY ORIG -> PATH for renames
  * X = status in index (staged), Y = status in worktree
@@ -88,9 +116,25 @@ export function registerGitIpcHandlers(): void {
     IPC_CHANNELS.GIT.STATUS,
     async (_event, cwd: string): Promise<IPC.Git.StatusResponse> => {
       try {
-        const { stdout } = await execAsync('git status --porcelain=v1', { cwd })
+        const { stdout } = await execAsync('git status --porcelain=v1', { cwd, maxBuffer: 10 * 1024 * 1024 })
         const { staged, unstaged, untracked } = parseGitStatus(stdout)
-        return { success: true, staged, unstaged, untracked }
+
+        // Expand untracked directories into individual files
+        const expandedUntracked: IPC.Git.FileChange[] = []
+        for (const file of untracked) {
+          if (file.path.endsWith('/')) {
+            // This is a directory, list all files inside it
+            const dirPath = path.join(cwd, file.path)
+            const files = await listFilesRecursively(dirPath, cwd)
+            for (const filePath of files) {
+              expandedUntracked.push({ path: filePath, status: 'untracked', staged: false })
+            }
+          } else {
+            expandedUntracked.push(file)
+          }
+        }
+
+        return { success: true, staged, unstaged, untracked: expandedUntracked }
       } catch (error) {
         return {
           success: false,

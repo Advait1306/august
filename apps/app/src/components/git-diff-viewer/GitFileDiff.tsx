@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { DiffEditor } from '@monaco-editor/react'
 import { FilePlus, FileMinus, FileEdit, ChevronDown, ChevronRight } from 'lucide-react'
 import { useTheme } from '@/src/components/theme'
@@ -97,6 +97,8 @@ export function GitFileDiff({ filePath, status, staged, workspaceCwd }: GitFileD
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editorHeight, setEditorHeight] = useState(100)
+  const isMountedRef = useRef(true)
+  const editorRef = useRef<DiffEditorType | null>(null)
 
   const fetchDiff = useCallback(async (showLoading = false) => {
     if (showLoading) {
@@ -111,6 +113,9 @@ export function GitFileDiff({ filePath, status, staged, workspaceCwd }: GitFileD
         staged,
       })
 
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return
+
       if (response?.success) {
         setOriginal(response.original)
         setModified(response.modified)
@@ -121,15 +126,29 @@ export function GitFileDiff({ filePath, status, staged, workspaceCwd }: GitFileD
         setError(response?.error || 'Failed to fetch diff')
       }
     } catch (err) {
+      if (!isMountedRef.current) return
       if (showLoading) {
         setError(err instanceof Error ? err.message : 'Failed to fetch diff')
       }
     } finally {
-      if (showLoading) {
+      if (isMountedRef.current && showLoading) {
         setIsLoading(false)
       }
     }
   }, [filePath, staged, workspaceCwd])
+
+  // Track mount state
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      // Dispose editor to prevent "TextModel got disposed" errors
+      if (editorRef.current) {
+        editorRef.current.dispose()
+        editorRef.current = null
+      }
+    }
+  }, [])
 
   // Fetch diff and listen for changes
   useEffect(() => {
@@ -151,9 +170,12 @@ export function GitFileDiff({ filePath, status, staged, workspaceCwd }: GitFileD
   const language = getLanguageFromPath(filePath)
 
   const handleEditorMount = (editor: DiffEditorType) => {
+    editorRef.current = editor
     const modifiedEditor = editor.getModifiedEditor()
 
     const updateHeight = () => {
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return
       // Use Monaco's content height directly
       const contentHeight = modifiedEditor.getContentHeight()
       setEditorHeight(contentHeight)
