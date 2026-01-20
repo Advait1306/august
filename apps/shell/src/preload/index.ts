@@ -87,6 +87,23 @@ const api = {
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.SEARCH_FILES, request),
     validateDirectory: (path: string): Promise<IPC.FileSystem.ValidateDirectoryResponse> =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.VALIDATE_DIRECTORY, path)
+  },
+  git: {
+    isRepo: (cwd: string): Promise<IPC.Git.IsRepoResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.IS_REPO, cwd),
+    status: (cwd: string): Promise<IPC.Git.StatusResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.STATUS, cwd),
+    diffFile: (request: IPC.Git.DiffFileRequest): Promise<IPC.Git.DiffFileResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.DIFF_FILE, request),
+    watch: (cwd: string): Promise<IPC.Git.WatchResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.WATCH, cwd),
+    unwatch: (cwd: string): Promise<IPC.Git.WatchResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.UNWATCH, cwd),
+    onChanged: (callback: (event: IPC.Git.ChangedEvent) => void) => {
+      const handler = (_: unknown, event: IPC.Git.ChangedEvent) => callback(event)
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.GIT.CHANGED, handler)
+      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.GIT.CHANGED, handler)
+    }
   }
 }
 

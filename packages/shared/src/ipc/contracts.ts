@@ -217,4 +217,53 @@ export namespace IPC {
       error?: string;
     }
   }
+
+  export namespace Git {
+    export interface IsRepoResponse {
+      isRepo: boolean;
+      error?: string;
+    }
+
+    export type FileStatus = 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked';
+
+    export interface FileChange {
+      path: string;
+      status: FileStatus;
+      staged: boolean;
+    }
+
+    export interface StatusResponse {
+      success: boolean;
+      staged: FileChange[];
+      unstaged: FileChange[];
+      untracked: FileChange[];
+      error?: string;
+    }
+
+    export interface DiffFileRequest {
+      cwd: string;
+      filePath: string;
+      staged: boolean;
+    }
+
+    export interface DiffFileResponse {
+      success: boolean;
+      original: string;
+      modified: string;
+      error?: string;
+    }
+
+    export interface WatchRequest {
+      cwd: string;
+    }
+
+    export interface WatchResponse {
+      success: boolean;
+      error?: string;
+    }
+
+    export interface ChangedEvent {
+      cwd: string;
+    }
+  }
 }
