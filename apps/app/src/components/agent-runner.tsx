@@ -41,6 +41,20 @@ export function AgentRunner() {
     initialize();
   }, [initializeDefaultWorkspace, isInitialized]);
 
+  // Cmd+D: Toggle git diff panel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey && !e.shiftKey && !e.altKey && e.key === 'd') {
+        e.preventDefault();
+        if (isGitRepo && activeWorkspace?.cwd) {
+          toggleDiffPanel(activeWorkspace.cwd);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isGitRepo, activeWorkspace?.cwd, toggleDiffPanel]);
+
   // Don't render until initialized
   if (!isReady || workspaces.length === 0) {
     return (
@@ -76,7 +90,7 @@ export function AgentRunner() {
                   : "hover:bg-neutral-300 dark:hover:bg-neutral-700"
               )}
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-              title="Git Changes"
+              title="Git Changes (⌘D)"
             >
               <GitBranch className="h-4 w-4" />
             </button>
