@@ -24,6 +24,8 @@ export function TerminalPanel({
     <TerminalView
       cwd={params.cwd}
       env={params.env}
+      workspaceId={params.workspaceId}
+      workspaceName={params.workspaceName}
       isActive={isActive}
       className="h-full w-full"
     />

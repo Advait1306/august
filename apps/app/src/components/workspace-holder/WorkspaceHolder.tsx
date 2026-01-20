@@ -50,12 +50,14 @@ const tabComponents = {
  */
 interface RightHeaderActionsProps extends IDockviewHeaderActionsProps {
   workspaceCwd?: string
+  workspaceId?: string
+  workspaceName?: string
 }
 
 /**
  * Add new panel button with dropdown menu
  */
-function RightHeaderActions({ containerApi, workspaceCwd }: RightHeaderActionsProps) {
+function RightHeaderActions({ containerApi, workspaceCwd, workspaceId, workspaceName }: RightHeaderActionsProps) {
   const [open, setOpen] = useState(false)
 
   const handleAddTerminal = () => {
@@ -63,7 +65,7 @@ function RightHeaderActions({ containerApi, workspaceCwd }: RightHeaderActionsPr
       id: `terminal-${nanoid(8)}`,
       component: 'terminal',
       title: 'Terminal',
-      params: { cwd: workspaceCwd },
+      params: { cwd: workspaceCwd, workspaceId, workspaceName },
     })
     setOpen(false)
   }
@@ -130,6 +132,7 @@ function isValidLayout(layout: unknown): boolean {
 
 export function WorkspaceHolder({
   workspaceId,
+  workspaceName,
   storageKey = 'default',
   className,
   onReady,
@@ -357,7 +360,7 @@ export function WorkspaceHolder({
           id: 'terminal-1',
           component: 'terminal',
           title: 'Terminal',
-          params: { cwd: workspaceCwd },
+          params: { cwd: workspaceCwd, workspaceId, workspaceName },
         })
       }
 
@@ -375,15 +378,15 @@ export function WorkspaceHolder({
       // Call external onReady callback
       onReady?.(dockviewApi)
     },
-    [fullStorageKey, onReady, workspaceCwd]
+    [fullStorageKey, onReady, workspaceCwd, workspaceId, workspaceName]
   )
 
-  // Wrap RightHeaderActions to pass workspaceCwd
+  // Wrap RightHeaderActions to pass workspace context
   const RightHeaderActionsWithCwd = useCallback(
     (props: IDockviewHeaderActionsProps) => (
-      <RightHeaderActions {...props} workspaceCwd={workspaceCwd} />
+      <RightHeaderActions {...props} workspaceCwd={workspaceCwd} workspaceId={workspaceId} workspaceName={workspaceName} />
     ),
-    [workspaceCwd]
+    [workspaceCwd, workspaceId, workspaceName]
   )
 
   // Handlers for new tab menu
@@ -393,11 +396,11 @@ export function WorkspaceHolder({
         id: `terminal-${nanoid(8)}`,
         component: 'terminal',
         title: 'Terminal',
-        params: { cwd: workspaceCwd },
+        params: { cwd: workspaceCwd, workspaceId, workspaceName },
       })
     }
     setNewTabMenuOpen(false)
-  }, [api, workspaceCwd])
+  }, [api, workspaceCwd, workspaceId, workspaceName])
 
   const handleAddFileViewerFromMenu = useCallback(() => {
     if (api) {

@@ -66,6 +66,7 @@ export function AgentRunner() {
                   >
                     <WorkspaceHolder
                       workspaceId={workspace.id}
+                      workspaceName={workspace.name}
                       storageKey={`workspace-${workspace.id}`}
                       workspaceCwd={workspace.cwd}
                       isActive={isActive}
