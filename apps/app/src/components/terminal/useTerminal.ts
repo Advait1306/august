@@ -137,7 +137,7 @@ export function useTerminal(
       // Play notification sound
       window.api.sound.play("Ping");
       toast.info(`Bell in ${name}`, {
-        duration: 3000,
+        duration: 15000,
         action: workspaceId
           ? {
               label: "Go to workspace",
@@ -162,7 +162,7 @@ export function useTerminal(
           window.api.sound.play("Ping");
           toast.info(message, {
             description: name,
-            duration: 5000,
+            duration: 15000,
             action: workspaceId
               ? {
                   label: "Go to workspace",
