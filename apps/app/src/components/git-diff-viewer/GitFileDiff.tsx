@@ -3,7 +3,7 @@ import { DiffEditor } from '@monaco-editor/react'
 import { FilePlus, FileMinus, FileEdit, ChevronDown, ChevronRight } from 'lucide-react'
 import { useTheme } from '@/src/components/theme'
 import { IPC } from '@jupiter/shared/ipc'
-import type { DiffEditor as DiffEditorType } from 'monaco-editor'
+import type { editor } from 'monaco-editor'
 
 interface GitFileDiffProps {
   filePath: string
@@ -98,7 +98,7 @@ export function GitFileDiff({ filePath, status, staged, workspaceCwd }: GitFileD
   const [error, setError] = useState<string | null>(null)
   const [editorHeight, setEditorHeight] = useState(100)
   const isMountedRef = useRef(true)
-  const editorRef = useRef<DiffEditorType | null>(null)
+  const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null)
 
   const fetchDiff = useCallback(async (showLoading = false) => {
     if (showLoading) {
@@ -169,7 +169,7 @@ export function GitFileDiff({ filePath, status, staged, workspaceCwd }: GitFileD
 
   const language = getLanguageFromPath(filePath)
 
-  const handleEditorMount = (editor: DiffEditorType) => {
+  const handleEditorMount = (editor: editor.IStandaloneDiffEditor) => {
     editorRef.current = editor
     const modifiedEditor = editor.getModifiedEditor()
 

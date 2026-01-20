@@ -77,6 +77,14 @@ declare global {
           path: string
         ) => Promise<IPC.FileSystem.ValidateDirectoryResponse>;
       };
+      git: {
+        isRepo: (cwd: string) => Promise<IPC.Git.IsRepoResponse>;
+        status: (cwd: string) => Promise<IPC.Git.StatusResponse>;
+        diffFile: (request: IPC.Git.DiffFileRequest) => Promise<IPC.Git.DiffFileResponse>;
+        watch: (cwd: string) => Promise<IPC.Git.WatchResponse>;
+        unwatch: (cwd: string) => Promise<IPC.Git.WatchResponse>;
+        onChanged: (callback: (event: IPC.Git.ChangedEvent) => void) => () => void;
+      };
     };
   }
 }
