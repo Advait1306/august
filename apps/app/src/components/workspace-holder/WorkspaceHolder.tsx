@@ -25,7 +25,6 @@ import { ThemedTab } from './ThemedTab'
 import type { WorkspaceHolderProps, ViewType } from './types'
 import { useWorkspaceStore } from '@/src/stores/workspace-store'
 import { useClosedTabsStore } from '@/src/stores/closed-tabs-store'
-import { useGitStore } from '@/src/stores/git-store'
 import { useGitStatus } from '@/src/hooks/useGitStatus'
 
 import 'dockview-react/dist/styles/dockview.css'
@@ -175,9 +174,10 @@ export function WorkspaceHolder({
     selectWorkspaceAtIndex,
     selectNextWorkspace,
     selectPreviousWorkspace,
+    toggleDiffPanel,
+    openDiffPanels,
   } = useWorkspaceStore()
   const { pushClosedTab, popClosedTab } = useClosedTabsStore()
-  const { toggleDiffPanel, openDiffPanels } = useGitStore()
   const { isGitRepo } = useGitStatus(workspaceCwd)
   const showDiffPanel = openDiffPanels.has(workspaceId) && isGitRepo
 

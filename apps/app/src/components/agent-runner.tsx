@@ -4,7 +4,6 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { WorkspaceHolder } from "./workspace-holder";
 import { WorkspaceSidebar } from "./workspace-sidebar";
 import { useWorkspaceStore } from "@/src/stores/workspace-store";
-import { useGitStore } from "@/src/stores/git-store";
 import { useGitStatus } from "@/src/hooks/useGitStatus";
 import { cn } from "@/lib/utils";
 
@@ -14,8 +13,9 @@ export function AgentRunner() {
     activeWorkspaceId,
     initializeDefaultWorkspace,
     isInitialized,
+    openDiffPanels,
+    toggleDiffPanel,
   } = useWorkspaceStore();
-  const { openDiffPanels, toggleDiffPanel } = useGitStore();
   const [isReady, setIsReady] = useState(false);
 
   // Get active workspace cwd for git status check

@@ -13,6 +13,7 @@ interface WorkspaceStore {
   workspaceApis: Map<string, DockviewApi>
   isInitialized: boolean
   isAddDialogOpen: boolean
+  openDiffPanels: Set<string> // Set of workspace IDs with diff panel open
 
   // Actions
   initializeDefaultWorkspace: (homeDir: string) => void
@@ -30,6 +31,12 @@ interface WorkspaceStore {
   selectWorkspaceAtIndex: (index: number) => void
   selectNextWorkspace: () => void
   selectPreviousWorkspace: () => void
+
+  // Git diff panel actions
+  openDiffPanel: (workspaceId: string) => void
+  closeDiffPanel: (workspaceId: string) => void
+  toggleDiffPanel: (workspaceId: string) => void
+  isDiffPanelOpen: (workspaceId: string) => boolean
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>()(
@@ -40,6 +47,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       workspaceApis: new Map(),
       isInitialized: false,
       isAddDialogOpen: false,
+      openDiffPanels: new Set(),
 
       initializeDefaultWorkspace: (homeDir: string) => {
         const { workspaces, isInitialized } = get()
@@ -164,13 +172,70 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         const prevIndex = currentIndex <= 0 ? workspaces.length - 1 : currentIndex - 1
         set({ activeWorkspaceId: workspaces[prevIndex].id })
       },
+
+      openDiffPanel: (workspaceId: string) => {
+        const { openDiffPanels } = get()
+        const newSet = new Set(openDiffPanels)
+        newSet.add(workspaceId)
+        set({ openDiffPanels: newSet })
+      },
+
+      closeDiffPanel: (workspaceId: string) => {
+        const { openDiffPanels } = get()
+        const newSet = new Set(openDiffPanels)
+        newSet.delete(workspaceId)
+        set({ openDiffPanels: newSet })
+      },
+
+      toggleDiffPanel: (workspaceId: string) => {
+        const { openDiffPanels } = get()
+        const newSet = new Set(openDiffPanels)
+        if (newSet.has(workspaceId)) {
+          newSet.delete(workspaceId)
+        } else {
+          newSet.add(workspaceId)
+        }
+        set({ openDiffPanels: newSet })
+      },
+
+      isDiffPanelOpen: (workspaceId: string) => {
+        return get().openDiffPanels.has(workspaceId)
+      },
     }),
     {
       name: STORAGE_KEY,
       partialize: (state) => ({
         workspaces: state.workspaces,
         activeWorkspaceId: state.activeWorkspaceId,
+        openDiffPanels: state.openDiffPanels,
       }),
+      storage: {
+        getItem: (name) => {
+          const str = localStorage.getItem(name)
+          if (!str) return null
+          const parsed = JSON.parse(str)
+          return {
+            ...parsed,
+            state: {
+              ...parsed.state,
+              // Convert array back to Set
+              openDiffPanels: new Set(parsed.state.openDiffPanels || []),
+            },
+          }
+        },
+        setItem: (name, value) => {
+          const toStore = {
+            ...value,
+            state: {
+              ...value.state,
+              // Convert Set to array for JSON serialization
+              openDiffPanels: Array.from(value.state.openDiffPanels || []),
+            },
+          }
+          localStorage.setItem(name, JSON.stringify(toStore))
+        },
+        removeItem: (name) => localStorage.removeItem(name),
+      },
     }
   )
 )
