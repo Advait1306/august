@@ -9,34 +9,6 @@ import { gitWatcherService } from '../services/git-watcher-service'
 const execAsync = promisify(exec)
 
 /**
- * Recursively list all files in a directory
- */
-async function listFilesRecursively(dirPath: string, relativeTo: string): Promise<string[]> {
-  const files: string[] = []
-
-  async function walk(currentPath: string) {
-    try {
-      const entries = await fs.readdir(currentPath, { withFileTypes: true })
-      for (const entry of entries) {
-        const fullPath = path.join(currentPath, entry.name)
-        if (entry.isDirectory()) {
-          await walk(fullPath)
-        } else if (entry.isFile()) {
-          // Get path relative to the workspace root
-          const relativePath = path.relative(relativeTo, fullPath)
-          files.push(relativePath)
-        }
-      }
-    } catch {
-      // Ignore errors (permission issues, etc.)
-    }
-  }
-
-  await walk(dirPath)
-  return files
-}
-
-/**
  * Parse git status --porcelain=v1 output
  * Format: XY PATH or XY ORIG -> PATH for renames
  * X = status in index (staged), Y = status in worktree
@@ -116,32 +88,20 @@ export function registerGitIpcHandlers(): void {
     IPC_CHANNELS.GIT.STATUS,
     async (_event, cwd: string): Promise<IPC.Git.StatusResponse> => {
       try {
-        const { stdout } = await execAsync('git status --porcelain=v1', { cwd, maxBuffer: 10 * 1024 * 1024 })
+        const { stdout } = await execAsync('git status --porcelain=v1 --untracked-files=all', {
+          cwd,
+          maxBuffer: 10 * 1024 * 1024
+        })
         const { staged, unstaged, untracked } = parseGitStatus(stdout)
 
-        // Expand untracked directories into individual files
-        const expandedUntracked: IPC.Git.FileChange[] = []
-        for (const file of untracked) {
-          if (file.path.endsWith('/')) {
-            // This is a directory, list all files inside it
-            const dirPath = path.join(cwd, file.path)
-            const files = await listFilesRecursively(dirPath, cwd)
-            for (const filePath of files) {
-              expandedUntracked.push({ path: filePath, status: 'untracked', staged: false })
-            }
-          } else {
-            expandedUntracked.push(file)
-          }
-        }
-
-        return { success: true, staged, unstaged, untracked: expandedUntracked }
+        return { success: true, staged, unstaged, untracked }
       } catch (error) {
         return {
           success: false,
           staged: [],
           unstaged: [],
           untracked: [],
-          error: error instanceof Error ? error.message : 'Failed to get git status',
+          error: error instanceof Error ? error.message : 'Failed to get git status'
         }
       }
     }
@@ -159,10 +119,10 @@ export function registerGitIpcHandlers(): void {
 
         // Get the original content from HEAD
         try {
-          const { stdout } = await execAsync(
-            `git show HEAD:"${filePath}"`,
-            { cwd, maxBuffer: 10 * 1024 * 1024 }
-          )
+          const { stdout } = await execAsync(`git show HEAD:"${filePath}"`, {
+            cwd,
+            maxBuffer: 10 * 1024 * 1024
+          })
           original = stdout
         } catch {
           // File might be new (not in HEAD), so original is empty
@@ -173,10 +133,10 @@ export function registerGitIpcHandlers(): void {
         if (staged) {
           // For staged changes, get content from the index
           try {
-            const { stdout } = await execAsync(
-              `git show :"${filePath}"`,
-              { cwd, maxBuffer: 10 * 1024 * 1024 }
-            )
+            const { stdout } = await execAsync(`git show :"${filePath}"`, {
+              cwd,
+              maxBuffer: 10 * 1024 * 1024
+            })
             modified = stdout
           } catch {
             // File might be deleted in staging, so modified is empty
@@ -199,25 +159,19 @@ export function registerGitIpcHandlers(): void {
           success: false,
           original: '',
           modified: '',
-          error: error instanceof Error ? error.message : 'Failed to get file diff',
+          error: error instanceof Error ? error.message : 'Failed to get file diff'
         }
       }
     }
   )
 
   // Watch a repository for changes
-  ipcMain.handle(
-    IPC_CHANNELS.GIT.WATCH,
-    (_event, cwd: string): IPC.Git.WatchResponse => {
-      return gitWatcherService.watch(cwd)
-    }
-  )
+  ipcMain.handle(IPC_CHANNELS.GIT.WATCH, (_event, cwd: string): IPC.Git.WatchResponse => {
+    return gitWatcherService.watch(cwd)
+  })
 
   // Unwatch a repository
-  ipcMain.handle(
-    IPC_CHANNELS.GIT.UNWATCH,
-    (_event, cwd: string): IPC.Git.WatchResponse => {
-      return gitWatcherService.unwatch(cwd)
-    }
-  )
+  ipcMain.handle(IPC_CHANNELS.GIT.UNWATCH, (_event, cwd: string): IPC.Git.WatchResponse => {
+    return gitWatcherService.unwatch(cwd)
+  })
 }
