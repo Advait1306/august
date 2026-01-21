@@ -33,13 +33,13 @@ export function registerFileSystemIpcHandlers(): void {
           entries: entries.map((entry) => ({
             name: entry.name,
             path: path.join(dirPath, entry.name),
-            isDirectory: entry.isDirectory(),
-          })),
+            isDirectory: entry.isDirectory()
+          }))
         }
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to read directory',
+          error: error instanceof Error ? error.message : 'Failed to read directory'
         }
       }
     }
@@ -58,7 +58,7 @@ export function registerFileSystemIpcHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create file',
+          error: error instanceof Error ? error.message : 'Failed to create file'
         }
       }
     }
@@ -77,7 +77,7 @@ export function registerFileSystemIpcHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create folder',
+          error: error instanceof Error ? error.message : 'Failed to create folder'
         }
       }
     }
@@ -85,11 +85,7 @@ export function registerFileSystemIpcHandlers(): void {
 
   ipcMain.handle(
     IPC_CHANNELS.FILE_SYSTEM.RENAME,
-    async (
-      _event,
-      oldPath: string,
-      newPath: string
-    ): Promise<IPC.FileSystem.OperationResponse> => {
+    async (_event, oldPath: string, newPath: string): Promise<IPC.FileSystem.OperationResponse> => {
       const oldPathCheck = validatePath(oldPath)
       if (!oldPathCheck.valid) {
         return { success: false, error: oldPathCheck.error }
@@ -104,7 +100,7 @@ export function registerFileSystemIpcHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to rename',
+          error: error instanceof Error ? error.message : 'Failed to rename'
         }
       }
     }
@@ -123,7 +119,7 @@ export function registerFileSystemIpcHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to delete',
+          error: error instanceof Error ? error.message : 'Failed to delete'
         }
       }
     }
@@ -150,7 +146,7 @@ export function registerFileSystemIpcHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to read file',
+          error: error instanceof Error ? error.message : 'Failed to read file'
         }
       }
     }
@@ -173,7 +169,7 @@ export function registerFileSystemIpcHandlers(): void {
       } catch (error) {
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to write file',
+          error: error instanceof Error ? error.message : 'Failed to write file'
         }
       }
     }
@@ -214,7 +210,8 @@ export function registerFileSystemIpcHandlers(): void {
         const globPattern = sanitizedQuery ? `**/*${sanitizedQuery}*` : '**/*'
 
         // Create case-insensitive glob matcher
-        const caseInsensitiveMatcher = (pattern: string) => picomatch(pattern, { nocase: true })
+        const caseInsensitiveMatcher = (pattern: string): ReturnType<typeof picomatch> =>
+          picomatch(pattern, { nocase: true })
 
         const crawler = new fdir()
           .withRelativePaths()
@@ -295,9 +292,12 @@ export function registerFileSystemIpcHandlers(): void {
           valid: false,
           resolvedPath: inputPath,
           name: '',
-          error: error instanceof Error && error.message.includes('ENOENT')
-            ? 'Directory does not exist'
-            : error instanceof Error ? error.message : 'Failed to validate directory'
+          error:
+            error instanceof Error && error.message.includes('ENOENT')
+              ? 'Directory does not exist'
+              : error instanceof Error
+                ? error.message
+                : 'Failed to validate directory'
         }
       }
     }

@@ -35,6 +35,7 @@ export class PtyService {
   private mainWindow: BrowserWindow | null = null
   private terminals: Map<string, PtyInstance> = new Map()
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
   /**
@@ -58,7 +59,10 @@ export class PtyService {
       }
 
       // Path is outside home directory, fall back to home
-      console.warn('[PtyService] Requested cwd outside home directory, falling back to home:', requestedCwd)
+      console.warn(
+        '[PtyService] Requested cwd outside home directory, falling back to home:',
+        requestedCwd
+      )
       return homeDir
     } catch {
       return homeDir

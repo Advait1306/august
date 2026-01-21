@@ -18,6 +18,7 @@ export class GitWatcherService {
   private watchers: Map<string, GitWatcherInstance> = new Map()
   private readonly DEBOUNCE_MS = 300 // Match VS Code's debounce time
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
   public static getInstance(): GitWatcherService {
@@ -163,22 +164,15 @@ export class GitWatcherService {
       '.watchman-cookie-',
       'gc.log',
       'FETCH_HEAD',
-      'ORIG_HEAD',
+      'ORIG_HEAD'
     ]
-    return ignorePatterns.some(pattern => filename.includes(pattern))
+    return ignorePatterns.some((pattern) => filename.includes(pattern))
   }
 
   private shouldIgnoreWorkspaceFile(filename: string): boolean {
     // Ignore common noisy files/directories
-    const ignorePatterns = [
-      'node_modules',
-      '.DS_Store',
-      'Thumbs.db',
-      '.swp',
-      '.swo',
-      '~',
-    ]
-    return ignorePatterns.some(pattern => filename.includes(pattern))
+    const ignorePatterns = ['node_modules', '.DS_Store', 'Thumbs.db', '.swp', '.swo', '~']
+    return ignorePatterns.some((pattern) => filename.includes(pattern))
   }
 
   private handleChange(cwd: string): void {
