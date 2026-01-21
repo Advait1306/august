@@ -297,6 +297,7 @@ export function FileEditor({ filePath, className }: FileEditorProps) {
           theme={theme === 'dark' ? 'vs-dark' : 'light'}
           options={{
             minimap: { enabled: false },
+            fontFamily: '"Paper Mono", monospace',
             fontSize: 14,
             wordWrap: 'on',
             lineNumbers: 'on',

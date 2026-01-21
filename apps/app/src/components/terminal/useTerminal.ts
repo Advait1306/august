@@ -60,7 +60,7 @@ export function useTerminal(
       TERMINAL_THEMES[initialOptionsRef.current.theme || "dark"];
     const xterm = new Terminal({
       cursorBlink: true,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      fontFamily: '"Paper Mono", monospace',
       fontSize: 14,
       theme: terminalTheme,
     });

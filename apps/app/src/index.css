@@ -2,6 +2,14 @@
 @import "tw-animate-css";
 @import "@clerk/themes/shadcn.css";
 
+@font-face {
+  font-family: "Paper Mono";
+  src: url("/fonts/PaperMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @source "../../node_modules/streamdown/dist/index.js";
 
 @custom-variant dark (&:is(.dark *));
@@ -71,7 +79,7 @@
 
   --font-sans: Geist, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Georgia, serif;
-  --font-mono: JetBrains Mono, monospace;
+  --font-mono: "Paper Mono", monospace;
   --shadow-color: #000000;
   --shadow-opacity: 0.05;
   --shadow-blur: 4px;
@@ -149,7 +157,7 @@
 
   --font-sans: Geist, ui-sans-serif, sans-serif, system-ui;
   --font-serif: Georgia, serif;
-  --font-mono: JetBrains Mono, monospace;
+  --font-mono: "Paper Mono", monospace;
   --shadow-color: #000000;
   --shadow-opacity: 0.1;
   --shadow-blur: 4px;
@@ -213,7 +221,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --font-sans: Geist, ui-sans-serif, sans-serif, system-ui;
-  --font-mono: JetBrains Mono, monospace;
+  --font-mono: "Paper Mono", monospace;
   --font-serif: Georgia, serif;
   --radius: 0.5rem;
   --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
@@ -248,6 +256,12 @@
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
   }
+}
+
+/* Xterm.js terminal padding */
+.xterm-viewport,
+.xterm-screen {
+  padding: 0 8px !important;
 }
 
 @layer utilities {
