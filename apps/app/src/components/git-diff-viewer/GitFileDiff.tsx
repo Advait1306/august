@@ -226,6 +226,7 @@ export function GitFileDiff({ filePath, status, staged, workspaceCwd }: GitFileD
               options={{
                 readOnly: true,
                 minimap: { enabled: false },
+                fontFamily: '"Paper Mono", monospace',
                 fontSize: 12,
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,

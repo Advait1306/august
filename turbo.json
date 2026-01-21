@@ -27,7 +27,7 @@
       "outputs": ["dist/", "out/", ".next"]
     },
     "shell#build": {
-      "dependsOn": ["web#build"],
+      "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": ["out/"]
     },

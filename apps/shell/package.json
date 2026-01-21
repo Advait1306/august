@@ -1,6 +1,6 @@
 {
   "name": "shell",
-  "version": "0.0.25",
+  "version": "0.0.26",
   "description": "An app to manage agents that help you work",
   "main": "./out/main/bootstrap.js",
   "author": "sixhuman.com",
@@ -21,11 +21,7 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "node scripts/build-and-notorize.js",
-    "build:linux": "electron-vite build && electron-builder --linux",
-    "publish": "node scripts/release.js",
-    "publish:mac": "electron-builder --mac -p always",
-    "publish:win": "electron-builder --win -p always",
-    "publish:linux": "electron-builder --linux -p always"
+    "build:linux": "electron-vite build && electron-builder --linux"
   },
   "dependencies": {
     "@august/shell-tools": "*",
