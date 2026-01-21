@@ -6,13 +6,15 @@ import '@xterm/xterm/css/xterm.css'
 interface TerminalViewProps {
   cwd?: string
   env?: Record<string, string>
+  workspaceId?: string
+  workspaceName?: string
   className?: string
   isActive?: boolean
 }
 
-export function TerminalView({ cwd, env, className, isActive }: TerminalViewProps) {
+export function TerminalView({ cwd, env, workspaceId, workspaceName, className, isActive }: TerminalViewProps) {
   const theme = useTheme()
-  const { terminalRef, isConnected, error, focus } = useTerminal({ cwd, env, theme })
+  const { terminalRef, isConnected, error, focus } = useTerminal({ cwd, env, theme, workspaceId, workspaceName })
 
   // Focus terminal when it becomes active
   useEffect(() => {

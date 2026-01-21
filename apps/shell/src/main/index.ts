@@ -111,6 +111,7 @@ app.whenReady().then(async () => {
     const { registerShellToolsIpcHandlers } = await import('./ipc/shell-tools')
     const { registerTerminalIpcHandlers } = await import('./ipc/terminal')
     const { registerFileSystemIpcHandlers } = await import('./ipc/file-system')
+    const { registerSoundIpcHandlers } = await import('./ipc/sound')
     const { registerGitIpcHandlers } = await import('./ipc/git')
 
     registerProjectIpcHandlers()
@@ -120,6 +121,7 @@ app.whenReady().then(async () => {
     registerShellToolsIpcHandlers()
     registerTerminalIpcHandlers()
     registerFileSystemIpcHandlers()
+    registerSoundIpcHandlers()
     registerGitIpcHandlers()
 
     // Initialize auto-updater and start checking for updates

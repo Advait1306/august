@@ -83,29 +83,32 @@ export function AgentRunner() {
         <div className="flex flex-1 overflow-hidden">
           <WorkspaceSidebar />
           <SidebarInset className="pr-0 pb-0">
-            {workspaces.map((workspace) => {
-              const isActive = workspace.id === activeWorkspaceId;
-              return (
-                <div
-                  key={workspace.id}
-                  className="absolute inset-0 h-full w-full"
-                  style={{
-                    visibility: isActive ? "visible" : "hidden",
-                    pointerEvents: isActive ? "auto" : "none",
-                    zIndex: isActive ? 1 : 0,
-                  }}
-                  aria-hidden={!isActive}
-                >
-                  <WorkspaceHolder
-                    workspaceId={workspace.id}
-                    storageKey={`workspace-${workspace.id}`}
-                    workspaceCwd={workspace.cwd}
-                    isActive={isActive}
-                    className="h-full w-full"
-                  />
-                </div>
-              );
-            })}
+            <div className="flex-1 w-full relative overflow-hidden">
+              {workspaces.map((workspace) => {
+                const isActive = workspace.id === activeWorkspaceId;
+                return (
+                  <div
+                    key={workspace.id}
+                    className="absolute inset-0 h-full w-full"
+                    style={{
+                      visibility: isActive ? "visible" : "hidden",
+                      pointerEvents: isActive ? "auto" : "none",
+                      zIndex: isActive ? 1 : 0,
+                    }}
+                    aria-hidden={!isActive}
+                  >
+                    <WorkspaceHolder
+                      workspaceId={workspace.id}
+                      workspaceName={workspace.name}
+                      storageKey={`workspace-${workspace.id}`}
+                      workspaceCwd={workspace.cwd}
+                      isActive={isActive}
+                      className="h-full w-full"
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </SidebarInset>
         </div>
       </div>

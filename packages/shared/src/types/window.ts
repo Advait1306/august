@@ -26,6 +26,9 @@ declare global {
       browser: {
         openUrl: (url: string) => Promise<boolean>;
       };
+      sound: {
+        play: (soundName: string) => Promise<{ success: boolean; error?: string }>;
+      };
       shellTools: {
         getManifest: () => Promise<IPC.ShellTools.GetManifestResponse>;
         execute: <T extends keyof IPC.ShellTools.ToolInputMap>(
