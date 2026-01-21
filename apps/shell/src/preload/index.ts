@@ -46,15 +46,15 @@ const api = {
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.RESIZE, { terminalId, cols, rows }),
     destroy: (terminalId: string): Promise<IPC.Terminal.OperationResponse> =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.TERMINAL.DESTROY, { terminalId }),
-    onData: (callback: (event: IPC.Terminal.DataEvent) => void) => {
-      const handler = (_: unknown, event: IPC.Terminal.DataEvent) => callback(event)
+    onData: (callback: (event: IPC.Terminal.DataEvent) => void): (() => void) => {
+      const handler = (_: unknown, event: IPC.Terminal.DataEvent): void => callback(event)
       electronAPI.ipcRenderer.on(IPC_CHANNELS.TERMINAL.DATA, handler)
-      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.DATA, handler)
+      return (): void => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.DATA, handler)
     },
-    onExit: (callback: (event: IPC.Terminal.ExitEvent) => void) => {
-      const handler = (_: unknown, event: IPC.Terminal.ExitEvent) => callback(event)
+    onExit: (callback: (event: IPC.Terminal.ExitEvent) => void): (() => void) => {
+      const handler = (_: unknown, event: IPC.Terminal.ExitEvent): void => callback(event)
       electronAPI.ipcRenderer.on(IPC_CHANNELS.TERMINAL.EXIT, handler)
-      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.EXIT, handler)
+      return (): void => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.EXIT, handler)
     }
   },
   fileSystem: {
@@ -78,15 +78,35 @@ const api = {
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.WATCH_FILE, path),
     unwatchFile: (path: string): Promise<IPC.FileSystem.WatchResponse> =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.UNWATCH_FILE, path),
-    onFileChanged: (callback: (event: IPC.FileSystem.FileChangedEvent) => void) => {
-      const handler = (_: unknown, event: IPC.FileSystem.FileChangedEvent) => callback(event)
+    onFileChanged: (callback: (event: IPC.FileSystem.FileChangedEvent) => void): (() => void) => {
+      const handler = (_: unknown, event: IPC.FileSystem.FileChangedEvent): void => callback(event)
       electronAPI.ipcRenderer.on(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
-      return () => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
+      return (): void =>
+        electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
     },
-    searchFiles: (request: IPC.FileSystem.SearchFilesRequest): Promise<IPC.FileSystem.SearchFilesResponse> =>
+    searchFiles: (
+      request: IPC.FileSystem.SearchFilesRequest
+    ): Promise<IPC.FileSystem.SearchFilesResponse> =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.SEARCH_FILES, request),
     validateDirectory: (path: string): Promise<IPC.FileSystem.ValidateDirectoryResponse> =>
       electronAPI.ipcRenderer.invoke(IPC_CHANNELS.FILE_SYSTEM.VALIDATE_DIRECTORY, path)
+  },
+  git: {
+    isRepo: (cwd: string): Promise<IPC.Git.IsRepoResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.IS_REPO, cwd),
+    status: (cwd: string): Promise<IPC.Git.StatusResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.STATUS, cwd),
+    diffFile: (request: IPC.Git.DiffFileRequest): Promise<IPC.Git.DiffFileResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.DIFF_FILE, request),
+    watch: (cwd: string): Promise<IPC.Git.WatchResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.WATCH, cwd),
+    unwatch: (cwd: string): Promise<IPC.Git.WatchResponse> =>
+      electronAPI.ipcRenderer.invoke(IPC_CHANNELS.GIT.UNWATCH, cwd),
+    onChanged: (callback: (event: IPC.Git.ChangedEvent) => void): (() => void) => {
+      const handler = (_: unknown, event: IPC.Git.ChangedEvent): void => callback(event)
+      electronAPI.ipcRenderer.on(IPC_CHANNELS.GIT.CHANGED, handler)
+      return (): void => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.GIT.CHANGED, handler)
+    }
   }
 }
 

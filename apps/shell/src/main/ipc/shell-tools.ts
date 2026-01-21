@@ -28,8 +28,22 @@ import {
 /**
  * Union types for all tool inputs and outputs
  */
-type ToolInput = GrepInput | GlobInput | LsInput | EditInput | WriteInput | MultiEditInput | BashInput
-type ToolOutput = GrepOutput | GlobOutput | LsOutput | EditOutput | WriteOutput | MultiEditOutput | BashOutput
+type ToolInput =
+  | GrepInput
+  | GlobInput
+  | LsInput
+  | EditInput
+  | WriteInput
+  | MultiEditInput
+  | BashInput
+type ToolOutput =
+  | GrepOutput
+  | GlobOutput
+  | LsOutput
+  | EditOutput
+  | WriteOutput
+  | MultiEditOutput
+  | BashOutput
 
 /**
  * Type mapping from tool names to their input/output types

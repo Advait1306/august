@@ -17,6 +17,7 @@ export class FileWatcherService {
   private readonly DEBOUNCE_MS = 100
   private readonly MAX_WATCHERS = 50
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
   public static getInstance(): FileWatcherService {
