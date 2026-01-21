@@ -7,6 +7,7 @@ import { setMainWindow, handleAuthToken } from './ipc/auth'
 import { autoUpdaterService } from './services/auto-updater-service'
 import { ptyService } from './services/pty-service'
 import { fileWatcherService } from './services/file-watcher-service'
+import { gitWatcherService } from './services/git-watcher-service'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -37,6 +38,9 @@ function createWindow(): void {
 
   // Set the main window reference for file watcher service
   fileWatcherService.setMainWindow(mainWindow)
+
+  // Set the main window reference for git watcher service
+  gitWatcherService.setMainWindow(mainWindow)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
@@ -108,6 +112,7 @@ app.whenReady().then(async () => {
     const { registerTerminalIpcHandlers } = await import('./ipc/terminal')
     const { registerFileSystemIpcHandlers } = await import('./ipc/file-system')
     const { registerSoundIpcHandlers } = await import('./ipc/sound')
+    const { registerGitIpcHandlers } = await import('./ipc/git')
 
     registerProjectIpcHandlers()
     registerAuthIpcHandlers()
@@ -117,6 +122,7 @@ app.whenReady().then(async () => {
     registerTerminalIpcHandlers()
     registerFileSystemIpcHandlers()
     registerSoundIpcHandlers()
+    registerGitIpcHandlers()
 
     // Initialize auto-updater and start checking for updates
     await autoUpdaterService.checkForUpdates()
@@ -177,6 +183,9 @@ app.on('before-quit', () => {
 
   // Clean up file watcher service
   fileWatcherService.destroyAll()
+
+  // Clean up git watcher service
+  gitWatcherService.destroyAll()
 })
 
 // In this file you can include the rest of your app's specific main process

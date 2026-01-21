@@ -1,87 +1,78 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock IPC handlers
-const mockIpcMainHandle = vi.fn();
-const mockShellOpenExternal = vi.fn();
+const mockIpcMainHandle = vi.fn()
+const mockShellOpenExternal = vi.fn()
 
-vi.mock("electron", () => ({
+vi.mock('electron', () => ({
   ipcMain: {
-    handle: mockIpcMainHandle,
+    handle: mockIpcMainHandle
   },
   shell: {
-    openExternal: mockShellOpenExternal,
-  },
-}));
+    openExternal: mockShellOpenExternal
+  }
+}))
 
 // Mock @jupiter/shared/ipc
-vi.mock("@jupiter/shared/ipc", () => ({
+vi.mock('@jupiter/shared/ipc', () => ({
   IPC_CHANNELS: {
     BROWSER: {
-      OPEN_URL: "browser:open-url",
-    },
-  },
-}));
+      OPEN_URL: 'browser:open-url'
+    }
+  }
+}))
 
-describe("Browser IPC Handlers", () => {
+describe('Browser IPC Handlers', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
-  describe("registerBrowserIpcHandlers", () => {
-    it("should register handler for OPEN_URL channel", async () => {
-      const { registerBrowserIpcHandlers } = await import("../../ipc/browser");
+  describe('registerBrowserIpcHandlers', () => {
+    it('should register handler for OPEN_URL channel', async () => {
+      const { registerBrowserIpcHandlers } = await import('../../ipc/browser')
 
-      registerBrowserIpcHandlers();
+      registerBrowserIpcHandlers()
 
-      expect(mockIpcMainHandle).toHaveBeenCalledTimes(1);
-      expect(mockIpcMainHandle).toHaveBeenCalledWith(
-        "browser:open-url",
-        expect.any(Function)
-      );
-    });
+      expect(mockIpcMainHandle).toHaveBeenCalledTimes(1)
+      expect(mockIpcMainHandle).toHaveBeenCalledWith('browser:open-url', expect.any(Function))
+    })
 
-    it("should open URL in external browser", async () => {
-      const { registerBrowserIpcHandlers } = await import("../../ipc/browser");
+    it('should open URL in external browser', async () => {
+      const { registerBrowserIpcHandlers } = await import('../../ipc/browser')
 
-      registerBrowserIpcHandlers();
+      registerBrowserIpcHandlers()
 
       // Get the handler function
       const handler = mockIpcMainHandle.mock.calls[0][1] as (
         event: unknown,
         url: string
-      ) => Promise<boolean>;
+      ) => Promise<boolean>
 
-      const result = await handler({}, "https://example.com");
+      const result = await handler({}, 'https://example.com')
 
-      expect(mockShellOpenExternal).toHaveBeenCalledWith("https://example.com");
-      expect(result).toBe(true);
-    });
+      expect(mockShellOpenExternal).toHaveBeenCalledWith('https://example.com')
+      expect(result).toBe(true)
+    })
 
-    it("should open various URL types", async () => {
-      const { registerBrowserIpcHandlers } = await import("../../ipc/browser");
+    it('should open various URL types', async () => {
+      const { registerBrowserIpcHandlers } = await import('../../ipc/browser')
 
-      registerBrowserIpcHandlers();
+      registerBrowserIpcHandlers()
 
       const handler = mockIpcMainHandle.mock.calls[0][1] as (
         event: unknown,
         url: string
-      ) => Promise<boolean>;
+      ) => Promise<boolean>
 
       // Test with different URL types
-      await handler({}, "https://github.com/user/repo");
-      expect(mockShellOpenExternal).toHaveBeenCalledWith(
-        "https://github.com/user/repo"
-      );
+      await handler({}, 'https://github.com/user/repo')
+      expect(mockShellOpenExternal).toHaveBeenCalledWith('https://github.com/user/repo')
 
-      await handler({}, "mailto:test@example.com");
-      expect(mockShellOpenExternal).toHaveBeenCalledWith(
-        "mailto:test@example.com"
-      );
+      await handler({}, 'mailto:test@example.com')
+      expect(mockShellOpenExternal).toHaveBeenCalledWith('mailto:test@example.com')
 
-      await handler({}, "https://docs.august.tech");
-      expect(mockShellOpenExternal).toHaveBeenCalledWith(
-        "https://docs.august.tech"
-      );
-    });
-  });
-});
+      await handler({}, 'https://docs.august.tech')
+      expect(mockShellOpenExternal).toHaveBeenCalledWith('https://docs.august.tech')
+    })
+  })
+})

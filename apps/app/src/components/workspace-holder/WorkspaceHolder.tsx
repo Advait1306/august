@@ -20,10 +20,12 @@ import { useTheme } from '@/src/components/theme'
 import { WorkspaceHolderProvider } from './WorkspaceHolderProvider'
 import { TerminalPanel } from './panels/TerminalPanel'
 import { FileViewerPanel } from './panels/FileViewerPanel'
+import { GitDiffPanelWrapper } from './panels/GitDiffPanelWrapper'
 import { ThemedTab } from './ThemedTab'
 import type { WorkspaceHolderProps, ViewType } from './types'
 import { useWorkspaceStore } from '@/src/stores/workspace-store'
 import { useClosedTabsStore } from '@/src/stores/closed-tabs-store'
+import { useGitStatus } from '@/src/hooks/useGitStatus'
 
 import 'dockview-react/dist/styles/dockview.css'
 import './workspace-holder.css'
@@ -36,7 +38,10 @@ const STORAGE_KEY_PREFIX = 'august-workspace-holder-'
 const components = {
   terminal: TerminalPanel,
   'file-viewer': FileViewerPanel,
+  'git-diff': GitDiffPanelWrapper,
 }
+
+const GIT_DIFF_PANEL_ID = 'git-diff-panel'
 
 /**
  * Custom tab components for proper theming
@@ -172,8 +177,59 @@ export function WorkspaceHolder({
     selectWorkspaceAtIndex,
     selectNextWorkspace,
     selectPreviousWorkspace,
+    toggleDiffPanel,
+    openDiffPanels,
   } = useWorkspaceStore()
   const { pushClosedTab, popClosedTab } = useClosedTabsStore()
+  const { isGitRepo } = useGitStatus(workspaceCwd)
+  const showDiffPanel = openDiffPanels.has(workspaceId) && isGitRepo
+
+  // Manage git diff panel in dockview
+  useEffect(() => {
+    if (!api || !workspaceCwd) return
+
+    const existingPanel = api.getPanel(GIT_DIFF_PANEL_ID)
+
+    if (showDiffPanel && !existingPanel) {
+      // Add the git diff panel to the right
+      api.addPanel({
+        id: GIT_DIFF_PANEL_ID,
+        component: 'git-diff',
+        title: 'Changes',
+        params: { workspaceCwd },
+        position: { direction: 'right' },
+        initialWidth: 800,
+      })
+
+      // Lock the panel's group to prevent movement
+      const panel = api.getPanel(GIT_DIFF_PANEL_ID)
+      if (panel) {
+        const group = panel.group
+        if (group) {
+          group.locked = true
+          group.header.hidden = true
+          group.api.setConstraints({ minimumWidth: 300, maximumWidth: 1200 })
+        }
+      }
+    } else if (!showDiffPanel && existingPanel) {
+      // Remove the git diff panel
+      existingPanel.api.close()
+    }
+  }, [api, showDiffPanel, workspaceCwd])
+
+  // Sync git store when diff panel is closed via tab X button
+  useEffect(() => {
+    if (!api) return
+
+    const disposable = api.onDidRemovePanel((event) => {
+      if (event.id === GIT_DIFF_PANEL_ID && openDiffPanels.has(workspaceId)) {
+        // Panel was closed externally (e.g., via X button), update store
+        toggleDiffPanel(workspaceId)
+      }
+    })
+
+    return () => disposable.dispose()
+  }, [api, workspaceId, openDiffPanels, toggleDiffPanel])
 
   // Keyboard shortcuts for tab and workspace navigation
   useEffect(() => {
@@ -212,6 +268,15 @@ export function WorkspaceHolder({
 
       // === TAB SHORTCUTS (only for active workspace) ===
       if (!api || !isActive) return
+
+      // Cmd+D: Toggle git diff panel
+      if (isMeta && !isShift && !isAlt && e.key === 'd') {
+        e.preventDefault()
+        if (isGitRepo) {
+          toggleDiffPanel(workspaceId)
+        }
+        return
+      }
 
       // Cmd+N: Toggle new tab menu
       if (isMeta && !isShift && !isAlt && e.key === 'n') {
@@ -320,6 +385,7 @@ export function WorkspaceHolder({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
     api,
+    workspaceId,
     workspaceCwd,
     isActive,
     activeWorkspaceId,
@@ -329,6 +395,8 @@ export function WorkspaceHolder({
     selectPreviousWorkspace,
     pushClosedTab,
     popClosedTab,
+    toggleDiffPanel,
+    isGitRepo,
   ])
 
   const handleReady = useCallback(
@@ -362,6 +430,17 @@ export function WorkspaceHolder({
           title: 'Terminal',
           params: { cwd: workspaceCwd, workspaceId, workspaceName },
         })
+      }
+
+      // Re-apply lock settings to restored git-diff panel if it exists
+      const restoredGitDiffPanel = dockviewApi.getPanel(GIT_DIFF_PANEL_ID)
+      if (restoredGitDiffPanel) {
+        const group = restoredGitDiffPanel.group
+        if (group) {
+          group.locked = true
+          group.header.hidden = true
+          group.api.setConstraints({ minimumWidth: 300, maximumWidth: 1200 })
+        }
       }
 
       // Subscribe to layout changes for persistence

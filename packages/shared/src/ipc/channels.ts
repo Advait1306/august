@@ -53,4 +53,12 @@ export const IPC_CHANNELS = {
     SEARCH_FILES: 'fs:searchFiles',
     VALIDATE_DIRECTORY: 'fs:validateDirectory',
   },
+  GIT: {
+    IS_REPO: 'git:isRepo',
+    STATUS: 'git:status',
+    DIFF_FILE: 'git:diffFile',
+    WATCH: 'git:watch',
+    UNWATCH: 'git:unwatch',
+    CHANGED: 'git:changed',
+  },
 } as const;
