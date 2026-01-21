@@ -36,6 +36,8 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@rocicorp/zero": "0.25.5",
+    "@sentry/react": "^10.35.0",
+    "@sentry/vite-plugin": "^4.7.0",
     "@serwist/window": "^9.2.3",
     "@tanstack/react-router": "1.139.14",
     "@tanstack/react-router-devtools": "^1.139.14",
