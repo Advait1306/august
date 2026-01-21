@@ -71,7 +71,7 @@ export class GitWatcherService {
       }
 
       // Watch the .git directory for changes (refs, HEAD, index, etc.)
-      instance.gitWatcher = watch(gitDir, { recursive: true }, (eventType, filename) => {
+      instance.gitWatcher = watch(gitDir, { recursive: true }, (_eventType, filename) => {
         // Filter out noisy files like index.lock
         if (filename && this.shouldIgnoreGitFile(filename)) {
           return
@@ -84,7 +84,7 @@ export class GitWatcherService {
       })
 
       // Watch the workspace directory for file changes
-      instance.workspaceWatcher = watch(cwd, { recursive: true }, (eventType, filename) => {
+      instance.workspaceWatcher = watch(cwd, { recursive: true }, (_eventType, filename) => {
         // Filter out .git directory changes (handled by gitWatcher)
         if (filename && (filename.startsWith('.git') || filename.startsWith('.git/'))) {
           return

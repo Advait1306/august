@@ -53,12 +53,16 @@ const api = {
     onData: (callback: (event: IPC.Terminal.DataEvent) => void): (() => void) => {
       const handler = (_: unknown, event: IPC.Terminal.DataEvent): void => callback(event)
       electronAPI.ipcRenderer.on(IPC_CHANNELS.TERMINAL.DATA, handler)
-      return (): void => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.DATA, handler)
+      return (): void => {
+        electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.DATA, handler)
+      }
     },
     onExit: (callback: (event: IPC.Terminal.ExitEvent) => void): (() => void) => {
       const handler = (_: unknown, event: IPC.Terminal.ExitEvent): void => callback(event)
       electronAPI.ipcRenderer.on(IPC_CHANNELS.TERMINAL.EXIT, handler)
-      return (): void => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.EXIT, handler)
+      return (): void => {
+        electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL.EXIT, handler)
+      }
     }
   },
   fileSystem: {
@@ -85,8 +89,9 @@ const api = {
     onFileChanged: (callback: (event: IPC.FileSystem.FileChangedEvent) => void): (() => void) => {
       const handler = (_: unknown, event: IPC.FileSystem.FileChangedEvent): void => callback(event)
       electronAPI.ipcRenderer.on(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
-      return (): void =>
+      return (): void => {
         electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.FILE_SYSTEM.FILE_CHANGED, handler)
+      }
     },
     searchFiles: (
       request: IPC.FileSystem.SearchFilesRequest
@@ -109,7 +114,9 @@ const api = {
     onChanged: (callback: (event: IPC.Git.ChangedEvent) => void): (() => void) => {
       const handler = (_: unknown, event: IPC.Git.ChangedEvent): void => callback(event)
       electronAPI.ipcRenderer.on(IPC_CHANNELS.GIT.CHANGED, handler)
-      return (): void => electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.GIT.CHANGED, handler)
+      return (): void => {
+        electronAPI.ipcRenderer.removeListener(IPC_CHANNELS.GIT.CHANGED, handler)
+      }
     }
   }
 }
