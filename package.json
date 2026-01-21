@@ -10,7 +10,8 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "worktree:add": "node scripts/worktree-add.js"
+    "worktree:add": "node scripts/worktree-add.js",
+    "publish": "node scripts/release.js"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",

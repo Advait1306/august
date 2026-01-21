@@ -5,12 +5,14 @@
 const { execSync } = require('child_process')
 const { readFileSync } = require('fs')
 const path = require('path')
-require('dotenv').config()
+require('dotenv').config({ path: path.join(__dirname, '../apps/shell/.env') })
 
 /**
  * Release script for automatic publishing to GitHub
  * Based on electron-builder documentation: https://www.electron.build/publish
  */
+
+const SHELL_DIR = path.join(__dirname, '../apps/shell')
 
 function log(message) {
   console.log(`[Release] ${message}`)
@@ -24,20 +26,20 @@ function execCommand(command, options = {}) {
   log(`Executing: ${command}`)
   return execSync(command, {
     stdio: 'inherit',
-    cwd: process.cwd(),
+    cwd: path.join(__dirname, '..'),
     ...options
   })
 }
 
 function getCurrentVersion() {
-  const packagePath = path.join(__dirname, '../package.json')
+  const packagePath = path.join(SHELL_DIR, 'package.json')
   const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'))
   return packageJson.version
 }
 
 function bumpVersion(type = 'patch') {
   log(`Bumping version (${type})...`)
-  execCommand(`npm version ${type} --no-git-tag-version`)
+  execCommand(`npm version ${type} --no-git-tag-version`, { cwd: SHELL_DIR })
   return getCurrentVersion()
 }
 
@@ -48,29 +50,35 @@ function commitAndTag(version) {
   execCommand(`git tag v${version}`)
 }
 
+function buildWithTurbo() {
+  log('Building shell and dependencies with turbo...')
+  execCommand('npx turbo run build --filter=shell')
+}
+
 function publishBuild() {
-  log('Building and publishing...')
+  log('Publishing...')
 
   // Check for GitHub token
   const githubToken = process.env.GITHUB_RELEASE_TOKEN
   if (!githubToken) {
     throw new Error(
-      'GITHUB_RELEASE_TOKEN or GH_TOKEN environment variable is required for publishing'
+      'GITHUB_RELEASE_TOKEN environment variable is required for publishing'
     )
   }
 
-  execCommand('npm run build')
+  // Build shell and all its dependencies using turbo
+  buildWithTurbo()
 
-  // Determine platform and run appropriate publish command
+  // Publish using electron-builder
   const platform = process.platform
-
   log(`Publishing for platform: ${platform}`)
+
   if (platform === 'darwin') {
-    execCommand('npm run publish:mac')
+    execCommand('npx electron-builder --mac -p always', { cwd: SHELL_DIR })
   } else if (platform === 'win32') {
-    execCommand('npm run publish:win')
+    execCommand('npx electron-builder --win -p always', { cwd: SHELL_DIR })
   } else if (platform === 'linux') {
-    execCommand('npm run publish:linux')
+    execCommand('npx electron-builder --linux -p always', { cwd: SHELL_DIR })
   } else {
     throw new Error(`Unsupported platform: ${platform}`)
   }
@@ -155,8 +163,9 @@ Examples:
 Note:
 - On macOS, this will trigger code signing and notarization
 - Ensure you have the necessary certificates and environment variables set
-- The GitHub token must be set in GITHUB_RELEASE_TOKEN or GH_TOKEN environment variable
+- The GitHub token must be set in GITHUB_RELEASE_TOKEN environment variable
 - For GitHub releases: export GITHUB_RELEASE_TOKEN=your_token_here
+- This script uses turbo to build the shell app and all its dependencies
 `)
   process.exit(0)
 }
