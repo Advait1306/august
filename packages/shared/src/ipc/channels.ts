@@ -23,6 +23,9 @@ export const IPC_CHANNELS = {
   BROWSER: {
     OPEN_URL: 'browser:open-url',
   },
+  SOUND: {
+    PLAY: 'sound:play',
+  },
   SHELL_TOOLS: {
     GET_MANIFEST: 'shell-tools:get-manifest',
     EXECUTE: 'shell-tools:execute',
@@ -49,5 +52,13 @@ export const IPC_CHANNELS = {
     FILE_CHANGED: 'fs:fileChanged',
     SEARCH_FILES: 'fs:searchFiles',
     VALIDATE_DIRECTORY: 'fs:validateDirectory',
+  },
+  GIT: {
+    IS_REPO: 'git:isRepo',
+    STATUS: 'git:status',
+    DIFF_FILE: 'git:diffFile',
+    WATCH: 'git:watch',
+    UNWATCH: 'git:unwatch',
+    CHANGED: 'git:changed',
   },
 } as const;

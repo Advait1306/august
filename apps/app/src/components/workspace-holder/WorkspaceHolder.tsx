@@ -20,10 +20,12 @@ import { useTheme } from '@/src/components/theme'
 import { WorkspaceHolderProvider } from './WorkspaceHolderProvider'
 import { TerminalPanel } from './panels/TerminalPanel'
 import { FileViewerPanel } from './panels/FileViewerPanel'
+import { GitDiffPanelWrapper } from './panels/GitDiffPanelWrapper'
 import { ThemedTab } from './ThemedTab'
 import type { WorkspaceHolderProps, ViewType } from './types'
 import { useWorkspaceStore } from '@/src/stores/workspace-store'
 import { useClosedTabsStore } from '@/src/stores/closed-tabs-store'
+import { useGitStatus } from '@/src/hooks/useGitStatus'
 
 import 'dockview-react/dist/styles/dockview.css'
 import './workspace-holder.css'
@@ -36,7 +38,10 @@ const STORAGE_KEY_PREFIX = 'august-workspace-holder-'
 const components = {
   terminal: TerminalPanel,
   'file-viewer': FileViewerPanel,
+  'git-diff': GitDiffPanelWrapper,
 }
+
+const GIT_DIFF_PANEL_ID = 'git-diff-panel'
 
 /**
  * Custom tab components for proper theming
@@ -50,12 +55,14 @@ const tabComponents = {
  */
 interface RightHeaderActionsProps extends IDockviewHeaderActionsProps {
   workspaceCwd?: string
+  workspaceId?: string
+  workspaceName?: string
 }
 
 /**
  * Add new panel button with dropdown menu
  */
-function RightHeaderActions({ containerApi, workspaceCwd }: RightHeaderActionsProps) {
+function RightHeaderActions({ containerApi, workspaceCwd, workspaceId, workspaceName }: RightHeaderActionsProps) {
   const [open, setOpen] = useState(false)
 
   const handleAddTerminal = () => {
@@ -63,7 +70,7 @@ function RightHeaderActions({ containerApi, workspaceCwd }: RightHeaderActionsPr
       id: `terminal-${nanoid(8)}`,
       component: 'terminal',
       title: 'Terminal',
-      params: { cwd: workspaceCwd },
+      params: { cwd: workspaceCwd, workspaceId, workspaceName },
     })
     setOpen(false)
   }
@@ -130,6 +137,7 @@ function isValidLayout(layout: unknown): boolean {
 
 export function WorkspaceHolder({
   workspaceId,
+  workspaceName,
   storageKey = 'default',
   className,
   onReady,
@@ -169,8 +177,59 @@ export function WorkspaceHolder({
     selectWorkspaceAtIndex,
     selectNextWorkspace,
     selectPreviousWorkspace,
+    toggleDiffPanel,
+    openDiffPanels,
   } = useWorkspaceStore()
   const { pushClosedTab, popClosedTab } = useClosedTabsStore()
+  const { isGitRepo } = useGitStatus(workspaceCwd)
+  const showDiffPanel = openDiffPanels.has(workspaceId) && isGitRepo
+
+  // Manage git diff panel in dockview
+  useEffect(() => {
+    if (!api || !workspaceCwd) return
+
+    const existingPanel = api.getPanel(GIT_DIFF_PANEL_ID)
+
+    if (showDiffPanel && !existingPanel) {
+      // Add the git diff panel to the right
+      api.addPanel({
+        id: GIT_DIFF_PANEL_ID,
+        component: 'git-diff',
+        title: 'Changes',
+        params: { workspaceCwd },
+        position: { direction: 'right' },
+        initialWidth: 800,
+      })
+
+      // Lock the panel's group to prevent movement
+      const panel = api.getPanel(GIT_DIFF_PANEL_ID)
+      if (panel) {
+        const group = panel.group
+        if (group) {
+          group.locked = true
+          group.header.hidden = true
+          group.api.setConstraints({ minimumWidth: 300, maximumWidth: 1200 })
+        }
+      }
+    } else if (!showDiffPanel && existingPanel) {
+      // Remove the git diff panel
+      existingPanel.api.close()
+    }
+  }, [api, showDiffPanel, workspaceCwd])
+
+  // Sync git store when diff panel is closed via tab X button
+  useEffect(() => {
+    if (!api) return
+
+    const disposable = api.onDidRemovePanel((event) => {
+      if (event.id === GIT_DIFF_PANEL_ID && openDiffPanels.has(workspaceId)) {
+        // Panel was closed externally (e.g., via X button), update store
+        toggleDiffPanel(workspaceId)
+      }
+    })
+
+    return () => disposable.dispose()
+  }, [api, workspaceId, openDiffPanels, toggleDiffPanel])
 
   // Keyboard shortcuts for tab and workspace navigation
   useEffect(() => {
@@ -209,6 +268,15 @@ export function WorkspaceHolder({
 
       // === TAB SHORTCUTS (only for active workspace) ===
       if (!api || !isActive) return
+
+      // Cmd+D: Toggle git diff panel
+      if (isMeta && !isShift && !isAlt && e.key === 'd') {
+        e.preventDefault()
+        if (isGitRepo) {
+          toggleDiffPanel(workspaceId)
+        }
+        return
+      }
 
       // Cmd+N: Toggle new tab menu
       if (isMeta && !isShift && !isAlt && e.key === 'n') {
@@ -317,6 +385,7 @@ export function WorkspaceHolder({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [
     api,
+    workspaceId,
     workspaceCwd,
     isActive,
     activeWorkspaceId,
@@ -326,6 +395,8 @@ export function WorkspaceHolder({
     selectPreviousWorkspace,
     pushClosedTab,
     popClosedTab,
+    toggleDiffPanel,
+    isGitRepo,
   ])
 
   const handleReady = useCallback(
@@ -357,8 +428,19 @@ export function WorkspaceHolder({
           id: 'terminal-1',
           component: 'terminal',
           title: 'Terminal',
-          params: { cwd: workspaceCwd },
+          params: { cwd: workspaceCwd, workspaceId, workspaceName },
         })
+      }
+
+      // Re-apply lock settings to restored git-diff panel if it exists
+      const restoredGitDiffPanel = dockviewApi.getPanel(GIT_DIFF_PANEL_ID)
+      if (restoredGitDiffPanel) {
+        const group = restoredGitDiffPanel.group
+        if (group) {
+          group.locked = true
+          group.header.hidden = true
+          group.api.setConstraints({ minimumWidth: 300, maximumWidth: 1200 })
+        }
       }
 
       // Subscribe to layout changes for persistence
@@ -375,15 +457,15 @@ export function WorkspaceHolder({
       // Call external onReady callback
       onReady?.(dockviewApi)
     },
-    [fullStorageKey, onReady, workspaceCwd]
+    [fullStorageKey, onReady, workspaceCwd, workspaceId, workspaceName]
   )
 
-  // Wrap RightHeaderActions to pass workspaceCwd
+  // Wrap RightHeaderActions to pass workspace context
   const RightHeaderActionsWithCwd = useCallback(
     (props: IDockviewHeaderActionsProps) => (
-      <RightHeaderActions {...props} workspaceCwd={workspaceCwd} />
+      <RightHeaderActions {...props} workspaceCwd={workspaceCwd} workspaceId={workspaceId} workspaceName={workspaceName} />
     ),
-    [workspaceCwd]
+    [workspaceCwd, workspaceId, workspaceName]
   )
 
   // Handlers for new tab menu
@@ -393,11 +475,11 @@ export function WorkspaceHolder({
         id: `terminal-${nanoid(8)}`,
         component: 'terminal',
         title: 'Terminal',
-        params: { cwd: workspaceCwd },
+        params: { cwd: workspaceCwd, workspaceId, workspaceName },
       })
     }
     setNewTabMenuOpen(false)
-  }, [api, workspaceCwd])
+  }, [api, workspaceCwd, workspaceId, workspaceName])
 
   const handleAddFileViewerFromMenu = useCallback(() => {
     if (api) {

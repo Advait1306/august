@@ -26,6 +26,9 @@ declare global {
       browser: {
         openUrl: (url: string) => Promise<boolean>;
       };
+      sound: {
+        play: (soundName: string) => Promise<{ success: boolean; error?: string }>;
+      };
       shellTools: {
         getManifest: () => Promise<IPC.ShellTools.GetManifestResponse>;
         execute: <T extends keyof IPC.ShellTools.ToolInputMap>(
@@ -76,6 +79,14 @@ declare global {
         validateDirectory: (
           path: string
         ) => Promise<IPC.FileSystem.ValidateDirectoryResponse>;
+      };
+      git: {
+        isRepo: (cwd: string) => Promise<IPC.Git.IsRepoResponse>;
+        status: (cwd: string) => Promise<IPC.Git.StatusResponse>;
+        diffFile: (request: IPC.Git.DiffFileRequest) => Promise<IPC.Git.DiffFileResponse>;
+        watch: (cwd: string) => Promise<IPC.Git.WatchResponse>;
+        unwatch: (cwd: string) => Promise<IPC.Git.WatchResponse>;
+        onChanged: (callback: (event: IPC.Git.ChangedEvent) => void) => () => void;
       };
     };
   }

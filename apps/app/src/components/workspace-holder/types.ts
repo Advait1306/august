@@ -11,6 +11,8 @@ export type ViewType = 'terminal' | 'file-viewer'
 export interface TerminalPanelParams {
   cwd?: string
   env?: Record<string, string>
+  workspaceId?: string
+  workspaceName?: string
 }
 
 /**
@@ -46,6 +48,8 @@ export interface ViewTypeRegistration<T extends ViewType = ViewType> {
 export interface WorkspaceHolderProps {
   /** Unique workspace identifier */
   workspaceId: string
+  /** Display name for the workspace */
+  workspaceName?: string
   /** Storage key suffix for localStorage persistence */
   storageKey?: string
   /** Additional CSS classes */

@@ -2,11 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { toast } from "sonner";
+import { useWorkspaceStore } from "@/src/stores/workspace-store";
 
 interface UseTerminalOptions {
   cwd?: string;
   env?: Record<string, string>;
   theme?: "light" | "dark";
+  workspaceId?: string;
+  workspaceName?: string;
 }
 
 const TERMINAL_THEMES = {
@@ -29,6 +33,10 @@ interface UseTerminalReturn {
   focus: () => void;
 }
 
+// OSC 9 notification pattern (iTerm2 Growl-style notifications)
+// Format: ESC ] 9 ; message BEL
+const OSC_9_NOTIFY = /\x1b\]9;([^\x07]*)\x07/;
+
 export function useTerminal(
   options: UseTerminalOptions = {}
 ): UseTerminalReturn {
@@ -41,6 +49,7 @@ export function useTerminal(
   const initialOptionsRef = useRef(options);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const setActiveWorkspace = useWorkspaceStore((state) => state.setActiveWorkspace);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -121,9 +130,47 @@ export function useTerminal(
       }
     });
 
+    // Listen for bell events and show toast notification
+    const bellDisposable = xterm.onBell(() => {
+      const { workspaceName, workspaceId } = initialOptionsRef.current;
+      const name = workspaceName || "Terminal";
+      // Play notification sound
+      window.api.sound.play("Ping");
+      toast.info(`Bell in ${name}`, {
+        duration: 15000,
+        action: workspaceId
+          ? {
+              label: "Go to workspace",
+              onClick: () => setActiveWorkspace(workspaceId),
+            }
+          : undefined,
+      });
+    });
+
     const unsubscribeData = window.api.terminal.onData((event) => {
       if (event.terminalId === terminalIdRef.current) {
         xterm.write(event.data);
+
+        // Parse OSC 9 notifications (iTerm2 Growl-style)
+        // Programs can send these to request desktop notifications
+        const osc9Match = event.data.match(OSC_9_NOTIFY);
+        if (osc9Match) {
+          const message = osc9Match[1];
+          const { workspaceName, workspaceId } = initialOptionsRef.current;
+          const name = workspaceName || "Terminal";
+          // Play notification sound
+          window.api.sound.play("Ping");
+          toast.info(message, {
+            description: name,
+            duration: 15000,
+            action: workspaceId
+              ? {
+                  label: "Go to workspace",
+                  onClick: () => setActiveWorkspace(workspaceId),
+                }
+              : undefined,
+          });
+        }
       }
     });
 
@@ -151,6 +198,7 @@ export function useTerminal(
       mountedRef.current = false;
 
       inputDisposable.dispose();
+      bellDisposable.dispose();
       unsubscribeData();
       unsubscribeExit();
       resizeObserver.disconnect();
