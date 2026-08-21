@@ -1,200 +1,147 @@
 # August
 
-An AI-powered agent management and task automation platform. August enables users to run and manage autonomous AI agents, handle task execution, and coordinate with various services through both desktop and web interfaces.
+**August is an agent orchestrator for business work.** It gives people a desktop environment where they can delegate tasks to autonomous agents that operate across local files, connected services, and long-running workflows.
 
-## Features
+The project asks a simple question: if a coding agent can inspect a system, write and run programs, use tools, and recover from errors, why should that execution model be limited to software development?
 
-- **Agent Management** - Run and manage autonomous AI agents with built-in permission systems
-- **Task Execution** - Create, track, and execute tasks with AI agent assistance
-- **Real-time Sync** - Rocicorp Zero for live bidirectional data synchronization
-- **Multi-platform** - Desktop app (Electron) and web app with shared codebase
-- **Third-party Integrations** - Connect external services via Composio
-- **Auto-updates** - Built-in update mechanism for the desktop application
+## Demo
 
-## Project Structure
+[![Watch the August product demo](https://img.youtube.com/vi/cJ4--pZs3Aw/hqdefault.jpg)](https://www.youtube.com/watch?v=cJ4--pZs3Aw)
 
+## Motivation
+
+Development on August began in 2025, while Claude Code was gaining traction in the developer ecosystem. What interested me was not only its ability to write code, but the more general model underneath it: an agent could use a computer, create small programs, inspect results, and continue working until a task was complete.
+
+That suggested a much broader product. The same pattern could manipulate spreadsheets, work with documents, run multi-step processes, and coordinate the routine operational work that surrounds a business. August was built to explore that idea as a dedicated product rather than as a coding assistant.
+
+In January 2026, a few months after development on August began, Anthropic introduced [Claude Cowork](https://www.anthropic.com/webinars/future-of-ai-at-work-introducing-cowork), applying Claude Code's execution model to non-coding knowledge work. August was developed independently, but addressed the same core problem earlier: making a capable computer-using agent useful to the rest of a business.
+
+## What August implements
+
+- **Persistent task workspaces** — create, revisit, and continue agent-driven tasks instead of treating every interaction as an isolated chat
+- **Local tool execution** — let agents search, read, edit, and write files or invoke commands through the desktop runtime
+- **Permission-aware actions** — surface tool requests through the application before sensitive work is executed
+- **Connected services** — expose third-party systems through MCP and Composio so workflows can cross application boundaries
+- **Streaming agent runtime** — process Anthropic streaming events, tool calls, pause/resume turns, and programmatic tool use
+- **Desktop and web clients** — share the product experience across an Electron shell and a browser application
+- **Live state synchronization** — use Rocicorp Zero and a local SQLite cache for responsive, bidirectional task state
+
+## System design
+
+```text
+                       ┌──────────────────────┐
+                       │ React application    │
+                       │ tasks + agent state  │
+                       └──────────┬───────────┘
+                                  │ typed IPC / HTTP
+                 ┌────────────────┴────────────────┐
+                 │                                 │
+        ┌────────▼────────┐               ┌────────▼────────┐
+        │ Electron shell  │               │ Express backend │
+        │ local runtime   │               │ auth + services │
+        └────────┬────────┘               └────────┬────────┘
+                 │                                 │
+      files, shell tools, MCP          Postgres, Composio, billing
+                 │                                 │
+                 └────────────────┬────────────────┘
+                                  │
+                         ┌────────▼────────┐
+                         │ Agent harness   │
+                         │ model + tools   │
+                         └─────────────────┘
 ```
+
+The renderer owns product state. The Electron main process exposes stateless, typed capabilities through a preload boundary, which keeps the interface portable while still allowing agents to act on the local computer. The backend coordinates authentication, integrations, persistence, and synchronized task state.
+
+## Repository map
+
+```text
 august/
 ├── apps/
-│   ├── shell/          # Electron desktop application
-│   ├── app/            # Vite + React web application
-│   ├── website/        # Next.js marketing website
-│   ├── server/         # Express.js backend API
-│   ├── db/             # Database setup and migrations
-│   └── zero-cache/     # Rocicorp Zero sync service
+│   ├── shell/          # Electron desktop runtime and local tool execution
+│   ├── app/            # Vite + React task interface
+│   ├── website/        # Next.js product website
+│   ├── server/         # Express API and service integrations
+│   ├── db/             # PostgreSQL setup
+│   ├── zero-cache/     # Rocicorp Zero synchronization service
+│   └── litmus/         # Agent harness test and evaluation client
 ├── packages/
-│   ├── shell-tools/    # Agent tools (grep with ripgrep)
-│   ├── sync/           # Database queries and mutations
-│   ├── shared/         # Shared types and IPC system
+│   ├── harness/        # Streaming agent loop and MCP integration
+│   ├── shell-tools/    # Local search, read, write, edit, and command tools
+│   ├── sync/           # Shared database schema, queries, and mutations
+│   ├── shared/         # Cross-process types and IPC contracts
 │   ├── typescript-config/
 │   └── eslint-config/
-└── docs/               # Architecture documentation
+└── docs/               # Agent loop, shell, application, and IPC design notes
 ```
 
-## Tech Stack
+## Technical highlights
 
-| Layer | Technologies |
-|-------|-------------|
-| Frontend | React 19, TypeScript, Vite, TanStack Router, Tailwind CSS 4, Radix UI |
-| Desktop | Electron 37+, Electron Builder |
-| Backend | Node.js, Express.js, PostgreSQL, Drizzle ORM |
-| Sync | Rocicorp Zero, Better-sqlite3 (client cache) |
-| Auth | Clerk |
-| AI | AI SDK, OpenAI, Anthropic Claude |
-| Build | Turborepo, npm workspaces |
+| Area            | Implementation                                                                          |
+| --------------- | --------------------------------------------------------------------------------------- |
+| Agent runtime   | Anthropic streaming API, async-generator event processing, programmatic tool calls, MCP |
+| Local execution | Electron main process, typed preload APIs, Bash and filesystem tools                    |
+| Client          | React 19, TypeScript, Vite, TanStack Router, Tailwind CSS                               |
+| State sync      | Rocicorp Zero, PostgreSQL, Drizzle ORM, local SQLite cache                              |
+| Services        | Express, Clerk, Composio, webhooks, billing integrations                                |
+| Build system    | npm workspaces and Turborepo                                                            |
 
-## Prerequisites
+## Project status
 
-- Node.js >= 18
-- npm 10.9.2+
-- Docker (for local PostgreSQL)
+August is a substantial product prototype, not a hosted service that can currently be reproduced with one command. The agent runtime, local tools, desktop/web surfaces, persistence, and service integrations are present in the repository; running the complete stack requires credentials and local configuration for the external systems below.
 
-## Getting Started
+## Development setup
 
-### Installation
+### Prerequisites
 
-```bash
-# Clone the repository
-git clone <repository-url>
+- Node.js 22 LTS
+- npm 10.9.2
+- Docker for PostgreSQL and synchronization services
+- Accounts or development credentials for the model, authentication, and integration providers being exercised
+
+```sh
+git clone https://github.com/Advait1306/august.git
 cd august
-
-# Install dependencies
+nvm use
 npm install
-
-# Build all packages
-npm run build
 ```
 
-### Development
+The main configuration surface includes:
 
-```bash
-# Start all apps in development mode
+| Component | Configuration                                                  |
+| --------- | -------------------------------------------------------------- |
+| App       | `VITE_SERVER_URL`, `VITE_ZERO_URL`, Clerk publishable settings |
+| Shell     | `VITE_WEB_URL` and optional development-tool settings          |
+| Server    | `DATABASE_URL`, Clerk, Composio, and billing credentials       |
+| Sync      | PostgreSQL connection and Zero service configuration           |
+
+Run the monorepo in development mode after configuring the required services:
+
+```sh
 npm run dev
-
-# Or start specific apps
-npx turbo dev --filter=app      # Web app only
-npx turbo dev --filter=shell    # Desktop app only
-npx turbo dev --filter=server   # Backend only
 ```
 
-### Database Setup
+Or work on one surface at a time:
 
-```bash
-cd apps/db
-
-# Start PostgreSQL in Docker
-npm run dev:db-up
-
-# Run migrations
-npm run migrate
-
-# Stop PostgreSQL
-npm run dev:db-down
+```sh
+npx turbo dev --filter=app
+npx turbo dev --filter=shell
+npx turbo dev --filter=server
 ```
 
-### Building for Production
+## Validation
 
-```bash
-# Build all packages
-npm run build
+```sh
+npm run check-types
+npm run lint
 
-# Build desktop app for specific platforms
-cd apps/shell
-npm run build:mac     # macOS
-npm run build:win     # Windows
-npm run build:linux   # Linux
+npm test --workspace=@august/harness
+npm test --workspace=@august/shell-tools
+npm test --workspace=shell
 ```
 
-## Available Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start all apps in development mode |
-| `npm run build` | Build all apps and packages |
-| `npm run lint` | Run ESLint across the monorepo |
-| `npm run format` | Format code with Prettier |
-| `npm run check-types` | TypeScript type checking |
-
-## Apps
-
-### Shell (`apps/shell`)
-
-Electron desktop application that serves as the container for the web app. Handles:
-- Local agent execution
-- IPC communication with the renderer
-- System-level integrations
-- Auto-updates
-
-### App (`apps/app`)
-
-Main React web application running inside Electron or standalone. Features:
-- Task management interface
-- Agent interaction UI
-- Settings and configuration
-- PWA support via Serwist
-
-### Server (`apps/server`)
-
-Express.js backend running on port 8080. Provides:
-- REST API endpoints
-- Authentication via Clerk
-- Billing via DodoPayments
-- Webhook handlers
-- Third-party integrations
-
-### Website (`apps/website`)
-
-Next.js marketing website with landing pages and public documentation.
-
-## Packages
-
-### @jupiter/shared
-
-Shared TypeScript types and IPC system for type-safe communication between Electron main and renderer processes.
-
-### @jupiter/sync
-
-Database queries, mutations, and Rocicorp Zero schema definitions. Used by both client and server for data synchronization.
-
-### @jupiter/shell-tools
-
-Agent tools including a ripgrep-based grep utility for fast file content searching.
-
-## Architecture
-
-### IPC System
-
-Three-layer architecture for Electron communication:
-1. **Shared types** in `@jupiter/shared`
-2. **Main process handlers** in `apps/shell/src/main/ipc/`
-3. **Preload scripts** exposing `window.api`
-
-See `docs/ipc.md` for detailed documentation.
-
-### Data Synchronization
-
-Uses Rocicorp Zero for real-time bidirectional sync:
-- Server-side schema in `@jupiter/sync`
-- Client-side SQLite cache via better-sqlite3
-- Zero-cache service for sync coordination
-
-## Environment Variables
-
-Each app requires its own `.env` file. Key variables include:
-
-- `DATABASE_URL` - PostgreSQL connection string
-- `CLERK_*` - Clerk authentication keys
-- `OPENAI_API_KEY` - OpenAI API key
-- `COMPOSIO_API_KEY` - Composio integration key
-- `DODO_*` - DodoPayments billing keys
-
-## Contributing
-
-1. Create a feature branch from `development`
-2. Make your changes
-3. Run `npm run lint` and `npm run check-types`
-4. Submit a pull request
+Additional design details are documented in [`docs/agent-loop.md`](docs/agent-loop.md), [`docs/ipc.md`](docs/ipc.md), and [`docs/app.md`](docs/app.md).
 
 ## License
 
-Proprietary - All rights reserved
+Proprietary — all rights reserved.
