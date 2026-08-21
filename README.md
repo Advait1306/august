@@ -6,7 +6,7 @@ The project asks a simple question: if a coding agent can inspect a system, writ
 
 ## Demo
 
-[![Watch the August product demo](https://img.youtube.com/vi/cJ4--pZs3Aw/hqdefault.jpg)](https://www.youtube.com/watch?v=cJ4--pZs3Aw)
+[![Watch the August product demo](https://img.youtube.com/vi/5N0ESrZHv4I/hqdefault.jpg)](https://www.youtube.com/watch?v=5N0ESrZHv4I)
 
 ## Motivation
 
